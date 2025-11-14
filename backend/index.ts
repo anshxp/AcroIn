@@ -2,7 +2,7 @@ import express,{ Express,Request,Response } from "express";
 import dotenv from "dotenv";
 import initializeDatabase  from "./database/initialization";
 import { graphqlHTTP } from 'express-graphql';
-import { schema, root } from './graphql/schema';
+import { schema, root } from './graphql/Fact';
 
 dotenv.config();
 
