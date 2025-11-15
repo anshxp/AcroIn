@@ -21,13 +21,12 @@ async function start() {
         // mount GraphQL endpoint (GraphiQL enabled in dev)
         app.use('/graphql', graphqlHTTP({ schema, rootValue: root, graphiql: true }));
 
-        const PORT = process.env.PORT || 4000;
+        const PORT = process.env.PORT;
         app.listen(PORT, () => {
             console.log(`Backend listening on port ${PORT}`);
         });
     } catch (error) {
         console.error('Failed to initialize database:', error);
-        process.exit(1);
     }
 }
 
