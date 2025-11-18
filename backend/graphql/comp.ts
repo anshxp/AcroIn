@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import Competition from "../schema/competetion";
 
-export const schema = buildSchema(`
+export const comp_Schema = buildSchema(`
     scalar Date
 
     type Competition {
@@ -42,7 +42,7 @@ export interface CompetitionInputTS {
     certificate_link?: string;
     student: string;   
 }
-export const root = {
+export const competetion = {
 
     competitions: async ({ student }: { student?: string }) => {
         const filter: any = {};

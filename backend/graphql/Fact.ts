@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import { FacultyModel } from "../schema/faculty";
 
-export const schema = buildSchema(`
+export const fact_Schema = buildSchema(`
     type Faculty {
         id: ID!
         firstname: String!
@@ -75,7 +75,7 @@ export interface FacultyInput {
     phone: string;
     role?: string[];
 }
-export const root = {
+export const faculty = {
     faculties: async ({ department, designation, headof, skills, techstacks }: { department?: string; designation?: string; headof?: string; skills?: string[]; techstacks?: string[] }) => {
         const filter: any = {};
         if (department) filter.department = department;

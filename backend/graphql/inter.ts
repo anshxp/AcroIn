@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import Internship from "../schema/internship";
 
-export const schema = buildSchema(`
+export const intern_Schema = buildSchema(`
     scalar Date
 
     type Internship {
@@ -42,7 +42,9 @@ export interface InternshipInputTS {
     certificate_link?: string;
     student: string;  
 }
-export const root = {
+
+
+export const internship = {
 
     
     internships: async ({ student }: { student?: string }) => {
@@ -51,7 +53,6 @@ export const root = {
         return await Internship.find(filter).lean();
     },
 
-    
     
     internship: async ({ id }: { id: string }) => {
         return await Internship.findById(id).lean();

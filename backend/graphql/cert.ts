@@ -1,7 +1,7 @@
 import { buildSchema } from "graphql";
 import Certificate from "../schema/certificate";
 
-export const schema = buildSchema(`
+export const cert_Schema = buildSchema(`
     scalar Date
 
     type Certificate {
@@ -40,7 +40,7 @@ export interface CertificateInputTS {
     student: string;   
 }
 
-export const root = {
+export const certificate = {
    
     certificates: async ({ student }: { student?: string }) => {
         const filter: any = {};

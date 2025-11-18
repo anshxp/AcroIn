@@ -2,7 +2,7 @@ import { buildSchema } from "graphql";
 import Student from "../schema/student";
 
 
-export const schema = buildSchema(`
+export const student_Schema = buildSchema(`
 
   type Student {
     id: ID!
@@ -73,7 +73,7 @@ const mapId = (doc: any) => {
   return mapped;
 };
 
-export const root = {
+export const student = {
   students: async (args: { department?: string; projects?: string[]; internships?: string[]; competitions?: string[]; certificates?: string[]; skills?: string[]; tech_stack?: string[] }) => {
     const { department, projects, internships, competitions, certificates, skills, tech_stack } = args || {};
     const filter: any = {};
