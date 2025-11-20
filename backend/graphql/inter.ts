@@ -1,80 +1,42 @@
-import { buildSchema } from "graphql";
 import Internship from "../schema/internship";
 
-export const intern_Schema = buildSchema(`
-    scalar Date
+export const intern_Schema = `
+  type Internship {
+    id: ID!
+    company: String!
+    position: String!
+    duration: String!
+    description: String
+    certificate_link: String
+    student: ID!
+  }
 
-    type Internship {
-        id: ID!
-        company: String!
-        position: String!
-        duration: String!
-        description: String
-        certificate_link: String
-        student: ID!
-    }
-
-    type Query {
-        internships(student: ID): [Internship!]!
-        internship(id: ID!): Internship
-    }
-
-    input InternshipInput {
-        company: String!
-        position: String!
-        duration: String!
-        description: String
-        certificate_link: String
-        student: ID!
-    }
-
-    type Mutation {
-        createInternship(input: InternshipInput!): Internship!
-        updateInternship(id: ID!, input: InternshipInput!): Internship!
-        deleteInternship(id: ID!): Boolean!
-    }
-`);
-export interface InternshipInputTS {
-    company: string;
-    position: string;
-    duration: string;
-    description?: string;
-    certificate_link?: string;
-    student: string;  
-}
-
+  input InternshipInput {
+    company: String!
+    position: String!
+    duration: String!
+    description: String
+    certificate_link: String
+    student: ID!
+  }
+`;
 
 export const internship = {
+  internships: async ({ student }) => {
+    const filter: any = {};
+    if (student) filter.student = student;
+    return await Internship.find(filter).lean();
+  },
 
-    
-    internships: async ({ student }: { student?: string }) => {
-        const filter: any = {};
-        if (student) filter.student = student;
-        return await Internship.find(filter).lean();
-    },
+  internship: async ({ id }) =>
+    await Internship.findById(id).lean(),
 
-    
-    internship: async ({ id }: { id: string }) => {
-        return await Internship.findById(id).lean();
-    },
+  createInternship: async ({ input }) =>
+    (await new Internship(input).save()).toObject(),
 
-  
-    createInternship: async ({ input }: { input: InternshipInputTS }) => {
-        const doc = new Internship(input);
-        const saved = await doc.save();
-        return saved.toObject();
-    },
+  updateInternship: async ({ id, input }) =>
+    await Internship.findByIdAndUpdate(id, input, { new: true }).lean(),
 
-    
-    updateInternship: async ({ id, input }: { id: string; input: InternshipInputTS }) => {
-        const updated = await Internship.findByIdAndUpdate(id, input, { new: true }).lean();
-        return updated;
-    },
-
-    
-    deleteInternship: async ({ id }: { id: string }) => {
-        const res = await Internship.findByIdAndDelete(id);
-        return !!res;
-    },
+  deleteInternship: async ({ id }) =>
+    !!(await Internship.findByIdAndDelete(id))
 };
-

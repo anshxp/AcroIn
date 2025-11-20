@@ -1,9 +1,6 @@
-import { buildSchema } from "graphql";
 import Student from "../schema/student";
 
-
-export const student_Schema = buildSchema(`
-
+export const student_Schema = `
   type Student {
     id: ID!
     name: String!
@@ -21,13 +18,6 @@ export const student_Schema = buildSchema(`
     updatedAt: String
   }
 
-
-  type Query {
-    students(department: String, projects: [String], internships: [String], competitions: [String], certificates: [String], skills: [String], tech_stack: [String]): [Student!]!
-    student(id: ID!): Student
-  }
-
-
   input StudentInput {
     name: String!
     roll: String!
@@ -41,75 +31,38 @@ export const student_Schema = buildSchema(`
     competitions: [ID!]
     certificates: [ID!]
   }
-
-
-  type Mutation {
-    createStudent(input: StudentInput!): Student!
-    updateStudent(id: ID!, input: StudentInput!): Student!
-    deleteStudent(id: ID!): Boolean!
-  }
-`);
-
-
-export interface StudentInput {
-  name: string;
-  roll: string;
-  email: string;
-  department: string;
-  tech_stack?: string[];
-  profile_image?: string;
-  face_encoding?: number[];
-  projects?: string[];
-  internships?: string[];
-  competitions?: string[];
-  certificates?: string[];
-}
-
+`;
 
 const mapId = (doc: any) => {
   if (!doc) return doc;
-  const mapped = { ...doc, id: doc._id ? String(doc._id) : undefined };
-  if (mapped._id) delete mapped._id;
+  const mapped = { ...doc, id: String(doc._id) };
+  delete mapped._id;
   return mapped;
 };
 
 export const student = {
-  students: async (args: { department?: string; projects?: string[]; internships?: string[]; competitions?: string[]; certificates?: string[]; skills?: string[]; tech_stack?: string[] }) => {
-    const { department, projects, internships, competitions, certificates, skills, tech_stack } = args || {};
+  students: async (args: any) => {
     const filter: any = {};
+    const { department, projects, internships, competitions, certificates, skills, tech_stack } = args;
 
     if (department) filter.department = department;
-    if (tech_stack && tech_stack.length) filter.tech_stack = { $all: tech_stack };
-    if (projects && projects.length) filter.projects = { $in: projects };
-    if (internships && internships.length) filter.internships = { $in: internships };
-    if (competitions && competitions.length) filter.competitions = { $in: competitions };
-    if (certificates && certificates.length) filter.certificates = { $in: certificates };
-    if (skills && skills.length) filter.skills = { $all: skills };
+    if (tech_stack?.length) filter.tech_stack = { $all: tech_stack };
+    if (projects?.length) filter.projects = { $in: projects };
+    if (internships?.length) filter.internships = { $in: internships };
+    if (competitions?.length) filter.competitions = { $in: competitions };
+    if (certificates?.length) filter.certificates = { $in: certificates };
+    if (skills?.length) filter.skills = { $all: skills };
 
-    const docs = await Student.find(filter).lean();
-    return docs.map(mapId);
+    return (await Student.find(filter).lean()).map(mapId);
   },
 
-  student: async ({ id }: { id: string }) => {
-    const doc = await Student.findById(id).lean();
-    return mapId(doc);
-  },
+  student: async ({ id }) => mapId(await Student.findById(id).lean()),
 
-  createStudent: async ({ input }: { input: StudentInput }) => {
-    const newStudent = new Student(input);
-    const saved = await newStudent.save();
-    const obj = saved.toObject ? saved.toObject() : saved;
-    return mapId(obj);
-  },
+  createStudent: async ({ input }) => mapId((await new Student(input).save()).toObject()),
 
-  updateStudent: async ({ id, input }: { id: string; input: StudentInput }) => {
-    const updated = await Student.findByIdAndUpdate(id, input, { new: true }).lean();
-    if (!updated) throw new Error("Student not found");
-    return mapId(updated);
-  },
+  updateStudent: async ({ id, input }) =>
+    mapId(await Student.findByIdAndUpdate(id, input, { new: true }).lean()),
 
-  deleteStudent: async ({ id }: { id: string }) => {
-    const res = await Student.findByIdAndDelete(id);
-    return !!res;
-  },
+  deleteStudent: async ({ id }) =>
+    !!(await Student.findByIdAndDelete(id))
 };

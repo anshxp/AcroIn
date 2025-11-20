@@ -1,75 +1,44 @@
-import { buildSchema } from "graphql";
 import Competition from "../schema/competetion";
 
-export const comp_Schema = buildSchema(`
-    scalar Date
+export const comp_Schema = `
+  type Competition {
+    id: ID!
+    name: String!
+    organizer: String!
+    position: String
+    date: Date!
+    certificate_link: String
+    student: ID!
+  }
 
-    type Competition {
-        id: ID!
-        name: String!
-        organizer: String!
-        position: String
-        date: Date!
-        certificate_link: String
-        student: ID!
-    }
+  input CompetitionInput {
+    name: String!
+    organizer: String!
+    position: String
+    date: Date!
+    certificate_link: String
+    student: ID!
+  }
+`;
 
-    type Query {
-        competitions(student: ID): [Competition!]!
-        competition(id: ID!): Competition
-    }
-
-    input CompetitionInput {
-        name: String!
-        organizer: String!
-        position: String
-        date: Date!
-        certificate_link: String
-        student: ID!
-    }
-
-    type Mutation {
-        createCompetition(input: CompetitionInput!): Competition!
-        updateCompetition(id: ID!, input: CompetitionInput!): Competition!
-        deleteCompetition(id: ID!): Boolean!
-    }
-`);
-export interface CompetitionInputTS {
-    name: string;
-    organizer: string;
-    position?: string;
-    date: Date;
-    certificate_link?: string;
-    student: string;   
-}
 export const competetion = {
+  competitions: async ({ student }) => {
+    const filter: any = {};
+    if (student) filter.student = student;
+    return await Competition.find(filter).lean();
+  },
 
-    competitions: async ({ student }: { student?: string }) => {
-        const filter: any = {};
-        if (student) filter.student = student;
-        return await Competition.find(filter).lean();
-    },
+  competition: async ({ id }) =>
+    await Competition.findById(id).lean(),
 
-    
-    competition: async ({ id }: { id: string }) => {
-        return await Competition.findById(id).lean();
-    },
+  createCompetition: async ({ input }) => {
+    const saved = await new Competition(input).save();
+    return saved.toObject();
+  },
 
-    createCompetition: async ({ input }: { input: CompetitionInputTS }) => {
-        const doc = new Competition(input);
-        const saved = await doc.save();
-        return saved.toObject();
-    },
+  updateCompetition: async ({ id, input }) =>
+    await Competition.findByIdAndUpdate(id, input, { new: true }).lean(),
 
-    updateCompetition: async ({ id, input }: { id: string; input: CompetitionInputTS }) => {
-        const updated = await Competition.findByIdAndUpdate(id, input, { new: true }).lean();
-        return updated;
-    },
-
-   
-    deleteCompetition: async ({ id }: { id: string }) => {
-        const res = await Competition.findByIdAndDelete(id);
-        return !!res;
-    },
+  deleteCompetition: async ({ id }) =>
+    !!(await Competition.findByIdAndDelete(id))
 };
-
