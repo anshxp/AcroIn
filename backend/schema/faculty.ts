@@ -5,7 +5,7 @@ export interface Faculty extends Document{
     lastName:string;
     email:string;
     password:string;
-    profilepic:string;
+    profilepic?:string;
     experience:number;
     qualification:string;
     subjects:string[];
@@ -17,7 +17,7 @@ export interface Faculty extends Document{
     skills:string[];
     techstacks:string[];
     phone:string;
-    role: { type: String[], enum: ['faculty', 'dept_admin', 'super_admin'], default: 'faculty' },
+    role: string[];
     createdAt:Date;
     updatedAt:Date;
 }

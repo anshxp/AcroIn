@@ -1,51 +1,34 @@
 {
   "expo": {
-    "name": "AcroIn Mobile",
-    "slug": "acroin-mobile",
+    "name": "AcroIn",
+    "slug": "acroin",
     "version": "1.0.0",
+    "scheme": "acroin",
     "orientation": "portrait",
-
-    "icon": "./assets/icon.png",
-
+    "entryPoint": "./App.js",
     "userInterfaceStyle": "automatic",
-
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#ffffff"
-      }
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
     },
-
     "web": {
-      "favicon": "./assets/icon.png"
+      "output": "single"
     },
-
     "plugins": [
-      "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/icon.png",
-          "imageWidth": 200,
+          "image": "./assets/splash.png",
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
-    ],
-
-    "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
-    },
-
-    "extra": {
-      "eas": {
-        "projectId": "your-project-id-here"
-      }
-    }
+      ],
+      "expo-secure-store",
+      "expo-router"
+    ]
   }
 }
