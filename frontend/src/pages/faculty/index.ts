@@ -1,0 +1,9 @@
+export { FacultyDashboard } from './FacultyDashboard';
+export { FacultyProfile } from './Profile';
+export { VerifyStudents } from './VerifyStudents';
+export { PostOpportunities } from './PostOpportunities';
+export { SmartSearch } from './SmartSearch';
+export { FacialRecognition } from './FacialRecognition';
+export { Recommendations } from './Recommendations';
+export { PlacementHub } from './PlacementHub';
+export { FacultyAnalytics } from './FacultyAnalytics';
