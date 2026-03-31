@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import Student from '../models/Student.js';
 import Project from '../models/Project.js';
 import Internship from '../models/Internship.js';
@@ -7,16 +8,35 @@ import Certificate from '../models/Certificate.js';
 
 const router = express.Router();
 
-// Create student
+/// Create student
 router.post('/', async (req, res) => {
   try {
-    const student = new Student(req.body);
+    const { password, ...rest } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const student = new Student({
+      ...rest,
+      password: hashedPassword
+    });
+
     await student.save();
-    res.status(201).json(student);
+
+    // remove password from response
+    const { password: _, ...studentData } = student._doc;
+
+    res.status(201).json(studentData);
+
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
+
 // Get all students
 router.get('/', async (req, res) => {
   const students = await Student.find().populate('projects internships competitions certificates');

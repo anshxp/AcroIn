@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import Faculty from '../models/Faculty.js';
 
 const router = express.Router();
@@ -6,9 +7,27 @@ const router = express.Router();
 // Create faculty
 router.post('/', async (req, res) => {
   try {
-    const faculty = new Faculty(req.body);
+    const { password, ...rest } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ message: "Password is required" });
+    }
+
+    // hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const faculty = new Faculty({
+      ...rest,
+      password: hashedPassword
+    });
+
     await faculty.save();
-    res.status(201).json(faculty);
+
+    // remove password from response
+    const { password: _, ...facultyData } = faculty._doc;
+
+    res.status(201).json(facultyData);
+
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -28,8 +47,29 @@ router.get('/:id', async (req, res) => {
 
 // Update faculty
 router.put('/:id', async (req, res) => {
-  const faculty = await Faculty.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.json(faculty);
+  try {
+    const updatedData = { ...req.body };
+
+    // 🔐 If password is being updated → hash it
+    if (updatedData.password) {
+      updatedData.password = await bcrypt.hash(updatedData.password, 10);
+    }
+
+    const faculty = await Faculty.findByIdAndUpdate(
+      req.params.id,
+      updatedData,
+      { new: true, runValidators: true }
+    ).select('-password'); // 🚫 remove password from response
+
+    if (!faculty) {
+      return res.status(404).json({ message: "Faculty not found" });
+    }
+
+    res.json(faculty);
+
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 });
 
 // Delete faculty

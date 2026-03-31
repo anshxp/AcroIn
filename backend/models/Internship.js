@@ -6,6 +6,7 @@ const internshipSchema = new mongoose.Schema({
   duration: String,
   description: String,
   certificate_link: String,
+  location: String,
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
 }, { timestamps: true });
 
