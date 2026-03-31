@@ -199,7 +199,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column - Recent Activity */}
+        {/* Right Column-Recent Activity */}
         <div className="card">
           <div className="card-header">
             <div>

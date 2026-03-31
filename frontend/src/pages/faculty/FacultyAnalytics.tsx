@@ -92,7 +92,7 @@ export const FacultyAnalytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/*Stats Grid*/}
       <div className="stats-grid">
         {stats.map((stat, index) => (
           <div key={index} className="stat-card">

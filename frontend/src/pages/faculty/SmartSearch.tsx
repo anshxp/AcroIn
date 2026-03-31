@@ -64,7 +64,7 @@ export const SmartSearch: React.FC = () => {
 
   return (
     <div>
-      {/* Page Header */}
+      {/*Page Header*/}
       <div className="page-header">
         <div className="page-title-section">
           <h1>Smart Search</h1>

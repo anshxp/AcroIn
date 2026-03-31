@@ -65,7 +65,6 @@ export const PostCard: React.FC<PostCardProps> = ({
       }
       setIsLiked(!isLiked);
     } catch (error) {
-      // Toggle locally even if API fails (for demo)
       setIsLiked(!isLiked);
       setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
     }

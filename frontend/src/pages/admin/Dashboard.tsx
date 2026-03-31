@@ -153,7 +153,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Department Statistics */}
+        {/* Department_Statistics */}
         <Card>
           <CardHeader
             title="Department Statistics"

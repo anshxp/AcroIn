@@ -30,7 +30,7 @@ export const PlacementHub: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/*Tabs*/}
       <div className="tabs">
         <button 
           className={`tab-btn ${activeTab === 'requirements' ? 'active' : ''}`}

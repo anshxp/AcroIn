@@ -59,8 +59,6 @@ export const LoginPage: React.FC = () => {
         handleDemoLogin(demoType[0] as 'student' | 'faculty' | 'admin');
         return;
       }
-
-      // If admin is selected, block or handle separately (no admin login available in current auth context)
       if (userType === 'admin') {
         // Option 1: show user-friendly message
         setError('Admin login is not available on this page. Use the admin portal or contact your site administrator.');

@@ -112,7 +112,7 @@ export const AdminSettings: React.FC = () => {
           </div>
         </div>
 
-        {/* Notification Settings */}
+        {/* Notification Settings*/}
         <div className="settings-card">
           <div className="settings-card-header">
             <Bell size={20} />

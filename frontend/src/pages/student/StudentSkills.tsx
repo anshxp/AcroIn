@@ -105,7 +105,7 @@ export const StudentSkills: React.FC = () => {
       </div>
 
       <div className="dashboard-grid">
-        {/* Skills List */}
+        {/*Skills List*/}
         <div className="card">
           <div className="card-header">
             <div>

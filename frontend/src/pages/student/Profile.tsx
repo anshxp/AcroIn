@@ -101,7 +101,7 @@ export const StudentProfile: React.FC = () => {
 
   return (
     <div className="profile-page">
-      {/* Profile Header Card */}
+      {/*Profile Header Card*/}
       <div className="profile-header-card">
         <div className="profile-cover">
           <div className="profile-cover-gradient"></div>
