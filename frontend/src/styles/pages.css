@@ -190,7 +190,8 @@
 /* Search Bar */
 .search-bar {
   position: relative;
-  max-width: none;
+  max-width: 400px;
+  margin-bottom: 24px;
 }
 
 .search-bar svg {

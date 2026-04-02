@@ -13,23 +13,32 @@ import internshipRoutes from './routes/internship.js';
 import notificationRoutes from './routes/notification.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
+import certificateRoutes from './routes/certificate.js';
+import competitionRoutes from './routes/competition.js';
+import internshipRoutes from './routes/internship.js';
+import notificationRoutes from './routes/notification.js';
+import adminRoutes from './routes/admin.js';
+import chatRoutes from './routes/chat.js';
 
 dotenv.config();
-
-const app = express();
-app.use(cors());
+const app=express();
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+app.options('*', cors());
 app.use(express.json());
 
-app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/faculty', facultyRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/certificates', certificateRoutes);
-app.use('/api/competitions', competitionRoutes);
-app.use('/api/internships', internshipRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/chats', chatRoutes);
+app.use('/students', studentRoutes);
+app.use('/faculty', facultyRoutes);
+app.use('/posts', postRoutes);
+app.use('/certificates', certificateRoutes);
+app.use('/competitions', competitionRoutes);
+app.use('/internships', internshipRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/admin', adminRoutes);
+app.use('/chats', chatRoutes);
+app.use('/auth', authRoutes);
 
 const PORT = process.env.PORT || 5000;
 

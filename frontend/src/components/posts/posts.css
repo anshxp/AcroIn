@@ -1,76 +1,3 @@
-/* SidePanel Styles */
-.sidepanel-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1200;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.sidepanel {
-  background: #fff;
-  width: 400px;
-  max-width: 100vw;
-  height: 100vh;
-  box-shadow: -2px 0 16px rgba(0,0,0,0.08);
-  display: flex;
-  flex-direction: column;
-  animation: sidepanelSlideIn 0.2s ease-out;
-  position: relative;
-}
-
-.sidepanel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 12px 24px;
-  border-bottom: 1px solid #eee;
-}
-
-.sidepanel-close {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  color: #888;
-  cursor: pointer;
-  line-height: 1;
-}
-
-.sidepanel-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 24px;
-}
-
-.sidepanel-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.3);
-  z-index: 1199;
-}
-
-@keyframes sidepanelSlideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0.7;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@media (max-width: 600px) {
-  .sidepanel {
-    width: 100vw;
-    max-width: 100vw;
-    border-radius: 0;
-  }
-  .sidepanel-header, .sidepanel-content {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-}
 /* Posts Styles */
 
 /* Create Post Modal */
@@ -277,9 +204,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 16px;
   overflow: hidden;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 .post-header {
@@ -639,10 +563,8 @@
 
 /* Post Feed */
 .posts-feed {
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  box-sizing: border-box;
+  max-width: 680px;
+  margin: 0 auto;
 }
 
 .posts-loading {

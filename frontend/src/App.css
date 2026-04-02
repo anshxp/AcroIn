@@ -1,5 +1,7 @@
 /* App.css - Global styles for AcroIn */
-
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 /* Reset and base styles */
 * {
   margin: 0;

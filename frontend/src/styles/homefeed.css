@@ -1,9 +1,8 @@
 /* ============ HOME FEED STYLES (LinkedIn-inspired) ============ */
 
 .home-feed {
-  width: 100%;
-  max-width: none;
-  margin: 0;
+  max-width: 680px;
+  margin: 0 auto;
   padding: 0 16px;
 }
 
@@ -159,9 +158,6 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   overflow: hidden;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 .post-header {
