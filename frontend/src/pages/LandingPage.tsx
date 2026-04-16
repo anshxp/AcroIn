@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   GraduationCap, 
@@ -20,14 +20,9 @@ import {
 import { Navbar, Footer } from '../components/common';
 import '../styles/common.css';
 import './LandingPage.css';
-import { landingAPI } from '../services/api';
-// ...existing imports...
 
 export const LandingPage: React.FC = () => {
   const [dashboardTab, setDashboardTab] = useState<'student' | 'faculty'>('student');
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const landingNavLinks = [
     { label: 'Features', href: '#features' },
@@ -35,26 +30,6 @@ export const LandingPage: React.FC = () => {
     { label: 'Dashboard', href: '#dashboard' },
     { label: 'About', href: '#about' },
   ];
-
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await landingAPI.stats();
-        if (res.success) {
-          setStats(res.data);
-        } else {
-          setError(res.message || 'Failed to load stats');
-        }
-      } catch (err: any) {
-        setError(err.message || 'Error fetching stats');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
 
   return (
     <div className="landing-page">
@@ -68,15 +43,18 @@ export const LandingPage: React.FC = () => {
               <Zap size={14} />
               <span>Next-Gen Networking Platform</span>
             </div>
+            
             <h1 className="hero-title">
               Acro-In:<br />
               Connect.<br />
               <span className="text-gradient">Collaborate. Create.</span>
             </h1>
+            
             <p className="hero-description">
               The official student-faculty networking platform of Acropolis Institute. 
               Powered by AI for smart connections, skill validation, and career opportunities.
             </p>
+            
             <div className="hero-buttons">
               <Link to="/register" className="btn-primary">
                 <span>Get Started</span>
@@ -86,36 +64,32 @@ export const LandingPage: React.FC = () => {
                 <span>Watch Demo</span>
               </button>
             </div>
-            {loading ? (
-              <div className="hero-stats">Loading stats...</div>
-            ) : error ? (
-              <div className="hero-stats error">{error}</div>
-            ) : stats ? (
-              <div className="hero-stats">
-                <div className="stat-item">
-                  <Users size={20} className="stat-icon blue" />
-                  <div className="stat-content">
-                    <span className="stat-value blue">{stats.activeStudents}</span>
-                    <span className="stat-label">Active Students</span>
-                  </div>
-                </div>
-                <div className="stat-item">
-                  <Target size={20} className="stat-icon green" />
-                  <div className="stat-content">
-                    <span className="stat-value green">{stats.matchAccuracy}%</span>
-                    <span className="stat-label">Match Accuracy</span>
-                  </div>
-                </div>
-                <div className="stat-item">
-                  <Shield size={20} className="stat-icon orange" />
-                  <div className="stat-content">
-                    <span className="stat-value orange">{stats.verifiedProfiles}%</span>
-                    <span className="stat-label">Verified Profiles</span>
-                  </div>
+            
+            <div className="hero-stats">
+              <div className="stat-item">
+                <Users size={20} className="stat-icon blue" />
+                <div className="stat-content">
+                  <span className="stat-value blue">5K+</span>
+                  <span className="stat-label">Active Students</span>
                 </div>
               </div>
-            ) : null}
+              <div className="stat-item">
+                <Target size={20} className="stat-icon green" />
+                <div className="stat-content">
+                  <span className="stat-value green">95%</span>
+                  <span className="stat-label">Match Accuracy</span>
+                </div>
+              </div>
+              <div className="stat-item">
+                <Shield size={20} className="stat-icon orange" />
+                <div className="stat-content">
+                  <span className="stat-value orange">100%</span>
+                  <span className="stat-label">Verified Profiles</span>
+                </div>
+              </div>
+            </div>
           </div>
+          
           <div className="hero-image">
             <div className="hero-image-wrapper">
               <div className="ai-verified-badge">
@@ -143,46 +117,123 @@ export const LandingPage: React.FC = () => {
             <Zap size={14} />
             <span>Platform Features</span>
           </div>
+          
           <h2 className="section-title">
             <span className="text-gradient">Everything You Need</span><br />
             for Campus Excellence
           </h2>
+          
           <p className="section-description">
             Acro-In combines cutting-edge AI with intuitive design to create the most 
             comprehensive student-faculty networking platform in academic institutions.
           </p>
+          
           {/* Stats Cards */}
-          {loading ? (
-            <div className="stats-grid">Loading stats...</div>
-          ) : error ? (
-            <div className="stats-grid error">{error}</div>
-          ) : stats ? (
-            <div className="stats-grid">
-              <div className="stats-card">
-                <Users size={24} className="stats-card-icon blue" />
-                <span className="stats-card-value blue">{stats.verifiedStudents}</span>
-                <span className="stats-card-label">Verified Students</span>
-              </div>
-              <div className="stats-card">
-                <Target size={24} className="stats-card-icon green" />
-                <span className="stats-card-value green">{stats.matchAccuracy}%</span>
-                <span className="stats-card-label">Match Accuracy</span>
-              </div>
-              <div className="stats-card">
-                <TrendingUp size={24} className="stats-card-icon orange" />
-                <span className="stats-card-value orange">{stats.placementRate}%</span>
-                <span className="stats-card-label">Placement Rate</span>
-              </div>
-              <div className="stats-card">
-                <Brain size={24} className="stats-card-icon purple" />
-                <span className="stats-card-value purple">{stats.aiModels}</span>
-                <span className="stats-card-label">AI Models</span>
-              </div>
+          <div className="stats-grid">
+            <div className="stats-card">
+              <Users size={24} className="stats-card-icon blue" />
+              <span className="stats-card-value blue">5,247</span>
+              <span className="stats-card-label">Verified Students</span>
             </div>
-          ) : null}
+            <div className="stats-card">
+              <Target size={24} className="stats-card-icon green" />
+              <span className="stats-card-value green">95%</span>
+              <span className="stats-card-label">Match Accuracy</span>
+            </div>
+            <div className="stats-card">
+              <TrendingUp size={24} className="stats-card-icon orange" />
+              <span className="stats-card-value orange">89%</span>
+              <span className="stats-card-label">Placement Rate</span>
+            </div>
+            <div className="stats-card">
+              <Brain size={24} className="stats-card-icon purple" />
+              <span className="stats-card-value purple">50+</span>
+              <span className="stats-card-label">AI Models</span>
+            </div>
           </div>
+          
+          {/* Feature Cards */}
+          <div className="features-grid">
+            <div className="feature-card blue-gradient">
+              <div className="feature-header">
+                <div className="feature-icon blue">
+                  <Users size={24} />
+                </div>
+                <span className="feature-badge blue">Core Feature</span>
+              </div>
+              <h3 className="feature-title">Smart Networking</h3>
+              <p className="feature-description">
+                AI-powered connections between students, faculty, and industry professionals.
+              </p>
+            </div>
+            
+            <div className="feature-card cyan-gradient">
+              <div className="feature-header">
+                <div className="feature-icon cyan">
+                  <Search size={24} />
+                </div>
+                <span className="feature-badge cyan">AI Enhanced</span>
+              </div>
+              <h3 className="feature-title">Semantic Search</h3>
+              <p className="feature-description">
+                Find teammates, mentors, and opportunities with intelligent search algorithms.
+              </p>
+            </div>
+            
+            <div className="feature-card orange-gradient">
+              <div className="feature-header">
+                <div className="feature-icon orange">
+                  <Building2 size={24} />
+                </div>
+                <span className="feature-badge orange">Recruitment</span>
+              </div>
+              <h3 className="feature-title">Placement Hub</h3>
+              <p className="feature-description">
+                Streamlined recruitment with ML-powered candidate matching and analytics.
+              </p>
+            </div>
+            
+            <div className="feature-card beige-gradient">
+              <div className="feature-header">
+                <div className="feature-icon beige">
+                  <BarChart3 size={24} />
+                </div>
+                <span className="feature-badge beige">Analytics</span>
+              </div>
+              <h3 className="feature-title">Analytics Dashboard</h3>
+              <p className="feature-description">
+                Comprehensive insights into skills, engagement, and placement trends.
+              </p>
+            </div>
+            
+            <div className="feature-card green-gradient">
+              <div className="feature-header">
+                <div className="feature-icon green">
+                  <Shield size={24} />
+                </div>
+                <span className="feature-badge green">Security</span>
+              </div>
+              <h3 className="feature-title">Identity Verification</h3>
+              <p className="feature-description">
+                Facial recognition and liveness detection for secure, verified profiles.
+              </p>
+            </div>
+            
+            <div className="feature-card coral-gradient">
+              <div className="feature-header">
+                <div className="feature-icon coral">
+                  <Brain size={24} />
+                </div>
+                <span className="feature-badge coral">AI Core</span>
+              </div>
+              <h3 className="feature-title">Skill Intelligence</h3>
+              <p className="feature-description">
+                AI-driven skill assessment, validation, and recommendation systems.
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
-          {/* Feature Cards ...existing code... */}
 
       {/* AI Technology Section */}
       <section id="ai-integration" className="ai-section">

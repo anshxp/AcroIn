@@ -301,7 +301,6 @@
   border-radius: 10px;
   font-size: 15px;
   line-height: 1.7;
-  color: #1e293b;
   resize: vertical;
   transition: all 0.2s;
   font-family: inherit;
@@ -310,7 +309,7 @@
 .profile-textarea:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  /* box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);/ */
 }
 
 /* Skills Section */

@@ -56,6 +56,7 @@ async function seed() {
     name: 'Hackathon 2026',
     organizer: 'Tech Club',
     date: '2026-04-15',
+    application_link: 'https://techclub.org/hackathon-2026/register',
     student: student._id
   });
 
@@ -64,6 +65,7 @@ async function seed() {
     company: 'Tech Corp',
     position: 'Intern',
     duration: '3 months',
+    application_link: 'https://jobs.techcorp.com/internships/apply',
     student: student._id
   });
 
