@@ -17,6 +17,7 @@ import chatRoutes from './routes/chat.js';
 import landingRoutes from './routes/landing.js';
 import projectRoutes from './routes/project.js';
 import uiRoutes from './routes/ui.js';
+import { auditLogger } from './middleware/auditLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -50,6 +51,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json());
+app.use(auditLogger);
 
 // Serve uploads folder statically (fallback for local storage if Cloudinary not configured)
 app.use('/uploads', express.static('uploads'));

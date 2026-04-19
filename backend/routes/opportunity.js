@@ -1,9 +1,68 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Opportunity from '../models/Opportunity.js';
+import Post from '../models/Post.js';
+import User from '../models/User.js';
+import { createAnnouncementNotifications } from '../utils/announcementNotifications.js';
 import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
+import { postUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
+
+const toAbsoluteUploadUrl = (req, filePath) => {
+  if (!filePath) return '';
+  if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+
+  const normalized = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  return `${req.protocol}://${req.get('host')}${normalized}`;
+};
+
+const getAuthorFromUser = async (userId) => {
+  const user = await User.findById(userId).select('name userType designation department');
+  if (!user) {
+    return null;
+  }
+
+  return {
+    _id: user._id,
+    name: user.name,
+    designation: user.designation,
+    department: user.department,
+    userType: user.userType,
+  };
+};
+
+const buildOpportunityPostContent = (opportunity) => {
+  const lines = [
+    `New ${opportunity.type} opportunity: ${opportunity.title}`,
+  ];
+
+  if (opportunity.company) {
+    lines.push(`Company: ${opportunity.company}`);
+  }
+  if (opportunity.location) {
+    lines.push(`Venue: ${opportunity.location}`);
+  }
+  if (opportunity.eventDate) {
+    lines.push(`Date: ${new Date(opportunity.eventDate).toLocaleDateString()}`);
+  }
+  if (opportunity.deadline) {
+    lines.push(`Deadline: ${new Date(opportunity.deadline).toLocaleDateString()}`);
+  }
+  if (opportunity.description) {
+    lines.push(`Details: ${opportunity.description}`);
+  }
+  if (Array.isArray(opportunity.requirements) && opportunity.requirements.length > 0) {
+    lines.push(`Requirements: ${opportunity.requirements.join(', ')}`);
+  }
+  if (opportunity.application_link) {
+    lines.push(`Apply: ${opportunity.application_link}`);
+  }
+
+  return lines.join('\n');
+};
 
 // Get all opportunities
 router.get('/', async (req, res) => {
@@ -30,9 +89,19 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create opportunity (admin/faculty only)
-router.post('/', verifyToken, isAdminOrFaculty, async (req, res) => {
+router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), async (req, res) => {
   try {
-    const { title, type, company, location, deadline, description, requirements, application_link } = req.body;
+    const { title, type, company, location, eventDate, deadline, description, requirements, application_link } = req.body;
+    const uploadedAttachments = Array.isArray(req.files)
+      ? req.files
+          .map((file) => toAbsoluteUploadUrl(req, file.path || `/uploads/${file.filename}`))
+          .filter(Boolean)
+      : [];
+    const normalizedRequirements = Array.isArray(requirements)
+      ? requirements
+      : typeof requirements === 'string' && requirements.trim()
+        ? [requirements.trim()]
+        : [];
 
     if (!title || !application_link) {
       return res.status(400).json({ 
@@ -56,15 +125,44 @@ router.post('/', verifyToken, isAdminOrFaculty, async (req, res) => {
       type: type || 'internship',
       company,
       location,
+      eventDate: eventDate ? new Date(eventDate) : null,
       deadline: deadline ? new Date(deadline) : null,
       description,
-      requirements: Array.isArray(requirements) ? requirements : [],
+      requirements: normalizedRequirements,
       application_link,
+      attachments: uploadedAttachments,
       createdBy: req.user?.id,
       createdByRole: req.user?.userType
     });
 
     await opportunity.save();
+
+    const author = await getAuthorFromUser(req.user?.id);
+    let createdPost = null;
+    if (author) {
+      createdPost = await Post.create({
+        author,
+        content: buildOpportunityPostContent(opportunity),
+        images: uploadedAttachments,
+      });
+    }
+
+    await createAnnouncementNotifications({
+      req,
+      payload: {
+        title: opportunity.title,
+        description: opportunity.description,
+        company: opportunity.company,
+        location: opportunity.location,
+        type: opportunity.type,
+        requirements: opportunity.requirements,
+      },
+      announcementType: 'opportunity',
+      sourceId: opportunity._id,
+      title: opportunity.title,
+      actionPath: createdPost ? `/home?post=${createdPost._id}` : '/home',
+    });
+
     res.status(201).json(opportunity);
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });

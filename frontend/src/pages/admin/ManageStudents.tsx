@@ -3,6 +3,7 @@ import {
   Search,
   Plus,
   Trash2,
+  AlertTriangle,
   Edit2,
   Eye,
   Download,
@@ -25,6 +26,7 @@ interface Student {
   name: string;
   roll: string;
   email: string;
+  profileImage: string;
   department: string;
   tech_stack: string[];
   projectsCount: number;
@@ -36,7 +38,9 @@ interface Student {
 }
 
 export const ManageStudents: React.FC = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
   const [students, setStudents] = useState<Student[]>([]);
+  const [brokenImageMap, setBrokenImageMap] = useState<Record<string, boolean>>({});
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -44,6 +48,10 @@ export const ManageStudents: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteTargetStudent, setDeleteTargetStudent] = useState<Student | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeletingStudent, setIsDeletingStudent] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -51,11 +59,12 @@ export const ManageStudents: React.FC = () => {
     const loadStudents = async () => {
       try {
         const backendStudents = await studentAPI.getAllStudents();
-        const normalizedStudents = backendStudents.map((student: any) => ({
+        const normalizedStudents: Student[] = backendStudents.map((student: any): Student => ({
           _id: student._id,
           name: student.name || 'Unknown Student',
           roll: student.roll || 'N/A',
           email: student.email || 'N/A',
+          profileImage: student.profile_image || student.profileImage || student.profilepic || '',
           department: student.department || 'N/A',
           tech_stack: Array.isArray(student.tech_stack) ? student.tech_stack : [],
           projectsCount: Array.isArray(student.projects) ? student.projects.length : 0,
@@ -78,10 +87,17 @@ export const ManageStudents: React.FC = () => {
   const departments = [
     { value: 'all', label: 'All Departments' },
     { value: 'CSE', label: 'Computer Science' },
+    { value: 'AIML', label: 'AI & ML' },
+    { value: 'DS', label: 'Data Science' },
+    { value: 'CSIT', label: 'CSIT' },
+    { value: 'CYBER', label: 'Cyber Security' },
     { value: 'ECE', label: 'Electronics' },
+    { value: 'EEE', label: 'Electrical' },
+    { value: 'VLSI', label: 'VLSI' },
     { value: 'ME', label: 'Mechanical' },
     { value: 'CE', label: 'Civil' },
     { value: 'IT', label: 'Information Technology' },
+    { value: 'IL', label: 'IL' },
   ];
 
   const stats = {
@@ -119,13 +135,34 @@ export const ManageStudents: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleDeleteStudent = (id: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return;
+  const openDeleteModal = (targetStudent: Student) => {
+    setDeleteTargetStudent(targetStudent);
+    setDeleteError('');
+    setIsDeleteModalOpen(true);
+  };
 
-    studentAPI
-      .deleteStudent(id)
-      .then(() => setStudents((prev) => prev.filter((s) => s._id !== id)))
-      .catch(() => undefined);
+  const closeDeleteModal = () => {
+    if (isDeletingStudent) return;
+    setIsDeleteModalOpen(false);
+    setDeleteTargetStudent(null);
+    setDeleteError('');
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deleteTargetStudent) return;
+
+    setDeleteError('');
+    setIsDeletingStudent(true);
+
+    try {
+      await studentAPI.deleteStudent(deleteTargetStudent._id);
+      setStudents((prev) => prev.filter((s) => s._id !== deleteTargetStudent._id));
+      closeDeleteModal();
+    } catch {
+      setDeleteError('Unable to delete this student. Please try again.');
+    } finally {
+      setIsDeletingStudent(false);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -135,12 +172,86 @@ export const ManageStudents: React.FC = () => {
   const getDepartmentColor = (dept: string) => {
     const colors: Record<string, string> = {
       CSE: '#3b82f6',
+      AIML: '#6366f1',
+      DS: '#0ea5e9',
+      CSIT: '#1d4ed8',
+      CYBER: '#0f766e',
       ECE: '#8b5cf6',
+      EEE: '#7c3aed',
+      VLSI: '#9333ea',
       ME: '#f59e0b',
       CE: '#10b981',
       IT: '#ec4899',
+      IL: '#64748b',
     };
     return colors[dept] || '#64748b';
+  };
+
+  const resolveImageUrl = (url?: string) => {
+    if (!url || !url.trim()) return undefined;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    return `${API_BASE_URL}${normalizedPath}`;
+  };
+
+  const markImageBroken = (key: string) => {
+    setBrokenImageMap((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+  };
+
+  const escapeCsv = (value: unknown) => {
+    const normalized = String(value ?? '').replace(/\r?\n|\r/g, ' ').trim();
+    const escaped = normalized.replace(/"/g, '""');
+    return `"${escaped}"`;
+  };
+
+  const downloadCsv = (filename: string, rows: string[][]) => {
+    const csv = rows.map((row) => row.map((cell) => escapeCsv(cell)).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportStudents = () => {
+    const header = [
+      'Name',
+      'Roll No',
+      'Email',
+      'Department',
+      'Status',
+      'Projects',
+      'Internships',
+      'Competitions',
+      'Certificates',
+      'Tech Stack',
+      'Created At',
+    ];
+
+    const rows = filteredStudents.map((student) => ([
+      student.name,
+      student.roll,
+      student.email,
+      student.department,
+      student.status,
+      String(student.projectsCount),
+      String(student.internshipsCount),
+      String(student.competitionsCount),
+      String(student.certificatesCount),
+      student.tech_stack.join(' | '),
+      new Date(student.createdAt).toISOString(),
+    ]));
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`students-${dateStamp}.csv`, [header, ...rows]);
   };
 
   return (
@@ -152,7 +263,7 @@ export const ManageStudents: React.FC = () => {
           <p className="page-subtitle">View and manage all registered students</p>
         </div>
         <div className="header-actions">
-          <button className="btn-secondary">
+          <button className="btn-secondary" onClick={handleExportStudents}>
             <Download size={18} />
             Export
           </button>
@@ -256,18 +367,35 @@ export const ManageStudents: React.FC = () => {
             {paginatedStudents.map((student) => (
               <tr key={student._id}>
                 <td>
+                  {(() => {
+                    const imageKey = `student-table-${student._id}`;
+                    const imageUrl = resolveImageUrl(student.profileImage);
+                    const canShowImage = Boolean(imageUrl && !brokenImageMap[imageKey]);
+
+                    return (
                   <div className="table-user">
                     <div 
                       className="table-user-avatar" 
                       style={{ background: `linear-gradient(135deg, ${getDepartmentColor(student.department)} 0%, ${getDepartmentColor(student.department)}dd 100%)` }}
                     >
-                      {getInitials(student.name)}
+                      {canShowImage ? (
+                        <img
+                          src={imageUrl}
+                          alt={student.name}
+                          className="avatar-image"
+                          onError={() => markImageBroken(imageKey)}
+                        />
+                      ) : (
+                        getInitials(student.name)
+                      )}
                     </div>
                     <div className="table-user-info">
                       <h4>{student.name}</h4>
                       <p>{student.email}</p>
                     </div>
                   </div>
+                    );
+                  })()}
                 </td>
                 <td>
                   <span className="roll-number">{student.roll}</span>
@@ -322,7 +450,7 @@ export const ManageStudents: React.FC = () => {
                     </button>
                     <button 
                       className="delete"
-                      onClick={() => handleDeleteStudent(student._id)}
+                      onClick={() => openDeleteModal(student)}
                       title="Delete"
                     >
                       <Trash2 size={16} />
@@ -369,6 +497,77 @@ export const ManageStudents: React.FC = () => {
         </div>
       </div>
 
+      {/* Delete Student Modal */}
+      {isDeleteModalOpen && deleteTargetStudent && (
+        <div className="modal-overlay" onClick={closeDeleteModal}>
+          <div className="modal-content modal-confirm" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Student</h2>
+              <button className="modal-close" onClick={closeDeleteModal} disabled={isDeletingStudent}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="delete-warning-banner">
+                <AlertTriangle size={18} />
+                <span>This action will permanently remove this student account.</span>
+              </div>
+
+              <div className="confirm-delete-box">
+                <p className="confirm-delete-title">Are you sure you want to continue?</p>
+                <p className="confirm-delete-text">
+                  You are deleting <strong>{deleteTargetStudent.name}</strong>. This cannot be undone.
+                </p>
+              </div>
+
+              <div className="delete-faculty-preview">
+                {(() => {
+                  const imageKey = `student-delete-${deleteTargetStudent._id}`;
+                  const imageUrl = resolveImageUrl(deleteTargetStudent.profileImage);
+                  const canShowImage = Boolean(imageUrl && !brokenImageMap[imageKey]);
+
+                  return (
+                    <div className="delete-faculty-avatar" style={{ background: `linear-gradient(135deg, ${getDepartmentColor(deleteTargetStudent.department)} 0%, ${getDepartmentColor(deleteTargetStudent.department)}dd 100%)` }}>
+                      {canShowImage ? (
+                        <img
+                          src={imageUrl}
+                          alt={deleteTargetStudent.name}
+                          className="avatar-image"
+                          onError={() => markImageBroken(imageKey)}
+                        />
+                      ) : (
+                        getInitials(deleteTargetStudent.name)
+                      )}
+                    </div>
+                  );
+                })()}
+                <div className="delete-faculty-meta">
+                  <h4>{deleteTargetStudent.name}</h4>
+                  <p>{deleteTargetStudent.email}</p>
+                  <span>{deleteTargetStudent.department}</span>
+                </div>
+              </div>
+
+              {deleteError && (
+                <div className="auth-error" style={{ marginTop: '4px' }}>
+                  <span>{deleteError}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="modal-btn cancel" onClick={closeDeleteModal} disabled={isDeletingStudent}>
+                Cancel
+              </button>
+              <button type="button" className="modal-btn submit delete" onClick={handleDeleteStudent} disabled={isDeletingStudent}>
+                {isDeletingStudent ? 'Deleting...' : 'Delete Student'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* View/Edit Modal */}
       {isModalOpen && selectedStudent && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
@@ -382,12 +581,27 @@ export const ManageStudents: React.FC = () => {
             
             <div className="modal-form">
               {/* Student Profile Header */}
+              {(() => {
+                const imageKey = `student-modal-${selectedStudent._id}`;
+                const imageUrl = resolveImageUrl(selectedStudent.profileImage);
+                const canShowImage = Boolean(imageUrl && !brokenImageMap[imageKey]);
+
+                return (
               <div className="student-profile-header">
                 <div 
                   className="student-avatar-large"
                   style={{ background: `linear-gradient(135deg, ${getDepartmentColor(selectedStudent.department)} 0%, ${getDepartmentColor(selectedStudent.department)}dd 100%)` }}
                 >
-                  {getInitials(selectedStudent.name)}
+                  {canShowImage ? (
+                    <img
+                      src={imageUrl}
+                      alt={selectedStudent.name}
+                      className="avatar-image"
+                      onError={() => markImageBroken(imageKey)}
+                    />
+                  ) : (
+                    getInitials(selectedStudent.name)
+                  )}
                 </div>
                 <div className="student-profile-info">
                   <h3>{selectedStudent.name}</h3>
@@ -397,6 +611,8 @@ export const ManageStudents: React.FC = () => {
                   </span>
                 </div>
               </div>
+                );
+              })()}
 
               {/* Stats Row */}
               <div className="student-stats-row">

@@ -47,21 +47,43 @@ if (isCloudinaryConfigured) {
   });
 }
 
+const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+const POST_MEDIA_MIMES = [
+  ...IMAGE_MIMES,
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'application/pdf',
+];
+
 // File filter
-const fileFilter = (req, file, cb) => {
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-  if (allowedMimes.includes(file.mimetype)) {
+const imageFileFilter = (req, file, cb) => {
+  if (IMAGE_MIMES.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Invalid file type. Only images are allowed.'));
   }
 };
 
+const postMediaFileFilter = (req, file, cb) => {
+  if (POST_MEDIA_MIMES.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only images, videos, and PDFs are allowed.'));
+  }
+};
+
 // Create multer instance
 export const upload = multer({
   storage,
-  fileFilter,
+  fileFilter: imageFileFilter,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
+export const postUpload = multer({
+  storage,
+  fileFilter: postMediaFileFilter,
+  limits: { fileSize: 25 * 1024 * 1024 },
 });
 
 export { cloudinary };

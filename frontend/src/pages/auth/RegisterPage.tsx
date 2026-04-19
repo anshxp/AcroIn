@@ -38,11 +38,17 @@ export const RegisterPage: React.FC = () => {
 
   const departments = [
     { value: 'CSE', label: 'Computer Science & Engineering' },
+    { value: 'AIML', label: 'Artificial Intelligence & Machine Learning' },
+    { value: 'DS', label: 'Data Science' },
+    { value: 'CSIT', label: 'Computer Science & Information Technology' },
+    { value: 'CYBER', label: 'Cyber Security' },
     { value: 'ECE', label: 'Electronics & Communication Engineering' },
     { value: 'EEE', label: 'Electrical & Electronics Engineering' },
+    { value: 'VLSI', label: 'VLSI Design' },
     { value: 'ME', label: 'Mechanical Engineering' },
     { value: 'CE', label: 'Civil Engineering' },
     { value: 'IT', label: 'Information Technology' },
+    { value: 'IL', label: 'IL' },
   ];
 
   const designations = [
@@ -66,13 +72,13 @@ export const RegisterPage: React.FC = () => {
     try {
       if (userType === 'student') {
         await register(studentForm, 'student');
-        navigate('/student/dashboard');
+        navigate('/student/profile');
       } else {
         await register({
           ...facultyForm,
           experience: parseInt(facultyForm.experience),
         }, 'faculty');
-        navigate('/faculty/dashboard');
+        navigate('/faculty/profile');
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');

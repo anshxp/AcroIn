@@ -1,8 +1,12 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Competition from '../models/Competition.js';
+import Student from '../models/Student.js';
+import User from '../models/User.js';
+import { createAnnouncementNotifications } from '../utils/announcementNotifications.js';
 import { resolveStudentId } from '../utils/resolveStudentId.js';
-import { verifyToken, isAdminOrFaculty, isStudent } from '../middleware/authMiddleware.js';
+import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
 
 const withApplicationLink = (doc) => {
@@ -36,8 +40,35 @@ const normalizeApplicationLinkPayload = (payload) => {
   return payload;
 };
 
+const resolveRequesterStudentId = async (req) => {
+  if (req.user?.userType !== 'student' || !req.user?.id) {
+    return null;
+  }
+
+  const userRecord = await User.findById(req.user.id).select('email');
+  if (!userRecord?.email) {
+    return null;
+  }
+
+  const student = await Student.findOne({ email: userRecord.email }).select('_id');
+  return student?._id || null;
+};
+
+const canMutateCompetition = async (req, competition) => {
+  if (!competition) return false;
+  if (req.user?.userType === 'admin') return true;
+  if (competition.createdBy?.toString() === req.user?.id) return true;
+
+  if (req.user?.userType === 'student') {
+    const requesterStudentId = await resolveRequesterStudentId(req);
+    return requesterStudentId && competition.student?.toString() === requesterStudentId.toString();
+  }
+
+  return false;
+};
+
 // Get all competitions
-router.get('/', async (req, res) => {
+router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
   try {
     const competitions = await Competition.find();
     res.json(competitions.map(withApplicationLink));
@@ -47,10 +78,17 @@ router.get('/', async (req, res) => {
 });
 
 // Get competitions by student
-router.get('/student/:studentId', async (req, res) => {
+router.get('/student/:studentId', verifyToken, async (req, res) => {
   try {
     const studentId = await resolveStudentId(req.params.studentId);
     if (!studentId) return res.json([]);
+
+    if (req.user?.userType === 'student') {
+      const requesterStudentId = await resolveRequesterStudentId(req);
+      if (!requesterStudentId || requesterStudentId.toString() !== studentId.toString()) {
+        return res.status(403).json({ success: false, message: 'Not authorized to access these competitions' });
+      }
+    }
 
     const competitions = await Competition.find({ student: studentId });
     res.json(competitions.map(withApplicationLink));
@@ -64,25 +102,54 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
     const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
-    
-    // For admin/faculty, application_link is required. For students, it's optional
+
     if (isAdminOrFacultyUser && !payload.application_link) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Competition link is required for admin/faculty submissions' 
+      return res.status(400).json({
+        success: false,
+        message: 'Competition link is required for admin/faculty submissions',
       });
     }
-    
+
     if (payload.student) {
       payload.student = await resolveStudentId(payload.student);
     }
-    
-    // Track who created this
+
+    if (req.user?.userType === 'student') {
+      const requesterStudentId = await resolveRequesterStudentId(req);
+      if (!requesterStudentId) {
+        return res.status(403).json({ success: false, message: 'Student profile not found for authenticated user' });
+      }
+
+      if (payload.student && payload.student.toString() !== requesterStudentId.toString()) {
+        return res.status(403).json({ success: false, message: 'Students can only create competitions for themselves' });
+      }
+
+      payload.student = requesterStudentId;
+    }
+
     payload.createdBy = req.user?.id;
     payload.createdByRole = req.user?.userType;
 
     const competition = new Competition(payload);
     await competition.save();
+
+    // Add competition ID to student's competitions array
+    if (competition.student) {
+      await Student.findByIdAndUpdate(
+        competition.student,
+        { $addToSet: { competitions: competition._id } },
+        { new: true }
+      );
+    }
+
+    await createAnnouncementNotifications({
+      req,
+      payload,
+      announcementType: 'competition',
+      sourceId: competition._id,
+      title: competition.name,
+    });
+
     res.status(201).json(withApplicationLink(competition));
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
@@ -90,16 +157,29 @@ router.post('/', verifyToken, async (req, res) => {
 });
 
 // Apply to competition
-router.post('/:id/apply', async (req, res) => {
+router.post('/:id/apply', verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid competition id' });
     }
-    const { studentId } = req.body;
+
+    if (req.user?.userType !== 'student') {
+      return res.status(403).json({ success: false, message: 'Only students can apply' });
+    }
+
+    const requesterStudentId = await resolveRequesterStudentId(req);
+    if (!requesterStudentId) {
+      return res.status(403).json({ success: false, message: 'Student profile not found for authenticated user' });
+    }
+
     const competition = await Competition.findById(req.params.id);
     if (!competition) return res.status(404).json({ success: false, message: 'Competition not found' });
+
     if (!competition.students) competition.students = [];
-    if (studentId && !competition.students.includes(studentId)) competition.students.push(studentId);
+    if (!competition.students.some((id) => id.toString() === requesterStudentId.toString())) {
+      competition.students.push(requesterStudentId);
+    }
+
     await competition.save();
     res.json(withApplicationLink(competition));
   } catch (err) {
@@ -108,37 +188,52 @@ router.post('/:id/apply', async (req, res) => {
 });
 
 // Update competition
-router.put('/:id', async (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid competition id' });
+    }
+
+    const competition = await Competition.findById(req.params.id);
+    if (!competition) {
+      return res.status(404).json({ success: false, message: 'Competition not found' });
+    }
+
+    const allowed = await canMutateCompetition(req, competition);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this competition' });
+    }
+
     const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
     if (payload.student) {
       payload.student = await resolveStudentId(payload.student);
     }
 
-    const competition = await Competition.findByIdAndUpdate(
-      req.params.id,
-      payload,
-      { new: true, runValidators: true }
-    );
-
-    if (!competition) {
-      return res.status(404).json({ message: "Competition not found" });
-    }
+    Object.assign(competition, payload);
+    await competition.save();
 
     res.json(withApplicationLink(competition));
-
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
+
 // Delete competition
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid competition id' });
     }
-    const deleted = await Competition.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ success: false, message: 'Competition not found' });
+
+    const competition = await Competition.findById(req.params.id);
+    if (!competition) return res.status(404).json({ success: false, message: 'Competition not found' });
+
+    const allowed = await canMutateCompetition(req, competition);
+    if (!allowed) {
+      return res.status(403).json({ success: false, message: 'Not authorized to delete this competition' });
+    }
+
+    await Competition.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Competition deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

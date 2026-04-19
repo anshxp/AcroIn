@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { 
   Save, 
   Bell, 
@@ -13,26 +13,156 @@ import {
   Upload,
   RefreshCw
 } from 'lucide-react';
+import { uiAPI, type AdminSystemSettings } from '../../services/api';
 import '../../styles/pages.css';
 
-export const AdminSettings: React.FC = () => {
-  const [settings, setSettings] = useState({
-    siteName: 'AcroIn',
-    siteUrl: 'https://acroin.edu',
-    adminEmail: 'admin@acroin.edu',
-    supportEmail: 'support@acroin.edu',
-    emailNotifications: true,
-    pushNotifications: true,
-    autoApproval: false,
-    maintenanceMode: false,
-    maxFileSize: '10',
-    allowedFileTypes: 'pdf,jpg,png,doc,docx',
-    sessionTimeout: '30',
-    maxLoginAttempts: '5',
-  });
+type SettingsFormState = {
+  siteName: string;
+  siteUrl: string;
+  adminEmail: string;
+  supportEmail: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  autoApproval: boolean;
+  maintenanceMode: boolean;
+  maxFileSize: string;
+  allowedFileTypes: string;
+  sessionTimeout: string;
+  maxLoginAttempts: string;
+};
 
-  const handleSave = () => {
-    alert('Settings saved successfully!');
+const DEFAULT_FORM_STATE: SettingsFormState = {
+  siteName: 'AcroIn',
+  siteUrl: 'https://acroin.edu',
+  adminEmail: 'admin@acroin.edu',
+  supportEmail: 'support@acroin.edu',
+  emailNotifications: true,
+  pushNotifications: true,
+  autoApproval: false,
+  maintenanceMode: false,
+  maxFileSize: '10',
+  allowedFileTypes: 'pdf,png,jpg',
+  sessionTimeout: '30',
+  maxLoginAttempts: '5',
+};
+
+const toFormState = (settings: AdminSystemSettings): SettingsFormState => ({
+  siteName: settings.general?.siteName || DEFAULT_FORM_STATE.siteName,
+  siteUrl: settings.general?.siteUrl || DEFAULT_FORM_STATE.siteUrl,
+  adminEmail: settings.general?.adminEmail || DEFAULT_FORM_STATE.adminEmail,
+  supportEmail: settings.general?.supportEmail || DEFAULT_FORM_STATE.supportEmail,
+  emailNotifications: settings.notifications?.emailNotifications ?? DEFAULT_FORM_STATE.emailNotifications,
+  pushNotifications: settings.notifications?.pushNotifications ?? DEFAULT_FORM_STATE.pushNotifications,
+  autoApproval: settings.notifications?.autoApproval ?? DEFAULT_FORM_STATE.autoApproval,
+  maintenanceMode: settings.security?.maintenanceMode ?? DEFAULT_FORM_STATE.maintenanceMode,
+  maxFileSize: String(settings.upload?.maxFileSizeMb ?? DEFAULT_FORM_STATE.maxFileSize),
+  allowedFileTypes: (settings.upload?.allowedFileTypes || []).join(',') || DEFAULT_FORM_STATE.allowedFileTypes,
+  sessionTimeout: String(settings.security?.sessionTimeoutMinutes ?? DEFAULT_FORM_STATE.sessionTimeout),
+  maxLoginAttempts: String(settings.security?.maxLoginAttempts ?? DEFAULT_FORM_STATE.maxLoginAttempts),
+});
+
+const toPayload = (form: SettingsFormState): AdminSystemSettings => ({
+  general: {
+    siteName: form.siteName.trim(),
+    siteUrl: form.siteUrl.trim(),
+    adminEmail: form.adminEmail.trim(),
+    supportEmail: form.supportEmail.trim(),
+  },
+  notifications: {
+    emailNotifications: form.emailNotifications,
+    pushNotifications: form.pushNotifications,
+    autoApproval: form.autoApproval,
+  },
+  security: {
+    sessionTimeoutMinutes: Number(form.sessionTimeout),
+    maxLoginAttempts: Number(form.maxLoginAttempts),
+    maintenanceMode: form.maintenanceMode,
+  },
+  upload: {
+    maxFileSizeMb: Number(form.maxFileSize),
+    allowedFileTypes: form.allowedFileTypes
+      .split(',')
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean),
+  },
+  database: {
+    backupFrequency: 'weekly',
+    lastBackupAt: null,
+  },
+});
+
+export const AdminSettings: React.FC = () => {
+  const [settings, setSettings] = useState<SettingsFormState>(DEFAULT_FORM_STATE);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        setIsLoading(true);
+        setErrorMessage(null);
+        const data = await uiAPI.getAdminSettings();
+        setSettings(toFormState(data));
+      } catch (error: any) {
+        const message = error?.response?.data?.message || 'Failed to load settings. Please try again.';
+        setErrorMessage(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const validationError = useMemo(() => {
+    if (!settings.siteName.trim()) return 'Site name is required.';
+    if (!settings.siteUrl.trim()) return 'Site URL is required.';
+    if (!settings.adminEmail.trim()) return 'Admin email is required.';
+    if (!settings.supportEmail.trim()) return 'Support email is required.';
+
+    const sessionTimeout = Number(settings.sessionTimeout);
+    if (Number.isNaN(sessionTimeout) || sessionTimeout < 5 || sessionTimeout > 120) {
+      return 'Session timeout must be between 5 and 120 minutes.';
+    }
+
+    const maxLoginAttempts = Number(settings.maxLoginAttempts);
+    if (Number.isNaN(maxLoginAttempts) || maxLoginAttempts < 3 || maxLoginAttempts > 10) {
+      return 'Max login attempts must be between 3 and 10.';
+    }
+
+    const maxFileSize = Number(settings.maxFileSize);
+    if (Number.isNaN(maxFileSize) || maxFileSize < 1 || maxFileSize > 100) {
+      return 'Max file size must be between 1 and 100 MB.';
+    }
+
+    return null;
+  }, [settings]);
+
+  const handleSave = async () => {
+    if (validationError) {
+      setErrorMessage(validationError);
+      setStatusMessage(null);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setErrorMessage(null);
+      setStatusMessage(null);
+
+      const payload = toPayload(settings);
+      const updated = await uiAPI.updateAdminSettings(payload);
+      setSettings(toFormState(updated));
+      setStatusMessage('Settings saved successfully.');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Failed to save settings. Please try again.';
+      setErrorMessage(message);
+      setStatusMessage(null);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -42,12 +172,21 @@ export const AdminSettings: React.FC = () => {
         <div className="page-header-content">
           <h1 className="page-title">System Settings</h1>
           <p className="page-subtitle">Configure application settings and preferences</p>
+          {statusMessage && <p style={{ color: '#10b981', marginTop: '8px' }}>{statusMessage}</p>}
+          {errorMessage && <p style={{ color: '#ef4444', marginTop: '8px' }}>{errorMessage}</p>}
         </div>
-        <button className="add-button" onClick={handleSave}>
+        <button className="add-button" onClick={handleSave} disabled={isSaving || isLoading}>
           <Save size={18} />
-          Save All Settings
+          {isSaving ? 'Saving...' : 'Save All Settings'}
         </button>
       </div>
+
+      {isLoading ? (
+        <div className="settings-card" style={{ marginTop: '16px' }}>
+          <div className="settings-card-body">Loading settings...</div>
+        </div>
+      ) : (
+      <>
 
       {/* Settings Grid */}
       <div className="settings-grid">
@@ -294,11 +433,13 @@ export const AdminSettings: React.FC = () => {
 
       {/* Save Button at Bottom */}
       <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="add-button" onClick={handleSave}>
+        <button className="add-button" onClick={handleSave} disabled={isSaving || isLoading}>
           <Save size={18} />
-          Save All Settings
+          {isSaving ? 'Saving...' : 'Save All Settings'}
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 };

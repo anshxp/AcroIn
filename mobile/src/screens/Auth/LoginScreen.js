@@ -6,12 +6,20 @@ import { AuthContext } from "../../context/AuthContext";
 export default function LoginScreen({ navigation }) {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [error, setError] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
 	const { signIn } = useContext(AuthContext);
 
-	const loginUser = () => {
-		// demo login: set a token so the app navigates to the TabNavigator
-		console.log("Logging in", email);
-		signIn("demo-token");
+	const loginUser = async () => {
+		try {
+			setError("");
+			setIsLoading(true);
+			await signIn({ email, password });
+		} catch (err) {
+			setError(err?.message || "Unable to log in");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -35,8 +43,10 @@ export default function LoginScreen({ navigation }) {
 			/>
 
 			<Button mode="contained" onPress={loginUser} style={styles.button} buttonColor="#1A73E8">
-				Login
+				{isLoading ? "Logging in..." : "Login"}
 			</Button>
+
+			{error ? <Text style={styles.errorText}>{error}</Text> : null}
 
 			<TouchableOpacity onPress={() => navigation.navigate("Register")}> 
 				<Text style={styles.footerText}>Don't have an account? Register</Text>
@@ -50,5 +60,6 @@ const styles = StyleSheet.create({
 	title: { fontSize: 28, fontWeight: "700", textAlign: "center", marginBottom: 12 },
 	input: { marginBottom: 12, backgroundColor: "white" },
 	button: { paddingVertical: 6, marginTop: 6 },
+	errorText: { color: "#dc2626", textAlign: "center", marginTop: 12 },
 	footerText: { textAlign: "center", marginTop: 18, color: "#1A73E8" },
 });

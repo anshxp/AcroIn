@@ -8,7 +8,7 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials, userType: 'student' | 'faculty' | 'admin') => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<void>;
   register: (data: StudentRegisterData | FacultyRegisterData, userType: 'student' | 'faculty') => Promise<void>;
   logout: () => void;
 }
@@ -47,28 +47,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (credentials: LoginCredentials, userType: 'student' | 'faculty' | 'admin') => {
+  const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
-      // For admin, use faculty login endpoint
-      const loginType = userType === 'admin' ? 'faculty' : userType;
-      const response = loginType === 'student' 
-        ? await authAPI.studentLogin(credentials)
-        : await authAPI.facultyLogin(credentials);
+      const response = await authAPI.login(credentials);
 
       if (response.success && response.token && response.user) {
+        const resolvedUserType = (response.user as any).userType as 'student' | 'faculty' | 'admin';
+        const resolvedName = (response.user as any).name
+          || `${(response.user as any).firstname || ''} ${(response.user as any).lastName || ''}`.trim()
+          || 'User';
+
         const userData: User = {
           id: response.user._id,
           email: response.user.email,
-          name: loginType === 'student' 
-            ? (response.user as any).name 
-            : `${(response.user as any).firstname} ${(response.user as any).lastName}`,
-          userType,
-          role: loginType === 'faculty' ? (response.user as any).role : undefined,
-          firstname: loginType === 'faculty' ? (response.user as any).firstname : undefined,
-          lastName: loginType === 'faculty' ? (response.user as any).lastName : undefined,
+          name: resolvedName,
+          userType: resolvedUserType,
+          role: (response.user as any).role,
+          firstname: (response.user as any).firstname,
+          lastName: (response.user as any).lastName,
           department: (response.user as any).department,
-          designation: loginType === 'faculty' ? (response.user as any).designation : undefined,
+          designation: (response.user as any).designation,
         };
 
         localStorage.setItem('token', response.token);

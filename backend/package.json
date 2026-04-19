@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "sync:profiles": "node sync-profiles.js",
+    "migrate:face-embeddings": "node migrate-face-embeddings-to-student.cjs",
+    "migrate:project-references": "node migrate-project-references.js"
   },
   "dependencies": {
     "axios": "^1.14.0",
@@ -20,6 +23,6 @@
     "multer-storage-cloudinary": "^4.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.1.14"
   }
 }

@@ -245,3 +245,269 @@ Recruiter access
 🧠 Final Product Statement
 
 AcroIn is a faculty-verified, identity-backed student talent discovery platform that enables fast, accurate, and trustworthy skill-based search within a college ecosystem.
+
+
+
+📘 AcroIn — Role-Based Authority & System Control Document (STRICT)
+🧠 0. GLOBAL SYSTEM RULES (APPLY TO EVERYONE)
+
+These are non-negotiable constraints across the platform:
+
+🔒 Identity Rules
+Every user MUST have:
+Verified college email
+Single account per email
+Student WITHOUT face data → cannot be verified
+Student WITHOUT profile completeness ≥ 40% → excluded from search
+🔐 Access Control Layer (Backend Middleware)
+requireAuth
+requireRole("student" | "faculty" | "admin")
+requireSameDepartment (faculty → student actions)
+⚠️ System Integrity Rules
+No user can:
+Modify another user’s core data
+Override verification manually (except admin)
+All sensitive actions must be logged
+👥 1. STUDENT ROLE — FULL SPEC
+🎓 PURPOSE
+Be discoverable based on skills
+Maintain verified profile
+Apply for opportunities
+✅ PERMISSIONS (WHAT STUDENT CAN DO)
+👤 Profile
+Create profile (once)
+Update own profile
+Upload:
+Skills
+Projects
+Certificates
+Resume
+Social links
+🎥 Face System
+Upload video for face capture
+Re-upload face data
+View face verification status
+🔎 Discovery
+View:
+Opportunities
+Notifications
+Get:
+Recommendations (future)
+❌ RESTRICTIONS (VERY IMPORTANT)
+🚫 Cannot:
+Verify themselves
+Access other students’ private data
+Perform face search
+Edit verification status
+Post opportunities
+🚫 Hidden Limitations
+If:
+profileCompleteness < 40
+
+→ NOT shown in search results
+
+🚫 Face Rules
+If:
+faceVerificationStatus !== "complete"
+
+→ Cannot be verified by faculty
+
+🧠 SYSTEM BEHAVIOR FOR STUDENT
+🔹 Profile Completeness Calculation Trigger
+On every profile update
+🔹 Face Upload Flow
+Upload video
+→ extract frames
+→ detect face
+→ generate embeddings
+→ store top N
+→ update status
+🔹 Verification Visibility
+Student can ONLY see:
+verified / not_verified
+NOT who verified (optional for privacy)
+👨‍🏫 2. FACULTY ROLE — FULL SPEC
+🎯 PURPOSE
+Verify students
+Discover talent
+Post opportunities
+✅ PERMISSIONS
+🔎 Search System
+Search students using:
+Skills
+Filters
+Face search
+🧠 Face Search
+Upload image
+Get ranked results
+✔ Verification System
+Verify students
+
+BUT ONLY:
+
+faculty.department === student.department
+📢 Opportunities
+Create opportunity posts
+Edit their own posts
+Delete their own posts
+❌ RESTRICTIONS
+🚫 Cannot:
+Verify students from other departments
+Edit student data
+Delete student profiles
+Access embeddings directly
+Promote/demote roles
+🚫 Face System
+Cannot store or download face data
+Only gets similarity results
+🧠 SYSTEM BEHAVIOR FOR FACULTY
+🔹 Verification Flow
+Check department match
+Check faceVerificationStatus == complete
+Check profile completeness >= 40
+
+→ then allow verification
+🔹 Search Ranking Priority
+
+Faculty sees:
+
+Verified students ranked higher
+🔹 Face Search Output
+top 5 matches
+with similarity score
+🛡️ 3. ADMIN ROLE — FULL SPEC
+🎯 PURPOSE
+Maintain system integrity
+Manage users
+Monitor activity
+✅ PERMISSIONS
+👥 User Management
+Create/remove users
+Assign roles:
+student → faculty → admin
+✔ Override Controls
+Override verification status
+Disable accounts
+📊 Monitoring
+View:
+total users
+verification stats
+search activity
+⚙️ System Control
+Configure:
+thresholds (face similarity)
+feature flags
+❌ RESTRICTIONS
+🚫 Should NOT:
+Manually edit student academic data
+Modify embeddings
+🧠 SYSTEM BEHAVIOR FOR ADMIN
+🔹 Suspicious Activity Detection
+Duplicate embeddings
+Multiple accounts
+🔹 Auto Cleanup
+Delete:
+inactive accounts
+graduated students (future)
+🧠 4. FEATURE ACCESS MATRIX (VERY IMPORTANT)
+Feature	Student	Faculty	Admin
+Profile CRUD	✅	❌	⚠️ limited
+Face Upload	✅	❌	❌
+Face Search	❌	✅	✅
+Student Search	❌	✅	✅
+Verification	❌	✅	✅
+Opportunities Create	❌	✅	✅
+Notifications	✅	✅	✅
+Role Management	❌	❌	✅
+🧠 5. CRITICAL SYSTEM GUARDS (MUST IMPLEMENT)
+🔒 Middleware Examples
+if (user.role !== "faculty") reject()
+
+if (faculty.department !== student.department) reject()
+
+if (student.faceVerificationStatus !== "complete") reject()
+🧠 6. STATE MACHINE (IMPORTANT FOR BUG PREVENTION)
+🔹 Student Verification State
+none → partial → complete → verified
+🔹 Allowed Transitions
+From	To
+none	partial
+partial	complete
+complete	verified
+🧠 7. COPILOT CONTROL INSTRUCTIONS (VERY IMPORTANT)
+
+Paste this into your project README or Copilot context:
+
+🤖 Copilot Behavior Contract
+You are working on an existing codebase (AcroIn).
+
+STRICT RULES:
+
+1. NEVER assume functionality
+2. ALWAYS ask before:
+   - changing existing logic
+   - modifying database schema
+   - altering API contracts
+   - renaming variables or files
+
+3. BEFORE writing code:
+   - ask what already exists
+   - ask for file structure
+   - ask for current implementation
+
+4. DO NOT:
+   - overwrite working features
+   - introduce breaking changes
+   - refactor without permission
+
+5. ALWAYS:
+   - match existing coding style
+   - reuse existing services/utilities
+   - keep functions modular
+
+6. IF something is unclear:
+   ASK instead of guessing
+
+7. FOR EVERY FEATURE:
+   - confirm role permissions
+   - confirm validation rules
+   - confirm edge cases
+
+8. WHEN ADDING NEW FEATURE:
+   ask:
+   - which role can access it?
+   - what are restrictions?
+   - what data model is affected?
+
+9. PRIORITY:
+   Stability > Clean Code > New Features
+⚠️ FINAL REALITY CHECK
+
+Your current system likely fails because:
+
+❌ No strict role enforcement
+❌ Missing state validation
+❌ Copilot guessing instead of asking
+❌ Inconsistent backend contracts
+
+This doc fixes that.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/internal/admin-bootstrap-setup-9x7

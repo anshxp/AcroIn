@@ -84,7 +84,6 @@ export const StudentCompetitions: React.FC = () => {
     e.preventDefault();
     const competitionData = {
       ...formData,
-      student: editingCompetition?.student || user?.email || user?.id || '',
     };
 
     try {

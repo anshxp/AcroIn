@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, MapPin, Briefcase, Trash2, Edit2, ExternalLink, X } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { Plus, Search, Calendar, MapPin, Briefcase, Trash2, Edit2, ExternalLink, X, Sparkles, Clock } from 'lucide-react';
 import { opportunityAPI } from '../../services/api';
 import type { Opportunity } from '../../types';
 import '../../styles/pages.css';
+import './PostOpportunities.css';
 
 export const PostOpportunities: React.FC = () => {
-  const { user } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,8 +18,9 @@ export const PostOpportunities: React.FC = () => {
   const [formData, setFormData] = useState({
     title: '',
     company: '',
-    type: 'internship' as 'internship' | 'job' | 'competition' | 'workshop',
+    type: 'internship' as Opportunity['type'],
     location: '',
+    eventDate: '',
     deadline: '',
     description: '',
     requirements: '',
@@ -47,8 +47,9 @@ export const PostOpportunities: React.FC = () => {
 
   const typeOptions = [
     { value: 'internship', label: 'Internship' },
-    { value: 'job', label: 'Job' },
     { value: 'competition', label: 'Competition' },
+    { value: 'certification', label: 'Certification' },
+    { value: 'job', label: 'Job' },
     { value: 'workshop', label: 'Workshop' },
   ];
 
@@ -66,6 +67,7 @@ export const PostOpportunities: React.FC = () => {
         company: opportunity.company || '',
         type: opportunity.type,
         location: opportunity.location || '',
+        eventDate: opportunity.eventDate ? opportunity.eventDate.split('T')[0] : '',
         deadline: opportunity.deadline ? opportunity.deadline.split('T')[0] : '',
         description: opportunity.description,
         requirements: opportunity.requirements.join(', '),
@@ -78,6 +80,7 @@ export const PostOpportunities: React.FC = () => {
         company: '',
         type: 'internship',
         location: '',
+        eventDate: '',
         deadline: '',
         description: '',
         requirements: '',
@@ -120,7 +123,8 @@ export const PostOpportunities: React.FC = () => {
         company: formData.company.trim(),
         type: formData.type,
         location: formData.location.trim(),
-        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null,
+        eventDate: formData.eventDate ? new Date(formData.eventDate).toISOString() : undefined,
+        deadline: formData.deadline ? new Date(formData.deadline).toISOString() : undefined,
         description: formData.description.trim(),
         requirements: formData.requirements
           ? formData.requirements.split(',').map((r) => r.trim()).filter(Boolean)
@@ -163,28 +167,41 @@ export const PostOpportunities: React.FC = () => {
     }
   };
 
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case 'internship':
-        return 'info';
-      case 'job':
-        return 'success';
-      case 'competition':
-        return 'warning';
-      case 'workshop':
-        return 'default';
-      default:
-        return 'default';
+  const getUrgency = (deadline?: string) => {
+    if (!deadline) {
+      return { label: 'Open', level: 'open' as const };
     }
+
+    const now = new Date();
+    const due = new Date(deadline);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const days = Math.ceil((due.getTime() - now.getTime()) / msPerDay);
+
+    if (days < 0) {
+      return { label: 'Closed', level: 'closed' as const };
+    }
+    if (days <= 3) {
+      return { label: 'Closing Soon', level: 'soon' as const };
+    }
+    return { label: 'Open', level: 'open' as const };
   };
 
+  const closingSoonCount = opportunities.filter((opp) => getUrgency(opp.deadline).level === 'soon').length;
+  const openCount = opportunities.filter((opp) => getUrgency(opp.deadline).level !== 'closed').length;
+  const recentCount = opportunities.filter((opp) => {
+    const created = new Date(opp.createdAt);
+    const now = new Date();
+    const msPerDay = 24 * 60 * 60 * 1000;
+    return (now.getTime() - created.getTime()) / msPerDay <= 2;
+  }).length;
+
   return (
-    <div>
+    <div className="opportunity-board">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-section">
           <h1>Post Opportunities</h1>
-          <p>Post internships, jobs, competitions, and workshops for students</p>
+          <p>Launch opportunities with a bold board view crafted for discoverability</p>
         </div>
         <div className="page-actions">
           <button className="btn-primary" onClick={() => handleOpenModal()}>
@@ -194,24 +211,48 @@ export const PostOpportunities: React.FC = () => {
         </div>
       </div>
 
+      <section className="opportunity-hero">
+        <div className="opportunity-hero-header">
+          <div>
+            <h2>Opportunity Board</h2>
+            <p>Designed to spotlight internships, competitions, and certifications beyond regular posts.</p>
+          </div>
+          <Sparkles size={22} />
+        </div>
+        <div className="opportunity-hero-stats">
+          <div className="opportunity-stat-pill">
+            <span className="label">Open</span>
+            <strong>{openCount}</strong>
+          </div>
+          <div className="opportunity-stat-pill">
+            <span className="label">Closing Soon</span>
+            <strong>{closingSoonCount}</strong>
+          </div>
+          <div className="opportunity-stat-pill">
+            <span className="label">New (48h)</span>
+            <strong>{recentCount}</strong>
+          </div>
+        </div>
+      </section>
+
       {isLoading && (
-        <p style={{ marginBottom: '16px', color: '#475569', fontSize: '13px' }}>
+        <p className="opportunity-feedback loading">
           Loading opportunities...
         </p>
       )}
       {apiMessage && (
-        <p style={{ marginBottom: '16px', color: '#166534', fontSize: '13px' }}>{apiMessage}</p>
+        <p className="opportunity-feedback success">{apiMessage}</p>
       )}
       {apiError && (
-        <p style={{ marginBottom: '16px', color: '#b91c1c', fontSize: '13px' }}>{apiError}</p>
+        <p className="opportunity-feedback error">{apiError}</p>
       )}
 
       {/* Search Bar */}
-      <div className="search-bar">
+      <div className="search-bar opportunity-search">
         <Search size={18} />
         <input
           type="text"
-          placeholder="Search opportunities..."
+          placeholder="Search by title, company, or type"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -219,244 +260,139 @@ export const PostOpportunities: React.FC = () => {
 
       {/* Opportunities List */}
       {filteredOpportunities.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="opportunity-list">
           {filteredOpportunities.map((opportunity) => (
-            <div key={opportunity._id} className="card" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#1e293b', margin: 0 }}>
+            <article key={opportunity._id} className={`opportunity-card opportunity-card-${opportunity.type}`}>
+              <div className="opportunity-card-main">
+                <div className="opportunity-card-top">
+                  <h3>
+                    <Briefcase size={17} />
+                    <span>
                       {opportunity.title}
-                    </h3>
-                    <span
-                      style={{
-                        padding: '2px 8px',
-                        background:
-                          opportunity.type === 'internship'
-                            ? '#dbeafe'
-                            : opportunity.type === 'job'
-                            ? '#dcfce7'
-                            : opportunity.type === 'competition'
-                            ? '#fef3c7'
-                            : '#f1f5f9',
-                        color:
-                          opportunity.type === 'internship'
-                            ? '#1d4ed8'
-                            : opportunity.type === 'job'
-                            ? '#16a34a'
-                            : opportunity.type === 'competition'
-                            ? '#b45309'
-                            : '#64748b',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: 500,
-                      }}
-                    >
+                    </span>
+                  </h3>
+                  <div className="opportunity-card-badges">
+                    <span className="opportunity-type-chip">
                       {opportunity.type}
+                    </span>
+                    <span className={`opportunity-urgency-badge ${getUrgency(opportunity.deadline).level}`}>
+                      {getUrgency(opportunity.deadline).label}
                     </span>
                   </div>
                   {opportunity.company && (
-                    <p style={{ fontSize: '14px', color: '#3b82f6', fontWeight: 500, margin: 0, marginBottom: '8px' }}>
+                    <p className="opportunity-company">
                       {opportunity.company}
                     </p>
                   )}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '12px',
-                      fontSize: '13px',
-                      color: '#64748b',
-                      marginBottom: '8px',
-                    }}
-                  >
+
+                  <div className="opportunity-meta-row">
                     {opportunity.location && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span className="opportunity-meta-chip">
                         <MapPin size={14} />
                         {opportunity.location}
                       </span>
                     )}
-                    {opportunity.deadline && (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {opportunity.eventDate && (
+                      <span className="opportunity-meta-chip">
                         <Calendar size={14} />
-                        Deadline: {new Date(opportunity.deadline).toLocaleDateString()}
+                        Date: {new Date(opportunity.eventDate).toLocaleDateString()}
+                      </span>
+                    )}
+                    {opportunity.deadline && (
+                      <span className="opportunity-meta-chip">
+                        <Clock size={14} />
+                        Application Deadline: {new Date(opportunity.deadline).toLocaleDateString()}
                       </span>
                     )}
                   </div>
-                  <p style={{ fontSize: '14px', color: '#475569', margin: 0, marginBottom: '8px', lineHeight: 1.4 }}>
+
+                  <p className="opportunity-description">
                     {opportunity.description}
                   </p>
+
                   {opportunity.requirements.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                    <div className="opportunity-tag-row">
                       {opportunity.requirements.slice(0, 3).map((req, idx) => (
-                        <span
-                          key={idx}
-                          style={{
-                            padding: '2px 8px',
-                            background: '#f1f5f9',
-                            color: '#64748b',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                          }}
-                        >
+                        <span key={idx} className="opportunity-tag">
                           {req}
                         </span>
                       ))}
                       {opportunity.requirements.length > 3 && (
-                        <span
-                          style={{
-                            padding: '2px 8px',
-                            background: '#f1f5f9',
-                            color: '#64748b',
-                            borderRadius: '12px',
-                            fontSize: '11px',
-                          }}
-                        >
+                        <span className="opportunity-tag">
                           +{opportunity.requirements.length - 3} more
                         </span>
                       )}
                     </div>
                   )}
+
                   {opportunity.application_link && (
                     <a
                       href={opportunity.application_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        color: '#3b82f6',
-                        fontSize: '13px',
-                        textDecoration: 'none',
-                        marginTop: '8px',
-                      }}
+                      className="opportunity-apply-btn"
                     >
                       Apply Now <ExternalLink size={12} />
                     </a>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
+                <div className="opportunity-card-actions">
                   <button
                     onClick={() => handleOpenModal(opportunity)}
-                    style={{
-                      padding: '6px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#3b82f6',
-                      cursor: 'pointer',
-                      borderRadius: '6px',
-                    }}
+                    aria-label="Edit opportunity"
                   >
                     <Edit2 size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(opportunity._id)}
-                    style={{
-                      padding: '6px',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#ef4444',
-                      cursor: 'pointer',
-                      borderRadius: '6px',
-                    }}
+                    aria-label="Delete opportunity"
                   >
                     <Trash2 size={16} />
                   </button>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       ) : (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-          <Briefcase size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+        <div className="opportunity-empty-state">
+          <Briefcase size={42} />
           <p>No opportunities found. Post your first one!</p>
         </div>
       )}
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '600px',
-              background: '#ffffff',
-              borderRadius: '14px',
-              boxShadow: '0 20px 50px rgba(15, 23, 42, 0.2)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                padding: '20px 24px',
-                borderBottom: '1px solid #e2e8f0',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <h3 style={{ margin: 0, color: '#1e293b', fontSize: '18px', fontWeight: 700 }}>
+        <div className="opportunity-modal-overlay">
+          <div className="opportunity-modal">
+            <div className="opportunity-modal-header">
+              <h3>
                 {editingOpportunity ? 'Edit Opportunity' : 'Post New Opportunity'}
               </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '20px',
-                  color: '#64748b',
-                  cursor: 'pointer',
-                  lineHeight: 1,
-                }}
-              >
+              <button onClick={() => setIsModalOpen(false)}>
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ padding: '20px 24px' }}>
-              <div style={{ display: 'grid', gap: '14px', maxHeight: '60vh', overflowY: 'auto', paddingRight: '8px' }}>
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+            <form onSubmit={handleSubmit} className="opportunity-form">
+              <div className="opportunity-form-grid">
+                <label>
                   Title *
                   <input
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="e.g., Software Engineering Internship"
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
                     required
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label>
                   Type *
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as Opportunity['type'] })}
                   >
                     {typeOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -466,106 +402,75 @@ export const PostOpportunities: React.FC = () => {
                   </select>
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label>
                   Company
                   <input
                     type="text"
                     value={formData.company}
                     onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                     placeholder="e.g., Google, Microsoft, etc."
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label>
                   Location
                   <input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     placeholder="e.g., Bangalore, India"
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
-                  Deadline
+                <label>
+                  Event Date
+                  <input
+                    type="date"
+                    value={formData.eventDate}
+                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                  />
+                </label>
+
+                <label>
+                  Application Deadline
                   <input
                     type="date"
                     value={formData.deadline}
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label className="opportunity-span-2">
                   Description
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Describe the opportunity..."
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      minHeight: '80px',
-                      fontFamily: 'inherit',
-                    }}
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label className="opportunity-span-2">
                   Requirements (comma-separated)
                   <textarea
                     value={formData.requirements}
                     onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
                     placeholder="e.g., 3rd year B.Tech, Strong coding skills, Data Structures"
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      minHeight: '60px',
-                      fontFamily: 'inherit',
-                    }}
                   />
                 </label>
 
-                <label style={{ display: 'grid', gap: '6px', fontSize: '13px', color: '#334155', fontWeight: 600 }}>
+                <label className="opportunity-span-2">
                   Application Link *
                   <input
                     type="url"
                     value={formData.application_link}
                     onChange={(e) => setFormData({ ...formData, application_link: e.target.value })}
                     placeholder="https://..."
-                    style={{
-                      padding: '10px 12px',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
                     required
                   />
                 </label>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', borderTop: '1px solid #e2e8f0', paddingTop: '16px' }}>
+              <div className="opportunity-modal-actions">
                 <button
                   type="button"
                   className="btn-secondary"

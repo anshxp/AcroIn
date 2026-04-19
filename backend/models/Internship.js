@@ -34,6 +34,7 @@ const internshipSchema = new mongoose.Schema({
   },
   location: String,
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student' },
+  students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Student' }],
   createdBy: mongoose.Schema.Types.ObjectId,
   createdByRole: { type: String, enum: ['student', 'faculty', 'admin'] }
 }, { timestamps: true });

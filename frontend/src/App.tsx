@@ -7,14 +7,13 @@ import {
   LandingPage,
   LoginPage,
   RegisterPage,
-  StudentDashboard,
+  AdminBootstrapPage,
   StudentProfile,
   StudentProjects,
   StudentInternships,
   StudentCompetitions,
   StudentCertificates,
   StudentSkills,
-  FacultyDashboard,
   FacultyProfile,
   VerifyStudents,
   PostOpportunities,
@@ -23,12 +22,13 @@ import {
   Recommendations,
   PlacementHub,
   FacultyAnalytics,
-  AdminDashboard,
+  StudentProfileView,
   ManageStudents,
   ManageFaculty,
   AdminSettings,
   AdminAnalytics,
   HomeFeed,
+  Notifications,
 } from './pages';
 import './App.css';
 
@@ -54,6 +54,8 @@ function App() {
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/__internal__/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
+          <Route path="/internal/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
 
           {/* Shared Home Feed - accessible by all authenticated users */}
           <Route
@@ -64,6 +66,7 @@ function App() {
             }
           >
             <Route path="/home" element={<HomeFeed />} />
+            <Route path="/notifications" element={<Notifications />} />
           </Route>
 
           {/* Student Routes */}
@@ -74,7 +77,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/student/dashboard" element={<StudentDashboard />} />
+            <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/skills" element={<StudentSkills />} />
             <Route path="/student/projects" element={<StudentProjects />} />
@@ -91,26 +94,34 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/faculty/dashboard" element={<FacultyDashboard />} />
             <Route path="/faculty/profile" element={<FacultyProfile />} />
-            <Route path="/faculty/search" element={<SmartSearch />} />
             <Route path="/faculty/verification" element={<FacialRecognition />} />
             <Route path="/faculty/recommendations" element={<Recommendations />} />
             <Route path="/faculty/placement" element={<PlacementHub />} />
             <Route path="/faculty/analytics" element={<FacultyAnalytics />} />
             <Route path="/faculty/verify" element={<VerifyStudents />} />
             <Route path="/faculty/opportunities" element={<PostOpportunities />} />
+            <Route path="/faculty/student/:id" element={<StudentProfileView />} />
+          </Route>
+
+          <Route
+            element={
+              <ProtectedRoute allowedUserTypes={['faculty', 'admin']}>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/faculty/search" element={<SmartSearch />} />
           </Route>
 
           {/* Admin Routes */}
           <Route
             element={
-              <ProtectedRoute allowedUserTypes={['admin']}>
+              <ProtectedRoute allowedUserTypes={['admin', 'faculty']} allowedRoles={['dept_admin', 'super_admin']}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
           >
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/faculty" element={<ManageFaculty />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />

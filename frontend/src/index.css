@@ -12,7 +12,7 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
+  color-scheme: light;
   color: #213547;
   background-color: #ffffff;
 
@@ -45,4 +45,11 @@ h1 {
 
 input, textarea, select {
   font-family: inherit;
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
 }

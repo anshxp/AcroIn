@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { PageLoader } from '../ui';
 
@@ -15,7 +15,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   allowedRoles,
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const location = useLocation();
 
   if (isLoading) {
     return <PageLoader />;
@@ -30,9 +29,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return <Navigate to="/" replace />;
   }
 
-  // Check roles (for faculty)
-  if (allowedRoles && user?.role) {
-    const hasRole = allowedRoles.some((role) => user.role?.includes(role));
+  // Check roles only for faculty accounts; admin accounts are allowed by user type.
+  if (allowedRoles && user?.userType === 'faculty') {
+    const userRoles = Array.isArray(user.role) ? user.role : [];
+    const hasRole = allowedRoles.some((role) => userRoles.includes(role));
     if (!hasRole) {
       return <Navigate to="/" replace />;
     }

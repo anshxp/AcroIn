@@ -15,8 +15,6 @@ export const LoginPage: React.FC = () => {
     admin: { email: 'demo.admin@acroin.edu', password: 'demo123' }
   };
 
-  // Note: keep 'admin' in UI, but we'll handle it explicitly in handleSubmit
-  const [userType, setUserType] = useState<'student' | 'faculty' | 'admin'>('student');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -59,16 +57,7 @@ export const LoginPage: React.FC = () => {
         handleDemoLogin(demoType[0] as 'student' | 'faculty' | 'admin');
         return;
       }
-      if (userType === 'admin') {
-        // Option 1: show user-friendly message
-        setError('Admin login is not available on this page. Use the admin portal or contact your site administrator.');
-        return;
-        // Option 2 (if you actually have an admin login endpoint implemented):
-        // await adminLogin({ email, password });
-      }
-
-      // At this point userType is narrowed to 'student' | 'faculty' — TypeScript is happy
-      await login({ email, password }, userType);
+      await login({ email, password });
 
       // All users go to home feed
       navigate('/home');
@@ -158,34 +147,6 @@ export const LoginPage: React.FC = () => {
           <div className="auth-form-header">
             <h2>Sign in to your account</h2>
             <p>Enter your credentials to access your dashboard</p>
-          </div>
-
-          {/* User Type Toggle */}
-          <div className="auth-toggle auth-toggle-three">
-            <button
-              type="button"
-              onClick={() => setUserType('student')}
-              className={`auth-toggle-btn ${userType === 'student' ? 'active' : ''}`}
-            >
-              <GraduationCap size={18} />
-              <span>Student</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('faculty')}
-              className={`auth-toggle-btn ${userType === 'faculty' ? 'active' : ''}`}
-            >
-              <Users size={18} />
-              <span>Faculty</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUserType('admin')}
-              className={`auth-toggle-btn ${userType === 'admin' ? 'active' : ''}`}
-            >
-              <Settings size={18} />
-              <span>Admin</span>
-            </button>
           </div>
 
           {error && (

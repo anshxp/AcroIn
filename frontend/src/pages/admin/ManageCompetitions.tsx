@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, Edit2, ExternalLink, X } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { competitionAPI } from '../../services/api';
 import type { Competition } from '../../types';
 import '../../styles/pages.css';
 
 export const ManageCompetitions: React.FC = () => {
-  const { user } = useAuth();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,7 +96,7 @@ export const ManageCompetitions: React.FC = () => {
       const payload = {
         name: formData.name.trim(),
         organizer: formData.organizer.trim(),
-        date: formData.date ? new Date(formData.date).toISOString() : null,
+        date: formData.date ? new Date(formData.date).toISOString() : undefined,
         application_link: formData.application_link.trim(),
       };
 

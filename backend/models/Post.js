@@ -5,6 +5,7 @@ const commentSchema = new mongoose.Schema({
     _id: { type: mongoose.Schema.Types.ObjectId, required: true },
     name: String,
     profileImage: String,
+    department: String,
     userType: { type: String, enum: ['student', 'faculty', 'admin'] },
   },
   content: String,

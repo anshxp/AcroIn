@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 const studentSkillSchema = new mongoose.Schema({
+  category: { type: String, default: 'General', trim: true },
   name: { type: String, required: true, trim: true },
   level: {
     type: String,
@@ -19,6 +20,14 @@ const studentExperienceSchema = new mongoose.Schema({
   type: { type: String, required: true, trim: true },
   verified: { type: Boolean, default: false },
 }, { _id: true });
+
+const studentFaceEmbeddingsSchema = new mongoose.Schema({
+  front: { type: [Number], default: undefined },
+  left: { type: [Number], default: undefined },
+  right: { type: [Number], default: undefined },
+  modelVersion: { type: String, default: 'arcface_v1' },
+  updatedAt: { type: Date, default: Date.now },
+}, { _id: false });
 
 const studentSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -40,6 +49,25 @@ const studentSchema = new mongoose.Schema({
   experiences: [studentExperienceSchema],
   profile_image: String,
   cover_image: String,
+  cgpa: Number,
+  resume: String,
+  profileCompleteness: { type: Number, default: 0, min: 0, max: 100 },
+  faceVerificationStatus: {
+    type: String,
+    enum: ['none', 'partial', 'complete'],
+    default: 'none',
+  },
+  faceEmbeddings: {
+    type: studentFaceEmbeddingsSchema,
+    select: false,
+  },
+  verificationStatus: {
+    type: String,
+    enum: ['not_verified', 'verified', 'strongly_verified'],
+    default: 'not_verified',
+  },
+  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' },
+  verifiedAt: Date,
   projects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
   internships: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Internship' }],
   competitions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Competition' }],

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
   User,
   Briefcase,
   Trophy,
@@ -34,7 +33,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const { user, logout } = useAuth();
 
   const studentNavItems: NavItem[] = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/student/dashboard' },
     { icon: <User size={20} />, label: 'Profile', path: '/student/profile' },
     { icon: <FolderGit2 size={20} />, label: 'Projects', path: '/student/projects' },
     { icon: <Briefcase size={20} />, label: 'Internships', path: '/student/internships' },
@@ -43,21 +41,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   ];
 
   const facultyNavItems: NavItem[] = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/faculty/dashboard' },
     { icon: <User size={20} />, label: 'Profile', path: '/faculty/profile' },
     { icon: <CheckSquare size={20} />, label: 'Verify Students', path: '/faculty/verify' },
     { icon: <Bell size={20} />, label: 'Post Opportunities', path: '/faculty/opportunities' },
   ];
 
   const adminNavItems: NavItem[] = [
-    { icon: <LayoutDashboard size={20} />, label: 'Dashboard', path: '/admin/dashboard' },
     { icon: <Users size={20} />, label: 'Manage Students', path: '/admin/students' },
     { icon: <UserCog size={20} />, label: 'Manage Faculty', path: '/admin/faculty' },
     { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
   ];
 
+  const isSystemAdmin = user?.userType === 'admin' || user?.role?.includes('admin');
+  const isFacultyAdmin = user?.role?.includes('super_admin') || user?.role?.includes('dept_admin');
+
   const getNavItems = () => {
-    if (user?.role?.includes('super_admin') || user?.role?.includes('dept_admin')) {
+    if (isSystemAdmin || isFacultyAdmin) {
       return [...facultyNavItems, ...adminNavItems];
     }
     if (user?.userType === 'faculty') {

@@ -1,6 +1,7 @@
 // User types
 export interface StudentSkill {
   _id?: string;
+  category?: string;
   name: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   verified: boolean;
@@ -38,6 +39,11 @@ export interface Student {
   cover_image?: string;
   skills?: StudentSkill[];
   experiences?: StudentExperience[];
+  profileCompleteness?: number;
+  faceVerificationStatus?: 'none' | 'partial' | 'complete';
+  verificationStatus?: 'not_verified' | 'verified' | 'strongly_verified';
+  verifiedBy?: string;
+  verifiedAt?: string;
   status?: 'active' | 'inactive';
   projects: Project[];
   internships: Internship[];
@@ -121,16 +127,32 @@ export interface Certificate {
 export interface Opportunity {
   _id: string;
   title: string;
-  type: 'internship' | 'job' | 'competition' | 'workshop';
+  type: 'internship' | 'job' | 'competition' | 'workshop' | 'certification';
   company?: string;
   location?: string;
+  eventDate?: string;
   deadline?: string;
   description: string;
   requirements: string[];
   application_link: string;
+  attachments?: string[];
   isActive: boolean;
   createdBy: string;
   createdByRole: 'faculty' | 'admin';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NotificationItem {
+  _id: string;
+  user: string;
+  message: string;
+  type: 'alert' | 'message' | 'profile_view' | 'system' | 'certificate';
+  read: boolean;
+  sourceType?: 'competition' | 'internship' | 'certificate' | 'opportunity' | 'post' | 'system';
+  sourceId?: string;
+  sourceTitle?: string;
+  actionPath?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -216,4 +238,5 @@ export interface Comment {
 export interface CreatePostData {
   content: string;
   images?: string[];
+  files?: File[];
 }

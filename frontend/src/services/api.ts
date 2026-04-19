@@ -14,6 +14,7 @@ import type {
   Post,
   CreatePostData,
   Opportunity,
+  NotificationItem,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -32,6 +33,71 @@ const unwrapData = <T>(responseData: any): T => {
 
   return responseData as T;
 };
+
+export interface FacultyAnalyticsPayload {
+  title: string;
+  subtitle: string;
+  stats: {
+    totalProfiles: number;
+    verifiedUsers: number;
+    activeSearches: number;
+    anomaliesDetected: number;
+    verificationRate: number;
+    profileGrowthPct: number;
+    activeSearchesGrowthPct: number;
+    newProfilesLast30Days: number;
+    projectsTracked: number;
+  };
+  trendingSkills: Array<{
+    rank: number;
+    name: string;
+    students: number;
+    growthPct: number;
+  }>;
+  clusters: Array<{
+    key: string;
+    name: string;
+    members: number;
+    skills: string[];
+    activityLevel: number;
+  }>;
+  anomalyAlerts: Array<{
+    title: string;
+    severity: 'High' | 'Medium' | 'Low';
+    description: string;
+    user: string;
+    action: string;
+  }>;
+}
+
+export interface AdminSystemSettings {
+  _id?: string;
+  key?: string;
+  general: {
+    siteName: string;
+    siteUrl: string;
+    adminEmail: string;
+    supportEmail: string;
+  };
+  notifications: {
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    autoApproval: boolean;
+  };
+  security: {
+    sessionTimeoutMinutes: number;
+    maxLoginAttempts: number;
+    maintenanceMode: boolean;
+  };
+  upload: {
+    maxFileSizeMb: number;
+    allowedFileTypes: string[];
+  };
+  database: {
+    backupFrequency: 'daily' | 'weekly' | 'monthly';
+    lastBackupAt: string | null;
+  };
+}
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
@@ -57,6 +123,11 @@ api.interceptors.response.use(
 
 // Auth APIs
 export const authAPI = {
+  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
+    const response = await api.post('/auth/login', credentials);
+    return response.data;
+  },
+
   studentLogin: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post('/auth/student/login', credentials);
     return response.data;
@@ -74,6 +145,18 @@ export const authAPI = {
 
   facultyRegister: async (data: FacultyRegisterData): Promise<AuthResponse> => {
     const response = await api.post('/auth/faculty/register', data);
+    return response.data;
+  },
+
+  bootstrapAdminRegister: async (
+    data: { name: string; email: string; password: string },
+    bootstrapKey: string
+  ): Promise<AuthResponse> => {
+    const response = await api.post('/auth/internal/admin-bootstrap', data, {
+      headers: {
+        'x-bootstrap-key': bootstrapKey,
+      },
+    });
     return response.data;
   },
 
@@ -127,6 +210,15 @@ export const studentAPI = {
     return response.data;
   },
 
+  updateSkill: async (
+    id: string,
+    skillId: string,
+    data: Omit<StudentSkill, '_id'>
+  ): Promise<{ skill: StudentSkill; skills: StudentSkill[]; message: string }> => {
+    const response = await api.put(`/students/${id}/skills/${skillId}`, data);
+    return response.data;
+  },
+
   uploadProfileImage: async (identifier: string, file: File): Promise<{ profile_image: string }> => {
     const formData = new FormData();
     formData.append('profileImage', file);
@@ -140,6 +232,21 @@ export const studentAPI = {
     const formData = new FormData();
     formData.append('coverImage', file);
     const response = await api.post(`/students/${identifier}/upload-cover-image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  enrollFace: async (
+    identifier: string,
+    files: { front: File; left: File; right: File }
+  ): Promise<{ success: boolean; message: string; faceVerificationStatus: string }> => {
+    const formData = new FormData();
+    formData.append('front', files.front);
+    formData.append('left', files.left);
+    formData.append('right', files.right);
+
+    const response = await api.post(`/students/${identifier}/face/enroll`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
@@ -168,8 +275,74 @@ export const facultyAPI = {
     return response.data;
   },
 
+  updateFaculty: async (id: string, data: Partial<Faculty>): Promise<Faculty> => {
+    const response = await api.put(`/faculty/${id}`, data);
+    return response.data;
+  },
+
   deleteFaculty: async (id: string): Promise<void> => {
     await api.delete(`/faculty/${id}`);
+  },
+
+  faceSearch: async (file: File): Promise<any> => {
+    const formData = new FormData();
+    formData.append('face', file);
+    const response = await api.post('/faculty/face-search', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  verifyStudent: async (identifier: string): Promise<any> => {
+    const response = await api.post(`/faculty/verify-student/${identifier}`);
+    return response.data;
+  },
+
+  verifyStudentSkill: async (studentId: string, skillId: string): Promise<any> => {
+    const response = await api.post(`/faculty/verify-student/${studentId}/skills/${skillId}/verify`);
+    return response.data;
+  },
+
+  verifyAllStudentSkills: async (studentId: string): Promise<any> => {
+    const response = await api.post(`/faculty/verify-student/${studentId}/skills/verify-all`);
+    return response.data;
+  },
+
+  verifyStudentCertificate: async (studentId: string, certificateId: string): Promise<any> => {
+    const response = await api.post(`/faculty/verify-student/${studentId}/certificates/${certificateId}/verify`);
+    return response.data;
+  },
+
+  verifyAllStudentCertificates: async (studentId: string): Promise<any> => {
+    const response = await api.post(`/faculty/verify-student/${studentId}/certificates/verify-all`);
+    return response.data;
+  },
+};
+
+export const adminAPI = {
+  createFaculty: async (data: {
+    firstname: string;
+    lastName: string;
+    email: string;
+    password: string;
+    department: string;
+    designation: string;
+    qualification: string;
+    experience: number;
+    phone: string;
+    role: 'faculty' | 'dept_admin' | 'super_admin';
+    subjects?: string[];
+    skills?: string[];
+    techstacks?: string[];
+    headof?: string[];
+  }): Promise<any> => {
+    const response = await api.post('/admin/faculty/create', data);
+    return response.data;
+  },
+
+  assignRole: async (userId: string, role: 'faculty' | 'dept_admin' | 'super_admin' | 'admin'): Promise<any> => {
+    const response = await api.post('/admin/assign-role', { userId, role });
+    return response.data;
   },
 };
 
@@ -185,7 +358,7 @@ export const internshipAPI = {
     return unwrapData<Internship[]>(response.data);
   },
 
-  create: async (data: Omit<Internship, '_id' | 'createdAt' | 'updatedAt'>): Promise<Internship> => {
+  create: async (data: Omit<Internship, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Internship> => {
     const response = await api.post('/internships', data);
     return unwrapData<Internship>(response.data);
   },
@@ -212,7 +385,7 @@ export const competitionAPI = {
     return unwrapData<Competition[]>(response.data);
   },
 
-  create: async (data: Omit<Competition, '_id' | 'createdAt' | 'updatedAt'>): Promise<Competition> => {
+  create: async (data: Omit<Competition, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Competition> => {
     const response = await api.post('/competitions', data);
     return unwrapData<Competition>(response.data);
   },
@@ -239,7 +412,7 @@ export const certificateAPI = {
     return unwrapData<Certificate[]>(response.data);
   },
 
-  create: async (data: Omit<Certificate, '_id' | 'createdAt' | 'updatedAt'>): Promise<Certificate> => {
+  create: async (data: Omit<Certificate, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Certificate> => {
     const response = await api.post('/certificates', data);
     return unwrapData<Certificate>(response.data);
   },
@@ -251,6 +424,19 @@ export const certificateAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/certificates/${id}`);
+  },
+};
+
+// Notification APIs
+export const notificationAPI = {
+  getByUser: async (userId: string): Promise<NotificationItem[]> => {
+    const response = await api.get(`/notifications/${userId}`);
+    return response.data;
+  },
+
+  markAsRead: async (notificationId: string): Promise<NotificationItem> => {
+    const response = await api.patch(`/notifications/${notificationId}/read`);
+    return response.data;
   },
 };
 
@@ -294,7 +480,27 @@ export const postAPI = {
   },
 
   create: async (data: CreatePostData): Promise<Post> => {
-    const response = await api.post('/posts', data);
+    const files = Array.isArray(data.files) ? data.files : [];
+
+    if (files.length > 0) {
+      const formData = new FormData();
+      formData.append('content', data.content);
+
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      const response = await api.post('/posts', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      return unwrapData<Post>(response.data);
+    }
+
+    const response = await api.post('/posts', {
+      content: data.content,
+      images: data.images,
+    });
     return unwrapData<Post>(response.data);
   },
 
@@ -339,7 +545,37 @@ export const opportunityAPI = {
     return unwrapData<Opportunity>(response.data);
   },
 
-  create: async (data: Omit<Opportunity, '_id' | 'createdAt' | 'updatedAt'>): Promise<Opportunity> => {
+  create: async (data: Omit<Opportunity, '_id' | 'createdAt' | 'updatedAt'> & { files?: File[] }): Promise<Opportunity> => {
+    const files = Array.isArray(data.files) ? data.files : [];
+
+    if (files.length > 0) {
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('type', data.type);
+      if (data.company) formData.append('company', data.company);
+      if (data.location) formData.append('location', data.location);
+      if (data.eventDate) formData.append('eventDate', data.eventDate);
+      if (data.deadline) formData.append('deadline', data.deadline);
+      if (data.description) formData.append('description', data.description);
+      formData.append('application_link', data.application_link);
+      formData.append('isActive', String(data.isActive));
+      formData.append('createdBy', data.createdBy);
+      formData.append('createdByRole', data.createdByRole);
+
+      (Array.isArray(data.requirements) ? data.requirements : []).forEach((requirement) => {
+        formData.append('requirements', requirement);
+      });
+
+      files.forEach((file) => {
+        formData.append('files', file);
+      });
+
+      const response = await api.post('/opportunities', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return unwrapData<Opportunity>(response.data);
+    }
+
     const response = await api.post('/opportunities', data);
     return unwrapData<Opportunity>(response.data);
   },
@@ -351,6 +587,23 @@ export const opportunityAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/opportunities/${id}`);
+  },
+};
+
+export const uiAPI = {
+  getFacultyAnalytics: async (): Promise<FacultyAnalyticsPayload> => {
+    const response = await api.get('/ui/faculty/analytics');
+    return unwrapData<FacultyAnalyticsPayload>(response.data);
+  },
+
+  getAdminSettings: async (): Promise<AdminSystemSettings> => {
+    const response = await api.get('/ui/admin/settings');
+    return unwrapData<AdminSystemSettings>(response.data);
+  },
+
+  updateAdminSettings: async (payload: AdminSystemSettings): Promise<AdminSystemSettings> => {
+    const response = await api.put('/ui/admin/settings', payload);
+    return unwrapData<AdminSystemSettings>(response.data);
   },
 };
 

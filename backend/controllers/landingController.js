@@ -1,6 +1,5 @@
 import LandingContent from '../models/LandingContent.js';
 import Student from '../models/Student.js';
-import FaceEmbedding from '../models/FaceEmbedding.js';
 
 const DEFAULT_CONTENT = {
   key: 'default',
@@ -78,7 +77,7 @@ export const getLandingStats = async (_req, res, next) => {
   try {
     const [activeStudents, verifiedStudents] = await Promise.all([
       Student.countDocuments({}),
-      FaceEmbedding.countDocuments({}),
+      Student.countDocuments({ faceVerificationStatus: 'complete' }),
     ]);
 
     const matchAccuracy = Math.min(99, 78 + Math.floor(verifiedStudents / 5));

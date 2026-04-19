@@ -183,7 +183,6 @@ export const StudentInternships: React.FC = () => {
       certificate_link: formData.certificate_link || undefined,
       startDate: formData.startDate,
       endDate: formData.endDate || undefined,
-      student: editingInternship?.student || user?.email || user?.id || '',
     };
 
     try {

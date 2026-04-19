@@ -80,7 +80,6 @@ export const StudentCertificates: React.FC = () => {
     e.preventDefault();
     const certificateData = {
       ...formData,
-      student: editingCertificate?.student || user?.email || user?.id || '',
     };
 
     try {

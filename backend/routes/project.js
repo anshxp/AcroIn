@@ -6,13 +6,14 @@ import {
   listProjectsByStudent,
   updateProject,
 } from '../controllers/projectController.js';
+import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/', listProjects);
-router.get('/student/:studentId', listProjectsByStudent);
-router.post('/', createProject);
-router.put('/:id', updateProject);
-router.delete('/:id', deleteProject);
+router.get('/', verifyToken, isAdminOrFaculty, listProjects);
+router.get('/student/:studentId', verifyToken, listProjectsByStudent);
+router.post('/', verifyToken, createProject);
+router.put('/:id', verifyToken, updateProject);
+router.delete('/:id', verifyToken, deleteProject);
 
 export default router;

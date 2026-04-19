@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GraduationCap, Sparkles, LogIn, Users, LogOut, LayoutDashboard } from 'lucide-react';
+import { GraduationCap, Sparkles, LogIn, Users, LogOut, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
 
@@ -29,9 +29,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { isAuthenticated, user, logout } = useAuth();
 
   const getDashboardPath = () => {
-    if (user?.userType === 'admin') return '/admin/dashboard';
-    if (user?.userType === 'faculty') return '/faculty/dashboard';
-    return '/student/dashboard';
+    if (user?.userType === 'faculty') return '/faculty/profile';
+    if (user?.userType === 'admin') return '/admin/students';
+    return '/student/profile';
   };
 
   return (
@@ -65,8 +65,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isAuthenticated ? (
               <>
                 <Link to={getDashboardPath()} className="navbar__login">
-                  <LayoutDashboard size={18} />
-                  <span>Dashboard</span>
+                  <Home size={18} />
+                  <span>Open App</span>
                 </Link>
                 <button onClick={logout} className="navbar__signup" style={{ cursor: 'pointer', border: 'none' }}>
                   <LogOut size={18} />

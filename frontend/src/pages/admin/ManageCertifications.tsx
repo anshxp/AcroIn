@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, Edit2, ExternalLink, X } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { certificateAPI, studentAPI } from '../../services/api';
 import type { Certificate, Student } from '../../types';
 import '../../styles/pages.css';
 
 export const ManageCertifications: React.FC = () => {
-  const { user } = useAuth();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
