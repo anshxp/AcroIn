@@ -165,17 +165,63 @@ const resolveStudent = async (identifier) => {
 /// Create student
 router.post('/', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { password, ...rest } = req.body;
+    const {
+      password,
+      name,
+      firstname,
+      firstName,
+      lastName,
+      lastname,
+      roll,
+      rollNo,
+      department,
+      ...rest
+    } = req.body || {};
 
-    if (!password) {
-      return res.status(400).json({ message: "Password is required" });
+    const normalizedName = String(
+      name || `${firstname || firstName || ''} ${lastName || lastname || ''}`
+    ).trim();
+    const normalizedRoll = String(roll || rollNo || '').trim();
+    const normalizedDepartment = String(department || '').trim();
+    const normalizedEmail = String(rest.email || '').trim().toLowerCase();
+
+    if (!password || !String(password).trim()) {
+      return res.status(400).json({ message: 'Password is required' });
     }
 
+    if (!normalizedName) {
+      return res.status(400).json({ message: 'Student name is required' });
+    }
+
+    if (!normalizedRoll) {
+      return res.status(400).json({ message: 'Roll number is required' });
+    }
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!normalizedDepartment) {
+      return res.status(400).json({ message: 'Department is required' });
+    }
+
+    console.log('Creating student with payload:', {
+      name: normalizedName,
+      roll: normalizedRoll,
+      email: normalizedEmail,
+      department: normalizedDepartment,
+      requester: req.user?.id,
+    });
+
     // hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(String(password), 10);
 
     const student = new Student({
       ...rest,
+      name: normalizedName,
+      roll: normalizedRoll,
+      email: normalizedEmail,
+      department: normalizedDepartment,
       password: hashedPassword,
     });
     student.profileCompleteness = calculateProfileCompleteness(student);
@@ -189,7 +235,25 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
     res.status(201).json(studentData);
 
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('Student create failed:', {
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      keyValue: err?.keyValue,
+      errors: err?.errors ? Object.fromEntries(Object.entries(err.errors).map(([key, value]) => [key, value?.message || String(value)])) : undefined,
+    });
+
+    if (err?.code === 11000) {
+      const duplicateKey = Object.keys(err?.keyValue || {})[0];
+      const duplicateValue = duplicateKey ? err.keyValue[duplicateKey] : '';
+      return res.status(409).json({
+        message: duplicateKey
+          ? `${duplicateKey} already exists${duplicateValue ? `: ${duplicateValue}` : ''}`
+          : 'A student with this email or roll number already exists',
+      });
+    }
+
+    res.status(400).json({ message: err?.message || 'Failed to create student' });
   }
 });
 
@@ -433,6 +497,29 @@ router.put('/:id', verifyToken, async (req, res) => {
     return res.status(403).json({ message: 'Not authorized to update this profile' });
   }
 
+  // Check if student is trying to edit locked parent info
+  if (isSelf && req.body.parentInfo) {
+    if (student.parentInfo?.isParentInfoLocked) {
+      return res.status(403).json({ 
+        message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.' 
+      });
+    }
+    
+    // If parent info is being submitted for the first time and all fields are present, lock it
+    if (!student.parentInfo?.isParentInfoLocked && 
+        req.body.parentInfo.fatherName && req.body.parentInfo.fatherPhone) {
+      req.body.parentInfo.isParentInfoLocked = true;
+      req.body.parentInfo.parentInfoLockedAt = new Date();
+    }
+  }
+
+  // Only admin can unlock or edit locked parent info
+  if (!isAdminUser && student.parentInfo?.isParentInfoLocked && req.body.parentInfo) {
+    return res.status(403).json({ 
+      message: 'Only department admin can edit locked parent information' 
+    });
+  }
+
   Object.assign(student, req.body);
   student.profileCompleteness = calculateProfileCompleteness(student);
   await student.save();
@@ -578,5 +665,34 @@ router.post(
     }
   }
 );
+
+// Verify parent phone number (admin only)
+router.patch('/:id/verify-parent-phone', verifyToken, async (req, res) => {
+  try {
+    if (req.user?.userType !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can verify parent phone' });
+    }
+
+    const student = await resolveStudent(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    if (!student.parentInfo?.fatherPhone) {
+      return res.status(400).json({ message: 'Parent phone not found' });
+    }
+
+    student.parentInfo.isParentPhoneVerified = true;
+    student.parentInfo.parentPhoneVerifiedAt = new Date();
+    await student.save();
+    await syncStudentProfileFromDoc(student);
+
+    res.json({ 
+      success: true, 
+      message: 'Parent phone verified successfully',
+      student: normalizeStudentResponse(student)
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 export default router;

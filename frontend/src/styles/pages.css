@@ -777,6 +777,46 @@
   margin-bottom: 16px;
 }
 
+/* Add Student Modal Styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2,6,23,0.5);
+  z-index: 9999;
+}
+.modal {
+  background: #fff;
+  width: 520px;
+  max-width: 95%;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(2,6,23,0.2);
+  overflow: hidden;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.modal-header h3 { margin: 0; font-size: 16px; }
+.modal-close { background: transparent; border: none; font-size: 20px; cursor: pointer; }
+.modal-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.form-row { display: flex; flex-direction: column; gap: 6px; }
+.form-row label { font-size: 13px; color: #475569; }
+.form-row input { padding: 10px 12px; border: 1px solid #e6eef6; border-radius: 8px; }
+.form-row select { padding: 10px 12px; border: 1px solid #e6eef6; border-radius: 8px; background: white; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #f1f5f9; }
+.btn { padding: 8px 12px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%); color: white; border: none; }
+.btn-secondary { background: #f1f5f9; border: none; color: #475569; }
+.modal-error { color: #b45309; background: #fff7ed; padding: 8px 10px; border-radius: 8px; }
+.modal-help { margin: 0; font-size: 12px; color: #64748b; }
+
+
 .meta-item {
   display: flex;
   align-items: center;

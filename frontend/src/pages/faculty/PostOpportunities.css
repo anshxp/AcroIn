@@ -173,6 +173,31 @@
   color: #991b1b;
 }
 
+.opportunity-status-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.opportunity-status-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.opportunity-status-badge.status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.opportunity-status-badge.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .opportunity-company {
   margin: 4px 0 10px;
   color: #0f766e;
@@ -265,6 +290,132 @@
   color: #dc2626;
   border-color: #fecaca;
   background: #fff1f2;
+}
+
+.btn-approve {
+  color: #16a34a;
+}
+
+.btn-approve:hover {
+  color: #dcfce7;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.btn-reject {
+  color: #dc2626;
+}
+
+.btn-reject:hover {
+  color: #fee2e2;
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.btn-view-interest {
+  position: relative;
+  color: #3b82f6;
+}
+
+.btn-view-interest:hover {
+  color: #dbeafe;
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.interest-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.opportunity-rejection-form {
+  padding: 20px;
+}
+
+.opportunity-rejection-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.opportunity-rejection-form label,
+.opportunity-rejection-form textarea {
+  font-size: 14px;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.opportunity-rejection-form textarea {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.opportunity-rejection-form textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.opportunity-modal-large {
+  max-width: 600px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.opportunity-interested-list {
+  padding: 20px;
+}
+
+.opportunity-loading,
+.opportunity-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 40px 20px;
+}
+
+.student-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.student-item {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.student-info h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.student-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.student-date {
+  font-style: italic;
+  margin-top: 4px !important;
 }
 
 .opportunity-empty-state {

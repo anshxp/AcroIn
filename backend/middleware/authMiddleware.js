@@ -55,3 +55,112 @@ export const extractUserInfo = (req, res, next) => {
   }
   next();
 };
+
+// Check if user is department admin (faculty with dept_admin or super_admin role)
+export const isDepartmentAdmin = async (req, res, next) => {
+  try {
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Faculty access required' });
+    }
+
+    // Import Faculty model
+    const Faculty = (await import('../models/Faculty.js')).default;
+    const User = (await import('../models/User.js')).default;
+
+    const user = await User.findById(req.user.id);
+    if (!user?.email) {
+      return res.status(403).json({ success: false, message: 'User email not found' });
+    }
+
+    const faculty = await Faculty.findOne({ email: user.email });
+    if (!faculty) {
+      return res.status(403).json({ success: false, message: 'Faculty profile not found' });
+    }
+
+    const isDeptAdmin = Array.isArray(faculty.role) && 
+                       faculty.role.some(r => r === 'dept_admin' || r === 'super_admin');
+
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'Department admin access required' });
+    }
+
+    // Attach faculty to request for later use
+    req.faculty = faculty;
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Check if user can approve opportunities (department admin only)
+export const canApproveOpportunities = async (req, res, next) => {
+  try {
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Faculty access required' });
+    }
+
+    const Faculty = (await import('../models/Faculty.js')).default;
+    const User = (await import('../models/User.js')).default;
+
+    const user = await User.findById(req.user.id);
+    if (!user?.email) {
+      return res.status(403).json({ success: false, message: 'User email not found' });
+    }
+
+    const faculty = await Faculty.findOne({ email: user.email });
+    if (!faculty) {
+      return res.status(403).json({ success: false, message: 'Faculty profile not found' });
+    }
+
+    const isDeptAdmin = Array.isArray(faculty.role) && 
+                       faculty.role.some(r => r === 'dept_admin' || r === 'super_admin');
+
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'Only department admin can approve opportunities' });
+    }
+
+    req.faculty = faculty;
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Prevent students from approving opportunities
+export const preventStudentApproval = (req, res, next) => {
+  if (req.user?.userType === 'student') {
+    return res.status(403).json({ success: false, message: 'Students cannot approve opportunities' });
+  }
+  next();
+};
+
+// Check if student's parent info is locked
+export const checkParentInfoLock = async (req, res, next) => {
+  try {
+    if (req.user?.userType !== 'student') {
+      return next(); // Skip for non-students
+    }
+
+    // Check if trying to edit parent info
+    if (!req.body.parentInfo) {
+      return next(); // Not editing parent info
+    }
+
+    const Student = (await import('../models/Student.js')).default;
+    const User = (await import('../models/User.js')).default;
+
+    const user = await User.findById(req.user.id);
+    const student = await Student.findOne({ email: user.email });
+
+    if (student?.parentInfo?.isParentInfoLocked) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Parent information is locked. Contact department admin for modifications.' 
+      });
+    }
+
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

@@ -29,6 +29,8 @@ import {
   AdminAnalytics,
   HomeFeed,
   Notifications,
+    ChatList,
+    ChatWindow,
 } from './pages';
 import './App.css';
 
@@ -68,6 +70,18 @@ function App() {
             <Route path="/home" element={<HomeFeed />} />
             <Route path="/notifications" element={<Notifications />} />
           </Route>
+
+            {/* Chat Routes - accessible by all authenticated users */}
+            <Route
+              element={
+                <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/chat" element={<ChatList />} />
+              <Route path="/chat/:chatId" element={<ChatWindow />} />
+            </Route>
 
           {/* Student Routes */}
           <Route

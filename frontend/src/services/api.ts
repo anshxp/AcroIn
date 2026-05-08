@@ -15,6 +15,9 @@ import type {
   CreatePostData,
   Opportunity,
   NotificationItem,
+  Chat,
+  Message,
+  Interest,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -255,6 +258,14 @@ export const studentAPI = {
 
 // Faculty APIs
 export const facultyAPI = {
+  uploadProfileImage: async (file: File): Promise<{ profilepic: string }> => {
+    const formData = new FormData();
+    formData.append('profileImage', file);
+    const response = await api.post('/faculty/profile/upload-profile-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
   getProfile: async (): Promise<Faculty> => {
     const response = await api.get('/faculty/profile');
     return response.data;
@@ -317,6 +328,20 @@ export const facultyAPI = {
     const response = await api.post(`/faculty/verify-student/${studentId}/certificates/verify-all`);
     return response.data;
   },
+
+  exportInterestedStudents: async (opportunityId: string, format: 'csv' | 'excel' | 'pdf' = 'csv'): Promise<Blob> => {
+    const response = await api.get(`/faculty/export/interested/${opportunityId}?format=${format}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  exportSearchResults: async (studentIds: string[], format: 'csv' | 'excel' | 'pdf' = 'csv'): Promise<Blob> => {
+    const response = await api.post('/faculty/export/search', { studentIds, format }, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
 
 export const adminAPI = {
@@ -342,6 +367,16 @@ export const adminAPI = {
 
   assignRole: async (userId: string, role: 'faculty' | 'dept_admin' | 'super_admin' | 'admin'): Promise<any> => {
     const response = await api.post('/admin/assign-role', { userId, role });
+    return response.data;
+  },
+  createStudent: async (data: {
+    name: string;
+    roll: string;
+    email: string;
+    password: string;
+    department?: string;
+  }): Promise<any> => {
+    const response = await api.post('/students', data);
     return response.data;
   },
 };
@@ -587,6 +622,70 @@ export const opportunityAPI = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/opportunities/${id}`);
+  },
+
+  approve: async (id: string): Promise<Opportunity> => {
+    const response = await api.patch(`/opportunities/${id}/approve`);
+    return unwrapData<Opportunity>(response.data?.opportunity || response.data);
+  },
+
+  reject: async (id: string, reason?: string): Promise<Opportunity> => {
+    const response = await api.patch(`/opportunities/${id}/reject`, { reason });
+    return unwrapData<Opportunity>(response.data?.opportunity || response.data);
+  },
+
+  getStats: async (): Promise<{ pending: number; approved: number; rejected: number }> => {
+    const response = await api.get('/opportunities/stats/pending');
+    return response.data;
+  },
+};
+
+// Interest APIs
+export const interestAPI = {
+  markInterest: async (opportunityId: string): Promise<Interest> => {
+    const response = await api.post(`/interests/${opportunityId}/mark`);
+    return unwrapData<Interest>(response.data?.interest || response.data);
+  },
+
+  unmarkInterest: async (opportunityId: string): Promise<void> => {
+    await api.delete(`/interests/${opportunityId}/unmark`);
+  },
+
+  getInterestedStudents: async (opportunityId: string): Promise<Interest[]> => {
+    const response = await api.get(`/interests/${opportunityId}/interested`);
+    return Array.isArray(response.data?.interests) ? response.data.interests : [];
+  },
+
+  hasInterest: async (opportunityId: string): Promise<boolean> => {
+    const response = await api.get(`/interests/${opportunityId}/has-interest`);
+    return response.data?.hasInterest || false;
+  },
+};
+
+// Chat APIs
+export const chatAPI = {
+  getChats: async (userId: string): Promise<Chat[]> => {
+    const response = await api.get(`/chats/${userId}`);
+    return Array.isArray(response.data?.chats) ? response.data.chats : [];
+  },
+
+  createChat: async (facultyId: string): Promise<Chat> => {
+    const response = await api.post('/chats', { facultyId });
+    return unwrapData<Chat>(response.data?.chat || response.data);
+  },
+
+  sendMessage: async (chatId: string, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
+    const response = await api.post(`/chats/${chatId}/message`, { content, tag });
+    return unwrapData<Chat>(response.data?.chat || response.data);
+  },
+
+  deleteMessage: async (chatId: string, messageId: string): Promise<Chat> => {
+    const response = await api.delete(`/chats/${chatId}/message/${messageId}`);
+    return unwrapData<Chat>(response.data?.chat || response.data);
+  },
+
+  deleteChat: async (chatId: string): Promise<void> => {
+    await api.delete(`/chats/${chatId}`);
   },
 };
 

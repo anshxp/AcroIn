@@ -68,6 +68,18 @@ const studentSchema = new mongoose.Schema({
   },
   verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' },
   verifiedAt: Date,
+  parentInfo: {
+    fatherName: String,
+    fatherPhone: String,
+    fatherEmail: String,
+    motherName: String,
+    motherPhone: String,
+    motherEmail: String,
+    isParentInfoLocked: { type: Boolean, default: false },
+    parentInfoLockedAt: Date,
+    isParentPhoneVerified: { type: Boolean, default: false },
+    parentPhoneVerifiedAt: Date
+  },
   projects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Project' }],
   internships: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Internship' }],
   competitions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Competition' }],

@@ -45,6 +45,19 @@ export interface Student {
   verifiedBy?: string;
   verifiedAt?: string;
   status?: 'active' | 'inactive';
+  cgpa?: number;
+  parentInfo?: {
+    fatherName?: string;
+    fatherPhone?: string;
+    fatherEmail?: string;
+    motherName?: string;
+    motherPhone?: string;
+    motherEmail?: string;
+    isParentInfoLocked?: boolean;
+    parentInfoLockedAt?: string;
+    isParentPhoneVerified?: boolean;
+    parentPhoneVerifiedAt?: string;
+  };
   projects: Project[];
   internships: Internship[];
   competitions: Competition[];
@@ -60,6 +73,8 @@ export interface Faculty {
   email: string;
   profilepic?: string;
   experience: number;
+  dateOfJoining?: string;
+  calculatedExperience?: boolean;
   qualification: string;
   subjects: string[];
   department: string;
@@ -137,6 +152,10 @@ export interface Opportunity {
   application_link: string;
   attachments?: string[];
   isActive: boolean;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
   createdBy: string;
   createdByRole: 'faculty' | 'admin';
   createdAt: string;
@@ -219,6 +238,7 @@ export interface Post {
   images?: string[];
   likes: string[];
   comments: Comment[];
+  linkedOpportunity?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -239,4 +259,35 @@ export interface CreatePostData {
   content: string;
   images?: string[];
   files?: File[];
+}
+
+// Chat types
+export interface Message {
+  _id: string;
+  sender: string;
+  content: string;
+  createdAt: string;
+  flagged?: boolean;
+  tag?: 'DOUBT' | 'GENERAL';
+  senderRole?: 'student' | 'faculty';
+}
+
+export interface Chat {
+  _id: string;
+  participants: string[];
+  messages: Message[];
+  facultyMediator?: string;
+  isActive: boolean;
+  messageType?: 'STUDENT_TO_FACULTY' | 'FACULTY_TO_FACULTY';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interest types
+export interface Interest {
+  _id: string;
+  student: string | Student;
+  opportunity: string | Opportunity;
+  createdAt: string;
+  updatedAt?: string;
 }

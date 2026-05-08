@@ -9,8 +9,10 @@ import Certificate from '../models/Certificate.js';
 import User from '../models/User.js';
 import { syncFacultyProfile, syncStudentProfileByEmail } from '../utils/profileSync.js';
 import { upload } from '../middleware/uploadMiddleware.js';
-import { extractFaceEmbedding, searchFace } from '../services/faceServices.js';
 import { verifyToken, isAdmin, isAdminOrFaculty } from '../middleware/authMiddleware.js';
+import { extractFaceEmbedding, searchFace } from '../services/faceServices.js';
+import { generateStudentCSV, generateStudentExcel, generateStudentPDF, filterStudents } from '../services/exportService.js';
+import { enrichFacultyWithCalculatedExperience, enrichFacultiesWithCalculatedExperience } from '../utils/experienceCalculator.js';
 
 const router = express.Router();
 
@@ -195,9 +197,10 @@ router.post('/', verifyToken, isAdmin, async (req, res) => {
 });
 
 // Get all faculty
-router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
-  const faculty = await Faculty.find().select('-password');
-  res.json(faculty);
+router.get('/', verifyToken, async (_req, res) => {
+  const faculties = await Faculty.find().select('-password');
+  const enrichedFaculties = enrichFacultiesWithCalculatedExperience(faculties);
+  res.json(enrichedFaculties);
 });
 
 // Search student by face image (faculty/admin)
@@ -498,8 +501,11 @@ router.get('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Faculty profile not found' });
     }
 
-    const { password: _, ...facultyData } = faculty.toObject();
-    return res.json(facultyData);
+    const facultyData = faculty.toObject();
+    // Calculate experience dynamically
+    const enrichedFacultyData = enrichFacultyWithCalculatedExperience(facultyData);
+    const { password: _, ...safeData } = enrichedFacultyData;
+    return res.json(safeData);
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -556,11 +562,66 @@ router.put('/profile', verifyToken, async (req, res) => {
   }
 });
 
+// Upload profile image for logged-in faculty
+router.post('/profile/upload-profile-image', verifyToken, upload.single('profileImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' });
+    }
+
+    const faculty = await findFacultyByRequester(req);
+    if (!faculty) return res.status(404).json({ message: 'Faculty profile not found' });
+
+    const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
+    faculty.profilepic = imageUrl;
+    await faculty.save();
+    await syncFacultyProfileFromDoc(faculty);
+
+    return res.json({ message: 'Profile image uploaded successfully', profilepic: imageUrl });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+// Upload profile image for a faculty (admin or self)
+router.post('/:id/upload-profile-image', verifyToken, upload.single('profileImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
+    const targetFaculty = await Faculty.findById(req.params.id);
+    if (!targetFaculty) return res.status(404).json({ message: 'Faculty not found' });
+
+    const requester = await getRequesterContext(req);
+    const isAdminUser = requester.userType === 'admin';
+    const isSelf = requester.userType === 'faculty' && requester.email && requester.email === targetFaculty.email;
+
+    if (!isAdminUser && !isSelf) {
+      return res.status(403).json({ message: 'Not authorized to update this faculty profile image' });
+    }
+
+    const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
+    targetFaculty.profilepic = imageUrl;
+    await targetFaculty.save();
+    await syncFacultyProfileFromDoc(targetFaculty);
+
+    return res.json({ message: 'Profile image uploaded successfully', profilepic: imageUrl });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
 // Get faculty by ID
 router.get('/:id', verifyToken, isAdminOrFaculty, async (req, res) => {
   const faculty = await Faculty.findById(req.params.id).select('-password');
   if (!faculty) return res.status(404).json({ message: 'Faculty not found' });
-  res.json(faculty);
+  const enrichedFaculty = enrichFacultyWithCalculatedExperience(faculty);
+  res.json(enrichedFaculty);
 });
 
 // Update faculty
@@ -602,6 +663,111 @@ router.put('/:id', verifyToken, async (req, res) => {
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
   await Faculty.findByIdAndDelete(req.params.id);
   res.json({ message: 'Faculty deleted' });
+});
+
+// Export interested students (faculty only)
+router.get('/export/interested/:opportunityId', verifyToken, async (req, res) => {
+  try {
+    // Only the faculty who posted the opportunity or an admin can export interested students
+    if (req.user?.userType !== 'faculty' && req.user?.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Faculty or admin access required' });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.opportunityId)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
+    }
+
+    const { format } = req.query; // 'csv', 'excel', 'pdf'
+    const Interest = mongoose.model('Interest');
+    const Opportunity = mongoose.model('Opportunity');
+
+    const opportunity = await Opportunity.findById(req.params.opportunityId);
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
+
+    // If requester is faculty, ensure they created this opportunity
+    if (req.user?.userType === 'faculty') {
+      if (!req.user?.id || opportunity.createdBy.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Only the faculty who posted this opportunity can export interested students' });
+      }
+    }
+
+    // Get interested students (include interest timestamp)
+    const interests = await Interest.find({ opportunity: req.params.opportunityId })
+      .populate('student', 'name roll email department year semester cgpa skills parentInfo')
+      .sort({ createdAt: 1 });
+
+    const students = interests.map(i => ({ ...(i.student?._doc || i.student || {}), interestDate: i.createdAt }));
+
+    // Generate export
+    if (format === 'excel') {
+      const buffer = await generateStudentExcel(students);
+      res.setHeader('Content-Disposition', `attachment; filename="interested-students-${Date.now()}.xlsx"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(buffer);
+    } else if (format === 'pdf') {
+      const pdf = generateStudentPDF(students, `Interested Students - ${opportunity.title}`);
+      res.setHeader('Content-Disposition', `attachment; filename="interested-students-${Date.now()}.pdf"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      pdf.pipe(res);
+    } else {
+      // Default to CSV
+      const csv = generateStudentCSV(students);
+      res.setHeader('Content-Disposition', `attachment; filename="interested-students-${Date.now()}.csv"`);
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(csv);
+    }
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Export filtered student search results (faculty only)
+router.post('/export/search', verifyToken, async (req, res) => {
+  try {
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Only faculty can export' });
+    }
+
+    const { studentIds, format, query } = req.body; // format: 'csv', 'excel', 'pdf'
+
+    let students = [];
+    if (studentIds && Array.isArray(studentIds) && studentIds.length > 0) {
+      students = await Student.find({
+        _id: { $in: studentIds.map(id => mongoose.Types.ObjectId.isValid(id) ? id : null).filter(Boolean) }
+      }).select('name roll email department year semester cgpa skills parentInfo');
+    } else if (query) {
+      // If only query provided, search in all students
+      const allStudents = await Student.find().select('name roll email department year semester cgpa skills parentInfo');
+      students = filterStudents(allStudents, query);
+    }
+
+    if (students.length === 0) {
+      return res.status(400).json({ success: false, message: 'No students to export' });
+    }
+
+    // Generate export
+    if (format === 'excel') {
+      const buffer = await generateStudentExcel(students);
+      res.setHeader('Content-Disposition', `attachment; filename="student-export-${Date.now()}.xlsx"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(buffer);
+    } else if (format === 'pdf') {
+      const pdf = generateStudentPDF(students, 'Student Search Results Export');
+      res.setHeader('Content-Disposition', `attachment; filename="student-export-${Date.now()}.pdf"`);
+      res.setHeader('Content-Type', 'application/pdf');
+      pdf.pipe(res);
+    } else {
+      // Default to CSV
+      const csv = generateStudentCSV(students);
+      res.setHeader('Content-Disposition', `attachment; filename="student-export-${Date.now()}.csv"`);
+      res.setHeader('Content-Type', 'text/csv');
+      res.send(csv);
+    }
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
 });
 
 export default router;

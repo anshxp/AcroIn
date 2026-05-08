@@ -12,11 +12,14 @@ import {
   Clock,
   ExternalLink,
   Trash2,
-  Edit
+  Edit,
+  Heart,
+  Users,
+  X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { facultyAPI, postAPI, studentAPI } from '../../services/api';
-import type { Post, Comment } from '../../types';
+import { facultyAPI, postAPI, studentAPI, interestAPI, opportunityAPI } from '../../services/api';
+import type { Post, Comment, Interest } from '../../types';
 import './posts.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -38,6 +41,11 @@ interface OpportunityViewModel {
   applyLink?: string;
 }
 
+interface OpportunitySignature {
+  type: string;
+  title: string;
+}
+
 export const PostCard: React.FC<PostCardProps> = ({ 
   post, 
   onPostUpdated,
@@ -55,6 +63,13 @@ export const PostCard: React.FC<PostCardProps> = ({
   const [shareFeedback, setShareFeedback] = useState('');
   const [isSharing, setIsSharing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [isInterested, setIsInterested] = useState(false);
+  const [isMarkingInterest, setIsMarkingInterest] = useState(false);
+  const [opportunityId, setOpportunityId] = useState<string | null>(null);
+  const [showInterestedStudentsModal, setShowInterestedStudentsModal] = useState(false);
+  const [interestedStudents, setInterestedStudents] = useState<Interest[]>([]);
+  const [isLoadingInterestedStudents, setIsLoadingInterestedStudents] = useState(false);
+  const [interestedStudentsError, setInterestedStudentsError] = useState('');
 
   useEffect(() => {
     const loadCurrentUserAvatar = async () => {
@@ -85,6 +100,108 @@ export const PostCard: React.FC<PostCardProps> = ({
 
     loadCurrentUserAvatar();
   }, [user?.id, user?.userType]);
+
+  const parseOpportunitySignature = (content: string): OpportunitySignature | null => {
+    const lines = content
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) return null;
+
+    const headingMatch = lines[0].match(/^New\s+(.+?)\s+opportunity:\s*(.+)$/i);
+    if (!headingMatch) return null;
+
+    return {
+      type: (headingMatch[1] || 'opportunity').trim().toLowerCase(),
+      title: (headingMatch[2] || 'Opportunity').trim(),
+    };
+  };
+
+  // Set opportunity ID from post and check interest
+  useEffect(() => {
+    const resolveOpportunityId = async () => {
+      if (post.linkedOpportunity) {
+        setOpportunityId(post.linkedOpportunity);
+        return;
+      }
+
+      const signature = parseOpportunitySignature(post.content);
+      if (!signature) return;
+
+      try {
+        const opportunities = await opportunityAPI.getAll();
+        const normalizedTitle = signature.title.toLowerCase();
+        const normalizedType = signature.type.toLowerCase();
+
+        const matchedOpportunity = opportunities.find((opportunity) => {
+          const opportunityTitle = String(opportunity.title || '').trim().toLowerCase();
+          const opportunityType = String(opportunity.type || '').trim().toLowerCase();
+          return opportunityTitle === normalizedTitle && opportunityType === normalizedType;
+        }) || opportunities.find((opportunity) => {
+          const opportunityTitle = String(opportunity.title || '').trim().toLowerCase();
+          return opportunityTitle === normalizedTitle;
+        });
+
+        if (matchedOpportunity?._id) {
+          setOpportunityId(matchedOpportunity._id);
+        }
+      } catch {
+        setOpportunityId(null);
+      }
+    }
+
+    resolveOpportunityId();
+  }, [post.content, post.linkedOpportunity, user?.userType]);
+
+  // Check if student is interested in the opportunity
+  useEffect(() => {
+    const checkInterest = async () => {
+      if (!opportunityId || user?.userType !== 'student') return;
+      try {
+        const hasInterest = await interestAPI.hasInterest(opportunityId);
+        setIsInterested(hasInterest);
+      } catch {
+        setIsInterested(false);
+      }
+    };
+    checkInterest();
+  }, [opportunityId, user?.userType]);
+
+  const loadInterestedStudents = async () => {
+    if (!opportunityId) return;
+
+    try {
+      setIsLoadingInterestedStudents(true);
+      setInterestedStudentsError('');
+      const response = await interestAPI.getInterestedStudents(opportunityId);
+      setInterestedStudents(response || []);
+      setShowInterestedStudentsModal(true);
+    } catch (error) {
+      setInterestedStudentsError('Failed to load interested students.');
+      setShowInterestedStudentsModal(true);
+    } finally {
+      setIsLoadingInterestedStudents(false);
+    }
+  };
+
+  const exportInterestedStudents = async (format: 'csv' | 'excel' | 'pdf' = 'csv') => {
+    if (!opportunityId) return;
+
+    try {
+      const blob = await facultyAPI.exportInterestedStudents(opportunityId, format);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `interested-students-${opportunityId}.${format === 'excel' ? 'xlsx' : format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setInterestedStudentsError('Failed to export interested students.');
+    }
+  };
 
   const getAuthorInitials = () => {
     const name = post.author.name;
@@ -385,16 +502,54 @@ export const PostCard: React.FC<PostCardProps> = ({
               <p className="opportunity-post-details">{opportunityPost.details}</p>
             )}
 
-            {opportunityPost.applyLink && (
-              <a
-                href={opportunityPost.applyLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="opportunity-post-apply-btn"
-              >
-                Apply Now <ExternalLink size={14} />
-              </a>
-            )}
+            <div className="opportunity-post-actions">
+              {opportunityPost.applyLink && (
+                <a
+                  href={opportunityPost.applyLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="opportunity-post-apply-btn"
+                >
+                  Apply Now <ExternalLink size={14} />
+                </a>
+              )}
+              {opportunityId && (user?.userType === 'faculty' || user?.userType === 'admin') && (
+                <button
+                  onClick={loadInterestedStudents}
+                  className="opportunity-interest-list-btn"
+                  title="View interested students"
+                >
+                  <Users size={16} />
+                  Interested Students
+                </button>
+              )}
+              {user?.userType === 'student' && opportunityId && (
+                <button
+                  onClick={async () => {
+                    if (isMarkingInterest) return;
+                    try {
+                      setIsMarkingInterest(true);
+                      if (isInterested) {
+                        await interestAPI.unmarkInterest(opportunityId);
+                      } else {
+                        await interestAPI.markInterest(opportunityId);
+                      }
+                      setIsInterested(!isInterested);
+                    } catch (err) {
+                      console.error('Error marking interest:', err);
+                    } finally {
+                      setIsMarkingInterest(false);
+                    }
+                  }}
+                  className={`opportunity-interest-btn ${isInterested ? 'interested' : ''}`}
+                  title={isInterested ? 'Remove interest' : 'Mark interest'}
+                  disabled={isMarkingInterest}
+                >
+                  <Heart size={16} fill={isInterested ? 'currentColor' : 'none'} />
+                  {isInterested ? 'Interested' : 'Mark Interest'}
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           <p>{post.content}</p>
@@ -428,6 +583,50 @@ export const PostCard: React.FC<PostCardProps> = ({
           </div>
         )}
       </div>
+
+      {showInterestedStudentsModal && (
+        <div className="post-modal-overlay" onClick={() => setShowInterestedStudentsModal(false)}>
+          <div className="post-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="post-modal-header">
+              <h3>Interested Students ({interestedStudents.length})</h3>
+              <div className="post-modal-header-actions">
+                <button
+                  type="button"
+                  className="post-export-btn"
+                  onClick={() => exportInterestedStudents('csv')}
+                >
+                  Export CSV
+                </button>
+                <button onClick={() => setShowInterestedStudentsModal(false)} aria-label="Close modal">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="post-modal-body">
+              {isLoadingInterestedStudents ? (
+                <p className="post-modal-empty">Loading students...</p>
+              ) : interestedStudentsError ? (
+                <p className="post-modal-empty">{interestedStudentsError}</p>
+              ) : interestedStudents.length === 0 ? (
+                <p className="post-modal-empty">No students have clicked interest yet.</p>
+              ) : (
+                <div className="post-interest-list">
+                  {interestedStudents.map((interest) => {
+                    const student = typeof interest.student === 'string' ? null : interest.student;
+                    return (
+                      <div className="post-interest-item" key={interest._id}>
+                        <strong>{student?.name || 'Unknown student'}</strong>
+                        <span>{student?.roll || 'N/A'}</span>
+                        <small>Interested on {new Date(interest.createdAt).toLocaleString()}</small>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="post-stats">
         {likesCount > 0 && (

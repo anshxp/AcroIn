@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, MapPin, Briefcase, Trash2, Edit2, ExternalLink, X, Sparkles, Clock } from 'lucide-react';
-import { opportunityAPI } from '../../services/api';
+import { CheckCircle, XCircle, Users } from 'lucide-react';
+import { facultyAPI, opportunityAPI } from '../../services/api';
+import { interestAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import type { Opportunity } from '../../types';
 import '../../styles/pages.css';
 import './PostOpportunities.css';
 
 export const PostOpportunities: React.FC = () => {
+  const { user } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,6 +19,13 @@ export const PostOpportunities: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+    const [rejectionModalOpen, setRejectionModalOpen] = useState<string | null>(null);
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [interestedStudentsModalOpen, setInterestedStudentsModalOpen] = useState<string | null>(null);
+    const [interestedStudents, setInterestedStudents] = useState<any[]>([]);
+    const [isLoadingInterested, setIsLoadingInterested] = useState(false);
+    const [interestMap, setInterestMap] = useState<Record<string, boolean>>({});
+    const [markingMap, setMarkingMap] = useState<Record<string, boolean>>({});
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -26,6 +37,14 @@ export const PostOpportunities: React.FC = () => {
     requirements: '',
     application_link: '',
   });
+
+  const isOpportunityOwner = (opportunity: Opportunity) => {
+    if (user?.userType !== 'faculty' && user?.userType !== 'admin') {
+      return false;
+    }
+
+    return String(opportunity.createdBy || '') === String(user?.id || '');
+  };
 
   // Load opportunities on mount
   useEffect(() => {
@@ -44,6 +63,46 @@ export const PostOpportunities: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const toggleInterest = async (opportunityId: string) => {
+    if (!opportunityId) return;
+    setMarkingMap((m) => ({ ...m, [opportunityId]: true }));
+    try {
+      const currently = !!interestMap[opportunityId];
+      if (currently) {
+        await interestAPI.unmarkInterest(opportunityId);
+        setInterestMap((m) => ({ ...m, [opportunityId]: false }));
+      } else {
+        await interestAPI.markInterest(opportunityId);
+        setInterestMap((m) => ({ ...m, [opportunityId]: true }));
+      }
+    } catch (err) {
+      console.error('Failed toggling interest', err);
+    } finally {
+      setMarkingMap((m) => ({ ...m, [opportunityId]: false }));
+    }
+  };
+
+  // When opportunities or user changes, pre-check interest for students
+  useEffect(() => {
+    const checkInterests = async () => {
+      if (!user || user.userType !== 'student') return;
+      const map: Record<string, boolean> = {};
+      await Promise.all(
+        opportunities.map(async (opp) => {
+          try {
+            const has = await interestAPI.hasInterest(opp._id);
+            map[opp._id] = Boolean(has);
+          } catch {
+            map[opp._id] = false;
+          }
+        })
+      );
+      setInterestMap(map);
+    };
+
+    checkInterests();
+  }, [opportunities, user]);
 
   const typeOptions = [
     { value: 'internship', label: 'Internship' },
@@ -167,6 +226,69 @@ export const PostOpportunities: React.FC = () => {
     }
   };
 
+    const handleApprove = async (id: string) => {
+      if (!confirm('Approve this opportunity?')) return;
+      try {
+        setApiError(null);
+        await opportunityAPI.approve(id);
+        setOpportunities((prev) =>
+          prev.map((o) => (o._id === id ? { ...o, status: 'APPROVED' } : o))
+        );
+        setApiMessage('Opportunity approved successfully');
+        setTimeout(() => setApiMessage(null), 3000);
+      } catch (err: any) {
+        setApiError(err.response?.data?.message || 'Failed to approve opportunity');
+      }
+    };
+
+    const handleReject = async (id: string) => {
+      if (!rejectionReason.trim()) {
+        setApiError('Please provide a rejection reason');
+        return;
+      }
+      try {
+        setApiError(null);
+        await opportunityAPI.reject(id, rejectionReason);
+        setOpportunities((prev) =>
+          prev.map((o) => (o._id === id ? { ...o, status: 'REJECTED' } : o))
+        );
+        setRejectionModalOpen(null);
+        setRejectionReason('');
+        setApiMessage('Opportunity rejected successfully');
+        setTimeout(() => setApiMessage(null), 3000);
+      } catch (err: any) {
+        setApiError(err.response?.data?.message || 'Failed to reject opportunity');
+      }
+    };
+
+    const loadInterestedStudents = async (opportunityId: string) => {
+      try {
+        setIsLoadingInterested(true);
+        const students = await interestAPI.getInterestedStudents(opportunityId);
+        setInterestedStudents(students || []);
+        setInterestedStudentsModalOpen(opportunityId);
+      } catch (err: any) {
+        setApiError('Failed to load interested students');
+      } finally {
+        setIsLoadingInterested(false);
+      }
+    };
+
+    const exportInterestedStudents = async (opportunityId: string, format: 'csv' | 'excel' | 'pdf' = 'csv') => {
+      try {
+        const blob = await facultyAPI.exportInterestedStudents(opportunityId, format);
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `interested-students-${opportunityId}.${format === 'excel' ? 'xlsx' : format}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        setApiError('Failed to export interested students');
+      }
+    };
   const getUrgency = (deadline?: string) => {
     if (!deadline) {
       return { label: 'Open', level: 'open' as const };
@@ -177,24 +299,24 @@ export const PostOpportunities: React.FC = () => {
     const msPerDay = 24 * 60 * 60 * 1000;
     const days = Math.ceil((due.getTime() - now.getTime()) / msPerDay);
 
-    if (days < 0) {
-      return { label: 'Closed', level: 'closed' as const };
-    }
-    if (days <= 3) {
-      return { label: 'Closing Soon', level: 'soon' as const };
-    }
-    return { label: 'Open', level: 'open' as const };
-  };
 
-  const closingSoonCount = opportunities.filter((opp) => getUrgency(opp.deadline).level === 'soon').length;
-  const openCount = opportunities.filter((opp) => getUrgency(opp.deadline).level !== 'closed').length;
-  const recentCount = opportunities.filter((opp) => {
-    const created = new Date(opp.createdAt);
-    const now = new Date();
-    const msPerDay = 24 * 60 * 60 * 1000;
-    return (now.getTime() - created.getTime()) / msPerDay <= 2;
-  }).length;
+      if (days < 0) {
+        return { label: 'Closed', level: 'closed' as const };
+      }
+      if (days <= 3) {
+        return { label: 'Closing Soon', level: 'soon' as const };
+      }
+      return { label: 'Open', level: 'open' as const };
+    };
 
+    const closingSoonCount = opportunities.filter((opp) => getUrgency(opp.deadline).level === 'soon').length;
+    const openCount = opportunities.filter((opp) => getUrgency(opp.deadline).level !== 'closed').length;
+    const recentCount = opportunities.filter((opp) => {
+      const created = new Date(opp.createdAt);
+      const now = new Date();
+      const msPerDay = 24 * 60 * 60 * 1000;
+      return (now.getTime() - created.getTime()) / msPerDay <= 2;
+    }).length;
   return (
     <div className="opportunity-board">
       {/* Page Header */}
@@ -275,6 +397,11 @@ export const PostOpportunities: React.FC = () => {
                     <span className="opportunity-type-chip">
                       {opportunity.type}
                     </span>
+                    {opportunity.status && (
+                      <span className={`opportunity-status-badge status-${opportunity.status.toLowerCase()}`}>
+                        {opportunity.status}
+                      </span>
+                    )}
                     <span className={`opportunity-urgency-badge ${getUrgency(opportunity.deadline).level}`}>
                       {getUrgency(opportunity.deadline).label}
                     </span>
@@ -338,6 +465,46 @@ export const PostOpportunities: React.FC = () => {
                 </div>
 
                 <div className="opportunity-card-actions">
+                  {opportunity.status === 'PENDING' && (
+                    <>
+                      <button
+                        onClick={() => handleApprove(opportunity._id)}
+                        className="btn-approve"
+                        title="Approve opportunity"
+                      >
+                        <CheckCircle size={16} />
+                      </button>
+                      <button
+                        onClick={() => setRejectionModalOpen(opportunity._id)}
+                        className="btn-reject"
+                        title="Reject opportunity"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </>
+                  )}
+                  {(opportunity.status === 'APPROVED' || isOpportunityOwner(opportunity) || user?.userType === 'admin') && (
+                    <button
+                      onClick={() => loadInterestedStudents(opportunity._id)}
+                      className="btn-view-interest"
+                      title="View interested students"
+                    >
+                      <Users size={16} />
+                      {interestedStudents.length > 0 && (
+                        <span className="interest-count">{interestedStudents.length}</span>
+                      )}
+                    </button>
+                  )}
+                  {user?.userType === 'student' && opportunity._id && (
+                    <button
+                      onClick={() => toggleInterest(opportunity._id)}
+                      className={`opportunity-student-interest ${interestMap[opportunity._id] ? 'interested' : ''}`}
+                      title={interestMap[opportunity._id] ? 'Remove interest' : 'Mark interest'}
+                      disabled={markingMap[opportunity._id]}
+                    >
+                      {interestMap[opportunity._id] ? 'Interested' : 'Mark Interest'}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleOpenModal(opportunity)}
                     aria-label="Edit opportunity"
@@ -483,6 +650,94 @@ export const PostOpportunities: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Reason Modal */}
+      {rejectionModalOpen && (
+        <div className="opportunity-modal-overlay" onClick={() => setRejectionModalOpen(null)}>
+          <div className="opportunity-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="opportunity-modal-header">
+              <h3>Reject Opportunity</h3>
+              <button onClick={() => setRejectionModalOpen(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="opportunity-rejection-form">
+              <label>
+                Rejection Reason *
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Provide a reason for rejection..."
+                  rows={4}
+                  required
+                />
+              </label>
+              <div className="opportunity-modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setRejectionModalOpen(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => handleReject(rejectionModalOpen)}
+                >
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interested Students Modal */}
+      {interestedStudentsModalOpen && (
+        <div className="opportunity-modal-overlay" onClick={() => setInterestedStudentsModalOpen(null)}>
+          <div className="opportunity-modal opportunity-modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="opportunity-modal-header">
+              <h3>Students Interested ({interestedStudents.length})</h3>
+              <div className="opportunity-modal-header-actions">
+                {interestedStudentsModalOpen && (
+                  <button
+                    type="button"
+                    className="btn-secondary btn-export"
+                    onClick={() => exportInterestedStudents(interestedStudentsModalOpen, 'csv')}
+                  >
+                    Export CSV
+                  </button>
+                )}
+                <button onClick={() => setInterestedStudentsModalOpen(null)}>
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="opportunity-interested-list">
+              {isLoadingInterested ? (
+                <p className="opportunity-loading">Loading students...</p>
+              ) : interestedStudents.length === 0 ? (
+                <p className="opportunity-empty">No students interested yet</p>
+              ) : (
+                <div className="student-items">
+                  {interestedStudents.map((interest) => (
+                    <div key={interest._id} className="student-item">
+                      <div className="student-info">
+                        <h4>{interest.student?.name || 'Unknown'}</h4>
+                        <p>{interest.student?.roll || 'N/A'}</p>
+                        <p className="student-date">
+                          Interested on {new Date(interest.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

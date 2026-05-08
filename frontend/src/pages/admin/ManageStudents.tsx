@@ -18,7 +18,8 @@ import {
   Mail,
   Building2,
 } from 'lucide-react';
-import { studentAPI } from '../../services/api';
+import { studentAPI, adminAPI } from '../../services/api';
+import AddStudentModal from '../../components/admin/AddStudentModal';
 import '../../styles/pages.css';
 
 interface Student {
@@ -46,6 +47,7 @@ export const ManageStudents: React.FC = () => {
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -165,6 +167,36 @@ export const ManageStudents: React.FC = () => {
     }
   };
 
+  const handleAddStudent = () => {
+    setIsAddStudentModalOpen(true);
+  };
+
+  const handleStudentCreated = (created: any) => {
+    const newStudent = created?.student || created;
+    if (newStudent?._id) {
+      setStudents((prev) => [{
+        _id: newStudent._id,
+        name: newStudent.name || `${newStudent.firstname || ''} ${newStudent.lastName || ''}`.trim() || 'New Student',
+        roll: newStudent.roll || newStudent.rollNo || 'N/A',
+        email: newStudent.email || 'N/A',
+        profileImage: newStudent.profile_image || '',
+        department: newStudent.department || 'N/A',
+        tech_stack: Array.isArray(newStudent.tech_stack) ? newStudent.tech_stack : [],
+        projectsCount: Array.isArray(newStudent.projects) ? newStudent.projects.length : 0,
+        internshipsCount: Array.isArray(newStudent.internships) ? newStudent.internships.length : 0,
+        competitionsCount: Array.isArray(newStudent.competitions) ? newStudent.competitions.length : 0,
+        certificatesCount: Array.isArray(newStudent.certificates) ? newStudent.certificates.length : 0,
+        status: newStudent.status === 'inactive' ? 'inactive' : 'active',
+        createdAt: newStudent.createdAt || new Date().toISOString(),
+      }, ...prev]);
+    } else {
+      (async () => {
+        const backendStudents = await studentAPI.getAllStudents();
+        setStudents(backendStudents);
+      })();
+    }
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -267,7 +299,7 @@ export const ManageStudents: React.FC = () => {
             <Download size={18} />
             Export
           </button>
-          <button className="add-button">
+          <button className="add-button" onClick={handleAddStudent}>
             <Plus size={18} />
             Add Student
           </button>
@@ -496,6 +528,14 @@ export const ManageStudents: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+        createStudent={adminAPI.createStudent}
+        onCreated={handleStudentCreated}
+      />
 
       {/* Delete Student Modal */}
       {isDeleteModalOpen && deleteTargetStudent && (

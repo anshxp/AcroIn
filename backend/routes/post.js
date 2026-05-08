@@ -105,7 +105,7 @@ const toAbsoluteUploadUrl = (req, filePath) => {
 // Update post
 router.put('/:id', verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     const isOwner = post.author?._id?.toString() === req.user?.id;
@@ -135,7 +135,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 // Get all posts
 router.get('/', verifyToken, async (_req, res) => {
   try {
-    const posts = await Post.find().sort({ createdAt: -1 });
+    const posts = await Post.find().populate('linkedOpportunity').sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -145,7 +145,7 @@ router.get('/', verifyToken, async (_req, res) => {
 // Create post
 router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), async (req, res) => {
   try {
-    const { content, images } = req.body || {};
+    const { content, images, linkedOpportunity } = req.body || {};
     const uploadedMedia = Array.isArray(req.files)
       ? req.files.map((file) => toAbsoluteUploadUrl(req, file.path || `/uploads/${file.filename}`))
       : [];
@@ -169,9 +169,11 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
       author,
       content: normalizedContent,
       images: [...bodyImages, ...uploadedMedia],
+      linkedOpportunity: linkedOpportunity || undefined,
     });
 
     await post.save();
+    await post.populate('linkedOpportunity');
     res.status(201).json(post);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -181,7 +183,7 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
 // Like post
 router.post('/:id/like', verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     if (!post.likes.some((id) => id.toString() === req.user.id)) {
@@ -198,7 +200,7 @@ router.post('/:id/like', verifyToken, async (req, res) => {
 // Unlike post
 router.post('/:id/unlike', verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     post.likes = post.likes.filter((id) => id.toString() !== req.user.id);
@@ -212,7 +214,7 @@ router.post('/:id/unlike', verifyToken, async (req, res) => {
 
 const addCommentHandler = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     const { content } = req.body || {};

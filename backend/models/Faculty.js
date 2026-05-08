@@ -6,6 +6,7 @@ const facultySchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   profilepic: String,
   experience: Number,
+  dateOfJoining: Date,
   qualification: String,
   subjects: [String],
   department: String,

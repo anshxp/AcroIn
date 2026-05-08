@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Opportunity from '../models/Opportunity.js';
+import Faculty from '../models/Faculty.js';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
 import { createAnnouncementNotifications } from '../utils/announcementNotifications.js';
@@ -64,10 +65,17 @@ const buildOpportunityPostContent = (opportunity) => {
   return lines.join('\n');
 };
 
-// Get all opportunities
+// Get all opportunities (students see only APPROVED, others see all)
 router.get('/', async (req, res) => {
   try {
-    const opportunities = await Opportunity.find({ isActive: true }).sort({ createdAt: -1 });
+    const query = { isActive: true };
+    
+    // If student, only show approved opportunities
+    if (req.user?.userType === 'student') {
+      query.status = 'APPROVED';
+    }
+    
+    const opportunities = await Opportunity.find(query).sort({ createdAt: -1 });
     res.json(opportunities);
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -144,6 +152,7 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
         author,
         content: buildOpportunityPostContent(opportunity),
         images: uploadedAttachments,
+        linkedOpportunity: opportunity._id,
       });
     }
 
@@ -225,4 +234,129 @@ router.delete('/:id', verifyToken, async (req, res) => {
   }
 });
 
+// Approve opportunity (dept admin only)
+router.patch('/:id/approve', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
+    }
+
+    // Check if user is dept_admin or super_admin faculty
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Only faculty can approve opportunities' });
+    }
+
+    const faculty = await Faculty.findOne({ email: (await User.findById(req.user.id)).email });
+    const isDeptAdmin = Array.isArray(faculty?.role) && faculty.role.some(r => r === 'dept_admin' || r === 'super_admin');
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'Only department admin can approve opportunities' });
+    }
+
+    const opportunity = await Opportunity.findById(req.params.id);
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
+
+    // Update status
+    opportunity.status = 'APPROVED';
+    opportunity.approvedBy = faculty._id;
+    opportunity.approvedAt = new Date();
+    await opportunity.save();
+
+    // Send announcement notifications only when approved
+    const author = await getAuthorFromUser(opportunity.createdBy);
+    let createdPost = null;
+    if (author) {
+      createdPost = await Post.create({
+        author,
+        content: buildOpportunityPostContent(opportunity),
+        images: opportunity.attachments,
+        linkedOpportunity: opportunity._id,
+      });
+    }
+
+    await createAnnouncementNotifications({
+      req,
+      payload: {
+        title: opportunity.title,
+        description: opportunity.description,
+        company: opportunity.company,
+        location: opportunity.location,
+        type: opportunity.type,
+        requirements: opportunity.requirements,
+      },
+      announcementType: 'opportunity',
+      sourceId: opportunity._id,
+      title: opportunity.title,
+      actionPath: createdPost ? `/home?post=${createdPost._id}` : '/home',
+    });
+
+    res.json({ success: true, message: 'Opportunity approved', opportunity });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Reject opportunity (dept admin only)
+router.patch('/:id/reject', verifyToken, async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
+    }
+
+    const { reason } = req.body;
+
+    // Check if user is dept_admin or super_admin faculty
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Only faculty can reject opportunities' });
+    }
+
+    const faculty = await Faculty.findOne({ email: (await User.findById(req.user.id)).email });
+    const isDeptAdmin = Array.isArray(faculty?.role) && faculty.role.some(r => r === 'dept_admin' || r === 'super_admin');
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'Only department admin can reject opportunities' });
+    }
+
+    const opportunity = await Opportunity.findById(req.params.id);
+    if (!opportunity) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
+
+    // Update status
+    opportunity.status = 'REJECTED';
+    opportunity.approvedBy = faculty._id;
+    opportunity.approvedAt = new Date();
+    opportunity.rejectionReason = reason || 'No reason provided';
+    await opportunity.save();
+
+    res.json({ success: true, message: 'Opportunity rejected', opportunity });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+// Get approval statistics (dept admin only)
+router.get('/stats/pending', verifyToken, async (req, res) => {
+  try {
+    if (req.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Only faculty can view stats' });
+    }
+
+    const faculty = await Faculty.findOne({ email: (await User.findById(req.user.id)).email });
+    const isDeptAdmin = Array.isArray(faculty?.role) && faculty.role.some(r => r === 'dept_admin' || r === 'super_admin');
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'Only department admin can view stats' });
+    }
+
+    const pending = await Opportunity.countDocuments({ status: 'PENDING' });
+    const approved = await Opportunity.countDocuments({ status: 'APPROVED' });
+    const rejected = await Opportunity.countDocuments({ status: 'REJECTED' });
+
+    res.json({ pending, approved, rejected });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;
+

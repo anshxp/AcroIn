@@ -25,6 +25,7 @@ const postSchema = new mongoose.Schema({
   images: [String],
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [commentSchema],
+  linkedOpportunity: { type: mongoose.Schema.Types.ObjectId, ref: 'Opportunity' },
 }, { timestamps: true });
 
 export default mongoose.model('Post', postSchema);

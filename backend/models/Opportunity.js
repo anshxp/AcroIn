@@ -19,6 +19,18 @@ const opportunitySchema = new mongoose.Schema({
     required: [true, 'Application link is required for opportunities']
   },
   isActive: { type: Boolean, default: true },
+  status: {
+    type: String,
+    enum: ['PENDING', 'APPROVED', 'REJECTED'],
+    default: 'PENDING'
+  },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Faculty',
+    default: null
+  },
+  approvedAt: Date,
+  rejectionReason: String,
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     required: true

@@ -610,6 +610,174 @@
   box-shadow: 0 8px 18px rgba(14, 165, 233, 0.24);
 }
 
+.opportunity-post-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.opportunity-interest-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f5f5f5;
+  border: 1px solid #e5e5e5;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.opportunity-interest-btn:hover {
+  background: #ffe5e5;
+  border-color: #fccaca;
+  color: #e11d48;
+  transform: translateY(-1px);
+}
+
+.opportunity-interest-btn.interested {
+  background: #ffe5e5;
+  border-color: #fccaca;
+  color: #e11d48;
+}
+
+.opportunity-interest-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.opportunity-interest-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.opportunity-interest-list-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.post-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.post-modal {
+  width: min(100%, 560px);
+  max-height: 75vh;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.55);
+}
+
+.post-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.post-modal-header-actions,
+.opportunity-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.post-export-btn,
+.btn-export {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.post-export-btn:hover,
+.btn-export:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.post-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.post-modal-header button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.post-modal-body {
+  max-height: calc(75vh - 60px);
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+}
+
+.post-modal-empty {
+  margin: 0;
+  padding: 18px 8px;
+  text-align: center;
+  color: #64748b;
+}
+
+.post-interest-list {
+  display: grid;
+  gap: 10px;
+}
+
+.post-interest-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.post-interest-item strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.post-interest-item span,
+.post-interest-item small {
+  color: #64748b;
+  font-size: 12px;
+}
+
 .post-images {
   margin-top: 12px;
   display: grid;

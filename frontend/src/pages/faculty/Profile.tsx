@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Avatar } from '../../components/ui/Avatar';
 import { Save, Plus, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { facultyAPI } from '../../services/api';
@@ -16,6 +17,7 @@ interface FacultyProfileForm {
   designation: string;
   qualification: string;
   experience: number;
+  dateOfJoining?: string;
   dob: string;
   linkedin: string;
   headof: string[];
@@ -25,11 +27,25 @@ interface FacultyProfileForm {
 
 const toList = (value?: string[]) => (Array.isArray(value) ? value : []);
 
+const calculateExperience = (dateOfJoining?: string): number | null => {
+  if (!dateOfJoining) return null;
+  try {
+    const joinDate = new Date(dateOfJoining);
+    const today = new Date();
+    const diffMs = today.getTime() - joinDate.getTime();
+    const diffYears = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 365.25));
+    return Math.max(0, diffYears);
+  } catch {
+    return null;
+  }
+};
+
 export const FacultyProfile: React.FC = () => {
   const { user, setUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeptAdmin, setIsDeptAdmin] = useState(false);
   const [newSkillCategory, setNewSkillCategory] = useState('');
   const [newSkillName, setNewSkillName] = useState('');
   const [customSkillName, setCustomSkillName] = useState('');
@@ -47,6 +63,7 @@ export const FacultyProfile: React.FC = () => {
     designation: '',
     qualification: '',
     experience: 0,
+    dateOfJoining: '',
     dob: '',
     linkedin: '',
     headof: [],
@@ -55,6 +72,8 @@ export const FacultyProfile: React.FC = () => {
   });
 
   const [draftProfile, setDraftProfile] = useState<FacultyProfileForm>(profile);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadFacultyProfile = async () => {
     try {
@@ -62,6 +81,15 @@ export const FacultyProfile: React.FC = () => {
       setApiError('');
 
       const faculty: Faculty = await facultyAPI.getProfile();
+      const facultyRoles = Array.isArray(faculty.role)
+        ? faculty.role
+        : Array.isArray(user?.role)
+          ? user.role
+          : [];
+      setIsDeptAdmin(
+        facultyRoles.includes('dept_admin') || facultyRoles.includes('super_admin')
+      );
+
       const normalized: FacultyProfileForm = {
         firstname: faculty.firstname || '',
         lastName: faculty.lastName || '',
@@ -71,6 +99,7 @@ export const FacultyProfile: React.FC = () => {
         designation: faculty.designation || '',
         qualification: faculty.qualification || '',
         experience: typeof faculty.experience === 'number' ? faculty.experience : 0,
+        dateOfJoining: faculty.dateOfJoining || '',
         dob: faculty.dob || '',
         linkedin: faculty.linkedin || '',
         headof: toList(faculty.headof),
@@ -80,6 +109,7 @@ export const FacultyProfile: React.FC = () => {
 
       setProfile(normalized);
       setDraftProfile(normalized);
+      setAvatarUrl(faculty.profilepic || '');
       if (user) {
         const syncedUser = {
           ...user,
@@ -131,6 +161,7 @@ export const FacultyProfile: React.FC = () => {
         designation: draftProfile.designation.trim(),
         qualification: draftProfile.qualification.trim(),
         experience: Number.isFinite(draftProfile.experience) ? draftProfile.experience : 0,
+        dateOfJoining: draftProfile.dateOfJoining || undefined,
         dob: draftProfile.dob,
         linkedin: draftProfile.linkedin.trim(),
         headof: draftProfile.headof,
@@ -139,6 +170,14 @@ export const FacultyProfile: React.FC = () => {
       };
 
       const updated = await facultyAPI.updateProfile(payload);
+      const updatedRoles = Array.isArray(updated.role)
+        ? updated.role
+        : Array.isArray(user?.role)
+          ? user.role
+          : [];
+      setIsDeptAdmin(
+        updatedRoles.includes('dept_admin') || updatedRoles.includes('super_admin')
+      );
 
       const next: FacultyProfileForm = {
         firstname: updated.firstname || '',
@@ -149,6 +188,7 @@ export const FacultyProfile: React.FC = () => {
         designation: updated.designation || '',
         qualification: updated.qualification || '',
         experience: typeof updated.experience === 'number' ? updated.experience : 0,
+        dateOfJoining: updated.dateOfJoining || '',
         dob: updated.dob || '',
         linkedin: updated.linkedin || '',
         headof: toList(updated.headof),
@@ -176,6 +216,32 @@ export const FacultyProfile: React.FC = () => {
       }
     } catch {
       setApiError('Unable to save profile. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleChangePhotoClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsSaving(true);
+    setApiError('');
+    try {
+      const result = await facultyAPI.uploadProfileImage(file);
+      const newUrl = result.profilepic || '';
+      setAvatarUrl(newUrl);
+      if (user) {
+        const updatedUser = { ...user, profilepic: newUrl };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+      setApiMessage('Profile image updated successfully.');
+    } catch (err) {
+      setApiError('Failed to upload image.');
     } finally {
       setIsSaving(false);
     }
@@ -264,12 +330,26 @@ export const FacultyProfile: React.FC = () => {
     <div className="page-container faculty-profile-page">
       <div className="page-header">
         <div className="page-title-section">
-          <h1>{fullName}</h1>
-          <p>{current.designation || 'Faculty'} • {current.department || 'Department not set'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Avatar src={avatarUrl || ''} name={fullName} size="xl" />
+            <div>
+              <h1>{fullName}</h1>
+              <p>{current.designation || 'Faculty'} • {current.department || 'Department not set'}</p>
+              <div className={`faculty-admin-status ${isDeptAdmin ? 'admin' : 'not-admin'}`}>
+                Department Admin: {isDeptAdmin ? 'Yes' : 'No'}
+              </div>
+            </div>
+          </div>
         </div>
         <div className="page-actions">
           {!isEditing && (
-            <button className="btn-primary" onClick={beginEdit} type="button">Edit Profile</button>
+            <>
+              <button className="btn-primary" onClick={beginEdit} type="button">Edit Profile</button>
+              <button className="btn-secondary" onClick={handleChangePhotoClick} type="button" style={{ marginLeft: '8px' }} disabled={isSaving}>
+                Change Photo
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+            </>
           )}
           {isEditing && (
             <>
@@ -370,14 +450,32 @@ export const FacultyProfile: React.FC = () => {
               />
             </label>
             <label>
-              Experience (Years)
+              Date of Joining
               <input
-                type="number"
-                min="0"
-                value={String(current.experience || 0)}
+                type="date"
+                value={current.dateOfJoining || ''}
                 disabled={!isEditing}
-                onChange={(event) => setDraftProfile({ ...draftProfile, experience: Number(event.target.value) })}
+                onChange={(event) => setDraftProfile({ ...draftProfile, dateOfJoining: event.target.value })}
               />
+            </label>
+            <label>
+              Experience (Years)
+              {current.dateOfJoining && calculateExperience(current.dateOfJoining) !== null ? (
+                <div className="faculty-experience-display">
+                  <span className="experience-value">
+                    {calculateExperience(current.dateOfJoining)} years
+                  </span>
+                  <span className="experience-note">(Calculated from joining date)</span>
+                </div>
+              ) : (
+                <input
+                  type="number"
+                  min="0"
+                  value={String(current.experience || 0)}
+                  disabled={!isEditing}
+                  onChange={(event) => setDraftProfile({ ...draftProfile, experience: Number(event.target.value) })}
+                />
+              )}
             </label>
           </div>
         </section>

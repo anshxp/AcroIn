@@ -39,6 +39,14 @@ interface ProfileForm {
   location: string;
   bio: string;
   tech_stack: string[];
+  parentInfo?: {
+    fatherName?: string;
+    fatherPhone?: string;
+    fatherEmail?: string;
+    motherName?: string;
+    motherPhone?: string;
+    motherEmail?: string;
+  };
 }
 
 const isDemoStudentAccount = (userId?: string, email?: string) => {
@@ -1309,6 +1317,157 @@ export const StudentProfile: React.FC = () => {
                         <span className="contact-value">Not added</span>
                       )
                     )}
+                  </div>
+                </div>
+
+                {/* Parent Information Section */}
+                <div className="parent-info-section">
+                  <h3 className="section-title">
+                    <span>👨‍👩‍👦</span> Parent Information
+                  </h3>
+                  {profile.parentInfo?.fatherName && !isEditing && (
+                    <div className="parent-info-locked-notice">
+                      <CheckCircle size={14} />
+                      <span>Parent information is locked</span>
+                    </div>
+                  )}
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Phone size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Father's Name</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="text"
+                          value={profile.parentInfo?.fatherName || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), fatherName: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="Father's full name"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.fatherName || 'Not added'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Phone size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Father's Phone</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="tel"
+                          value={profile.parentInfo?.fatherPhone || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), fatherPhone: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="+91 9876543210"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.fatherPhone || 'Not added'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Mail size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Father's Email</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="email"
+                          value={profile.parentInfo?.fatherEmail || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), fatherEmail: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="father@email.com"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.fatherEmail || 'Not added'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Phone size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Mother's Name</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="text"
+                          value={profile.parentInfo?.motherName || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), motherName: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="Mother's full name"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.motherName || 'Not added'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Phone size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Mother's Phone</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="tel"
+                          value={profile.parentInfo?.motherPhone || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), motherPhone: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="+91 9876543210"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.motherPhone || 'Not added'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="contact-item">
+                    <div className="contact-icon">
+                      <Mail size={18} />
+                    </div>
+                    <div className="contact-content">
+                      <span className="contact-label">Mother's Email</span>
+                      {isEditing && !profile.parentInfo?.fatherName ? (
+                        <input
+                          type="email"
+                          value={profile.parentInfo?.motherEmail || ''}
+                          onChange={(e) => setProfile({
+                            ...profile,
+                            parentInfo: { ...(profile.parentInfo || {}), motherEmail: e.target.value }
+                          })}
+                          className="contact-input"
+                          placeholder="mother@email.com"
+                        />
+                      ) : (
+                        <span className="contact-value">{profile.parentInfo?.motherEmail || 'Not added'}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

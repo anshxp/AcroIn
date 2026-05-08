@@ -645,6 +645,45 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+/* Parent Information Section */
+.parent-info-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.parent-info-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+
+.parent-info-section .section-title span {
+  font-size: 18px;
+}
+
+.parent-info-locked-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+.parent-info-locked-notice svg {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
 /* Face Capture Section */
 .face-capture-grid {
   display: grid;

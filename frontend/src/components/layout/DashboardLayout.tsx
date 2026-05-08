@@ -18,6 +18,7 @@ import {
   FileCheck,
   LogOut,
   Plus
+    , MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CreatePostModal } from '../posts';
@@ -190,6 +191,7 @@ export const DashboardLayout: React.FC = () => {
     if (userType === 'admin') {
       return [
         { path: '/home', label: 'Home Feed', icon: <Home size={20} /> },
+          { path: '/chat', label: 'Messages', icon: <MessageSquare size={20} /> },
         { path: '/admin/students', label: 'Manage Students', icon: <Users size={20} /> },
         { path: '/admin/faculty', label: 'Manage Faculty', icon: <GraduationCap size={20} /> },
         { path: '/admin/analytics', label: 'Analytics', icon: <TrendingUp size={20} /> },
@@ -200,6 +202,7 @@ export const DashboardLayout: React.FC = () => {
     if (userType === 'faculty') {
       const facultyItems: NavItem[] = [
         { path: '/home', label: 'Home Feed', icon: <Home size={20} /> },
+          { path: '/chat', label: 'Messages', icon: <MessageSquare size={20} /> },
         { path: '/faculty/search', label: 'Smart Search', icon: <Search size={20} /> },
         { path: '/faculty/verification', label: 'Facial Recognition', icon: <Camera size={20} />, badge: 'New', badgeType: 'new' },
         { path: '/faculty/recommendations', label: 'Recommendations', icon: <Star size={20} />, badge: 5 },
@@ -222,6 +225,7 @@ export const DashboardLayout: React.FC = () => {
     // Student navigation
     return [
       { path: '/home', label: 'Home', icon: <Home size={20} /> },
+        { path: '/chat', label: 'Messages', icon: <MessageSquare size={20} /> },
       { path: '/student/search', label: 'Smart Search', icon: <Search size={20} /> },
       { path: '/student/profile', label: 'Profile', icon: <Users size={20} /> },
       { path: '/student/skills', label: 'Skills', icon: <Award size={20} /> },
