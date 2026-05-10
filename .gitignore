@@ -1,32 +1,24 @@
+# Node
 node_modules/
 dist/
 build/
+
+# Environment
 .env
+.venv/
+venv/
+ENV/
+
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.venv
-venv/
-ENV/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
 *.egg-info/
-.installed.cfg
-*.egg
 
-# VSCode
+# IDE
 .vscode/
+.idea/
 
 # OS
 .DS_Store
@@ -35,18 +27,16 @@ Thumbs.db
 # Misc
 *.swp
 *.swo
-.idea/
 *.iml
-*.sublime-workspace
-*.sublime-project
 
-# Data
-face_rec_service/data/
-
-# Face recognition service heavy files
-face_rec_service/
-
-# OR more precise (better)
+# Heavy ML/Data Files
 face_rec_service/models/
 face_rec_service/data/
 face_rec_service/cache/
+
+# Optional
+*.onnx
+*.pth
+*.pt
+*.h5
+*.pkl
