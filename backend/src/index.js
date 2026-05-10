@@ -19,7 +19,12 @@ const chatRoutes = require('../routes/chat');
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: "https://acro-in.vercel.app",
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 
