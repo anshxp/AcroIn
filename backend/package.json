@@ -4,8 +4,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/free-port.cjs",
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "dev": "nodemon --config nodemon.json --exec node scripts/run-with-freeport.cjs",
     "sync:profiles": "node sync-profiles.js",
     "migrate:face-embeddings": "node migrate-face-embeddings-to-student.cjs",
     "migrate:project-references": "node migrate-project-references.js"

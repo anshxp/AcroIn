@@ -64,6 +64,12 @@ export interface Student {
   certificates: Certificate[];
   createdAt: string;
   updatedAt: string;
+  // Display/computed properties for UI
+  profileImage?: string;
+  projectsCount?: number;
+  internshipsCount?: number;
+  competitionsCount?: number;
+  certificatesCount?: number;
 }
 
 export interface Faculty {
@@ -239,6 +245,8 @@ export interface Post {
   likes: string[];
   comments: Comment[];
   linkedOpportunity?: string;
+  scope?: 'campus' | 'department';
+  visibleToDepartments?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -290,4 +298,28 @@ export interface Interest {
   opportunity: string | Opportunity;
   createdAt: string;
   updatedAt?: string;
+}
+
+// Audit Log types
+export interface AuditLog {
+  _id: string;
+  actorId: string | User;
+  actorRole: 'student' | 'faculty' | 'dept_admin' | 'admin' | 'super_admin' | 'system';
+  actorDepartment?: string;
+  affectedDepartment?: string;
+  action: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  success: boolean;
+  ip?: string;
+  userAgent?: string;
+  payload?: {
+    params?: Record<string, any>;
+    query?: Record<string, any>;
+    body?: Record<string, any>;
+    durationMs?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
 }

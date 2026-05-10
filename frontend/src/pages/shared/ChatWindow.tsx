@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MoreVertical, Trash2, Flag } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI } from '../../services/api';
-import type { Chat, Message } from '../../types';
+import type { Chat } from '../../types';
 import './chat.css';
 
 export const ChatWindow: React.FC = () => {
@@ -77,8 +77,8 @@ export const ChatWindow: React.FC = () => {
 
   const getOtherParticipantName = () => {
     if (!chat) return '';
-    const otherParticipant = chat.participants.find(p => p._id !== user?.id);
-    return otherParticipant?.name || 'Unknown';
+    const otherParticipantId = chat.participants.find(p => p !== user?.id);
+    return otherParticipantId || 'Unknown';
   };
 
   if (isLoading) {
@@ -138,7 +138,7 @@ export const ChatWindow: React.FC = () => {
             {chat.messages.map(message => (
               <div
                 key={message._id}
-                className={`message ${message.sender._id === user?.id ? 'message-sent' : 'message-received'}`}
+                className={`message ${message.sender === user?.id ? 'message-sent' : 'message-received'}`}
               >
                 <div className="message-bubble">
                   {message.tag && message.tag !== 'GENERAL' && (
@@ -149,7 +149,7 @@ export const ChatWindow: React.FC = () => {
                     {new Date(message.createdAt).toLocaleTimeString()}
                   </span>
                 </div>
-                {message.sender._id === user?.id && (
+                {message.sender === user?.id && (
                   <button
                     onClick={() => handleDeleteMessage(message._id)}
                     className="message-delete-btn"

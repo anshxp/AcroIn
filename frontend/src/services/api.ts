@@ -16,8 +16,8 @@ import type {
   Opportunity,
   NotificationItem,
   Chat,
-  Message,
   Interest,
+  AuditLog,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -344,42 +344,7 @@ export const facultyAPI = {
   },
 };
 
-export const adminAPI = {
-  createFaculty: async (data: {
-    firstname: string;
-    lastName: string;
-    email: string;
-    password: string;
-    department: string;
-    designation: string;
-    qualification: string;
-    experience: number;
-    phone: string;
-    role: 'faculty' | 'dept_admin' | 'super_admin';
-    subjects?: string[];
-    skills?: string[];
-    techstacks?: string[];
-    headof?: string[];
-  }): Promise<any> => {
-    const response = await api.post('/admin/faculty/create', data);
-    return response.data;
-  },
-
-  assignRole: async (userId: string, role: 'faculty' | 'dept_admin' | 'super_admin' | 'admin'): Promise<any> => {
-    const response = await api.post('/admin/assign-role', { userId, role });
-    return response.data;
-  },
-  createStudent: async (data: {
-    name: string;
-    roll: string;
-    email: string;
-    password: string;
-    department?: string;
-  }): Promise<any> => {
-    const response = await api.post('/students', data);
-    return response.data;
-  },
-};
+// admin APIs (faculty/student management and audit/post endpoints)
 
 // Internship APIs
 export const internshipAPI = {
@@ -703,6 +668,64 @@ export const uiAPI = {
   updateAdminSettings: async (payload: AdminSystemSettings): Promise<AdminSystemSettings> => {
     const response = await api.put('/ui/admin/settings', payload);
     return unwrapData<AdminSystemSettings>(response.data);
+  },
+};
+
+export const adminAPI = {
+  createFaculty: async (data: {
+    firstname: string;
+    lastName: string;
+    email: string;
+    password: string;
+    department: string;
+    designation: string;
+    qualification: string;
+    experience: number;
+    phone: string;
+    role: 'faculty' | 'dept_admin' | 'super_admin';
+    subjects?: string[];
+    skills?: string[];
+    techstacks?: string[];
+    headof?: string[];
+  }): Promise<any> => {
+    const response = await api.post('/admin/faculty/create', data);
+    return response.data;
+  },
+
+  assignRole: async (userId: string, role: 'faculty' | 'dept_admin' | 'super_admin' | 'admin'): Promise<any> => {
+    const response = await api.post('/admin/assign-role', { userId, role });
+    return response.data;
+  },
+
+  createStudent: async (data: {
+    name: string;
+    roll: string;
+    email: string;
+    password: string;
+    department?: string;
+  }): Promise<any> => {
+    const response = await api.post('/students', data);
+    return response.data;
+  },
+
+  getDepartmentAuditLogs: async (limit = 50): Promise<AuditLog[]> => {
+    const response = await api.get('/admin/department/audit-logs', { params: { limit } });
+    return response.data?.data || [];
+  },
+
+  createDepartmentPost: async (data: {
+    content: string;
+    images?: string[];
+    scope: 'campus' | 'department';
+    linkedOpportunity?: string;
+  }): Promise<Post> => {
+    const response = await api.post('/admin/department/posts', data);
+    return response.data?.data || response.data;
+  },
+
+  getAuditLogs: async (limit = 50): Promise<AuditLog[]> => {
+    const response = await api.get('/admin/audit-logs', { params: { limit } });
+    return response.data?.data || [];
   },
 };
 

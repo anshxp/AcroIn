@@ -22,7 +22,7 @@ import { studentAPI, adminAPI } from '../../services/api';
 import AddStudentModal from '../../components/admin/AddStudentModal';
 import '../../styles/pages.css';
 
-interface Student {
+interface ManagedStudent {
   _id: string;
   name: string;
   roll: string;
@@ -40,7 +40,7 @@ interface Student {
 
 export const ManageStudents: React.FC = () => {
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<ManagedStudent[]>([]);
   const [brokenImageMap, setBrokenImageMap] = useState<Record<string, boolean>>({});
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,10 +48,10 @@ export const ManageStudents: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<ManagedStudent | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteTargetStudent, setDeleteTargetStudent] = useState<Student | null>(null);
+  const [deleteTargetStudent, setDeleteTargetStudent] = useState<ManagedStudent | null>(null);
   const [deleteError, setDeleteError] = useState('');
   const [isDeletingStudent, setIsDeletingStudent] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +61,7 @@ export const ManageStudents: React.FC = () => {
     const loadStudents = async () => {
       try {
         const backendStudents = await studentAPI.getAllStudents();
-        const normalizedStudents: Student[] = backendStudents.map((student: any): Student => ({
+        const normalizedStudents: ManagedStudent[] = backendStudents.map((student: any): ManagedStudent => ({
           _id: student._id,
           name: student.name || 'Unknown Student',
           roll: student.roll || 'N/A',
@@ -125,19 +125,19 @@ export const ManageStudents: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  const handleViewStudent = (student: Student) => {
+  const handleViewStudent = (student: ManagedStudent) => {
     setSelectedStudent(student);
     setIsViewMode(true);
     setIsModalOpen(true);
   };
 
-  const handleEditStudent = (student: Student) => {
+  const handleEditStudent = (student: ManagedStudent) => {
     setSelectedStudent(student);
     setIsViewMode(false);
     setIsModalOpen(true);
   };
 
-  const openDeleteModal = (targetStudent: Student) => {
+  const openDeleteModal = (targetStudent: ManagedStudent) => {
     setDeleteTargetStudent(targetStudent);
     setDeleteError('');
     setIsDeleteModalOpen(true);
@@ -192,7 +192,22 @@ export const ManageStudents: React.FC = () => {
     } else {
       (async () => {
         const backendStudents = await studentAPI.getAllStudents();
-        setStudents(backendStudents);
+        const normalizedStudents: ManagedStudent[] = backendStudents.map((student: any): ManagedStudent => ({
+          _id: student._id,
+          name: student.name || 'Unknown Student',
+          roll: student.roll || 'N/A',
+          email: student.email || 'N/A',
+          profileImage: student.profile_image || student.profileImage || student.profilepic || '',
+          department: student.department || 'N/A',
+          tech_stack: Array.isArray(student.tech_stack) ? student.tech_stack : [],
+          projectsCount: Array.isArray(student.projects) ? student.projects.length : 0,
+          internshipsCount: Array.isArray(student.internships) ? student.internships.length : 0,
+          competitionsCount: Array.isArray(student.competitions) ? student.competitions.length : 0,
+          certificatesCount: Array.isArray(student.certificates) ? student.certificates.length : 0,
+          status: student.status === 'inactive' ? 'inactive' : 'active',
+          createdAt: student.createdAt || new Date().toISOString(),
+        }));
+        setStudents(normalizedStudents);
       })();
     }
   };

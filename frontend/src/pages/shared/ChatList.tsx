@@ -1,6 +1,6 @@
+import { MessageSquare, Plus, Search, X, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageSquare, Plus, Search, X, Trash2, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI, facultyAPI } from '../../services/api';
 import type { Chat, Faculty } from '../../types';
@@ -74,8 +74,8 @@ export const ChatList: React.FC = () => {
   };
 
   const filteredChats = chats.filter(chat => {
-    const otherParticipant = chat.participants.find(p => p._id !== user?.id);
-    const name = otherParticipant?.name || '';
+    const otherParticipantId = chat.participants.find(p => p !== user?.id);
+    const name = otherParticipantId || '';
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -85,8 +85,8 @@ export const ChatList: React.FC = () => {
   });
 
   const getOtherParticipantName = (chat: Chat) => {
-    const otherParticipant = chat.participants.find(p => p._id !== user?.id);
-    return otherParticipant?.name || 'Unknown';
+    const otherParticipantId = chat.participants.find(p => p !== user?.id);
+    return otherParticipantId || 'Unknown';
   };
 
   const getLastMessage = (chat: Chat) => {

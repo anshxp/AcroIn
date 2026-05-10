@@ -26,6 +26,12 @@ const postSchema = new mongoose.Schema({
   likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   comments: [commentSchema],
   linkedOpportunity: { type: mongoose.Schema.Types.ObjectId, ref: 'Opportunity' },
+  scope: { type: String, enum: ['campus', 'department'], default: 'campus' },
+  visibleToDepartments: [String],
 }, { timestamps: true });
+
+postSchema.index({ scope: 1, createdAt: -1 });
+postSchema.index({ visibleToDepartments: 1, createdAt: -1 });
+postSchema.index({ 'author.department': 1, createdAt: -1 });
 
 export default mongoose.model('Post', postSchema);

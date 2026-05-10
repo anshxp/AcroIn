@@ -342,4 +342,112 @@ router.get('/audit-logs', async (req, res) => {
   }
 });
 
+// ✅ Department audit logs (for departmental admins)
+router.get('/department/audit-logs', async (req, res) => {
+  try {
+    const requester = await getRequesterAccess(req);
+    
+    if (!requester.isDepartmentAdmin) {
+      return res.status(403).json({ success: false, message: 'Department admin access required' });
+    }
+
+    // Get the department admin's department
+    if (!requester.user?.email) {
+      return res.status(400).json({ success: false, message: 'Unable to determine your department' });
+    }
+
+    const Faculty = (await import('../models/Faculty.js')).default;
+    const faculty = await Faculty.findOne({ email: requester.user.email }).select('department');
+    
+    if (!faculty?.department) {
+      return res.status(400).json({ success: false, message: 'Department information not found' });
+    }
+
+    const department = String(faculty.department).trim();
+    const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 50));
+
+    // Get logs for the department - where department admin or affected department matches
+    const logs = await AuditLog.find({
+      $or: [
+        { actorDepartment: department },
+        { affectedDepartment: department }
+      ]
+    })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('actorId', 'email userType name');
+
+    res.json({ success: true, count: logs.length, data: logs, department });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ✅ Department admin create post with scope
+router.post('/department/posts', async (req, res) => {
+  try {
+    const requester = await getRequesterAccess(req);
+    
+    if (!requester.isDepartmentAdmin && requester.user?.userType !== 'faculty') {
+      return res.status(403).json({ success: false, message: 'Faculty or department admin access required' });
+    }
+
+    if (!requester.user?.email) {
+      return res.status(400).json({ success: false, message: 'User email not found' });
+    }
+
+    const Faculty = (await import('../models/Faculty.js')).default;
+    const faculty = await Faculty.findOne({ email: requester.user.email }).select('department role profilepic');
+    
+    if (!faculty) {
+      return res.status(404).json({ success: false, message: 'Faculty profile not found' });
+    }
+
+    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.includes('dept_admin');
+    
+    if (!isDeptAdmin) {
+      return res.status(403).json({ success: false, message: 'You must be a department admin to use this endpoint' });
+    }
+
+    const { content, images, scope, linkedOpportunity } = req.body || {};
+
+    if (!content || !String(content).trim()) {
+      return res.status(400).json({ success: false, message: 'Post content is required' });
+    }
+
+    const postScope = String(scope || 'campus').trim().toLowerCase();
+    if (!['campus', 'department'].includes(postScope)) {
+      return res.status(400).json({ success: false, message: 'Scope must be "campus" or "department"' });
+    }
+
+    const Post = (await import('../models/Post.js')).default;
+
+    const newPost = await Post.create({
+      author: {
+        _id: requester.user._id || requester.user.id,
+        name: requester.user.name,
+        designation: String(faculty.designation || '').trim(),
+        department: faculty.department,
+        profileImage: faculty.profilepic || undefined,
+        userType: 'faculty',
+      },
+      content: String(content).trim(),
+      images: Array.isArray(images) ? images : [],
+      scope: postScope,
+      visibleToDepartments: postScope === 'department' ? [faculty.department] : [],
+      linkedOpportunity: linkedOpportunity || undefined,
+      likes: [],
+      comments: [],
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Post created successfully',
+      data: newPost,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 export default router;

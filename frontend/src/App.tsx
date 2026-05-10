@@ -27,6 +27,7 @@ import {
   ManageFaculty,
   AdminSettings,
   AdminAnalytics,
+  DepartmentAuditLogs,
   HomeFeed,
   Notifications,
     ChatList,
@@ -140,6 +141,7 @@ function App() {
             <Route path="/admin/faculty" element={<ManageFaculty />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
           </Route>
 
           {/* Catch all - redirect to home */}

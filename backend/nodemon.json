@@ -1,0 +1,13 @@
+{
+  "delay": 2000,
+  "verbose": false,
+  "ignore": [
+    "../frontend/**",
+    "../**/node_modules/**",
+    "./scripts/**",
+    "**/*.log",
+    "tmp/**"
+  ],
+  "watch": ["./"],
+  "ext": "js,mjs,cjs,json"
+}

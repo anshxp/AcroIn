@@ -49,7 +49,7 @@ const resolveActor = async (req) => {
     return null;
   }
 
-  const user = await User.findById(actorId).select('role userType');
+  const user = await User.findById(actorId).select('role userType email department');
   const roleList = Array.isArray(user?.role) ? user.role.map((role) => String(role || '').trim().toLowerCase()) : [];
 
   let actorRole = actorUserType;
@@ -61,9 +61,23 @@ const resolveActor = async (req) => {
     actorRole = String(user.userType).trim().toLowerCase();
   }
 
+  let actorDepartment = user?.department || null;
+  
+  // Try to resolve department from Faculty record if available
+  if (!actorDepartment && user?.email && (actorRole === 'faculty' || actorRole === 'dept_admin')) {
+    try {
+      const Faculty = (await import('../models/Faculty.js')).default;
+      const faculty = await Faculty.findOne({ email: user.email }).select('department');
+      actorDepartment = faculty?.department || null;
+    } catch {
+      // Department resolution failed, continue with null
+    }
+  }
+
   return {
     actorId,
     actorRole,
+    actorDepartment,
   };
 };
 
@@ -87,9 +101,19 @@ export const auditLogger = (req, res, next) => {
       const payload = sanitizePayload(req.body);
       const success = res.statusCode >= 200 && res.statusCode < 400;
 
+      // Try to extract affected department from request body or params
+      let affectedDepartment = null;
+      if (req.body?.department) {
+        affectedDepartment = String(req.body.department).trim();
+      } else if (req.params?.department) {
+        affectedDepartment = String(req.params.department).trim();
+      }
+
       await AuditLog.create({
         actorId: actor.actorId,
         actorRole: actor.actorRole,
+        actorDepartment: actor.actorDepartment,
+        affectedDepartment,
         action: `${req.method} ${req.baseUrl || ''}${req.path || ''}`.trim(),
         method: req.method,
         path: req.originalUrl,

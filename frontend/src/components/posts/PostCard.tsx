@@ -433,7 +433,17 @@ export const PostCard: React.FC<PostCardProps> = ({
             </span>
             <span className="post-meta">
               <span>{formatTimeAgo(post.createdAt)}</span>
-              <Globe size={12} />
+              {post.scope === 'department' ? (
+                <span className="post-scope-badge department" title={`Visible only to ${post.author.department}`}>
+                  <Users size={12} />
+                  Department
+                </span>
+              ) : (
+                <span className="post-scope-badge campus" title="Visible to all">
+                  <Globe size={12} />
+                  Campus
+                </span>
+              )}
             </span>
           </div>
         </div>

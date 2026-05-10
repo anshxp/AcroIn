@@ -1179,3 +1179,115 @@
 .no-posts p {
   color: #6b7280;
 }
+
+/* Post Scope Selector */
+.post-scope-selector {
+  padding: 16px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 16px 0;
+}
+
+.scope-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding: 0 0 8px 0;
+}
+
+.scope-options {
+  display: flex;
+  gap: 12px;
+}
+
+.scope-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.scope-option:hover {
+  border-color: #bfdbfe;
+  background: #f0f9ff;
+}
+
+.scope-option.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.scope-option svg {
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.scope-option.active svg {
+  color: #3b82f6;
+}
+
+.scope-option > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.scope-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.scope-option.active .scope-title {
+  color: #1e40af;
+}
+
+.scope-desc {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.scope-option.active .scope-desc {
+  color: #3b82f6;
+}
+
+/* Post Scope Badge */
+.post-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.post-scope-badge.campus {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.post-scope-badge.department {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.post-scope-badge svg {
+  width: 12px;
+  height: 12px;
+}

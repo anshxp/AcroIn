@@ -133,9 +133,43 @@ router.put('/:id', verifyToken, async (req, res) => {
 });
 
 // Get all posts
-router.get('/', verifyToken, async (_req, res) => {
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const posts = await Post.find().populate('linkedOpportunity').sort({ createdAt: -1 });
+    // Get user's department if they're a student or faculty
+    let userDepartment = null;
+    
+    if (req.user?.userType === 'student' && req.user?.email) {
+      const student = await Student.findOne({ email: req.user.email }).select('department');
+      userDepartment = student?.department;
+    } else if (req.user?.userType === 'faculty' && req.user?.email) {
+      const faculty = await Faculty.findOne({ email: req.user.email }).select('department');
+      userDepartment = faculty?.department;
+    } else if (req.user?.userType === 'admin') {
+      // Admins can see all posts
+      userDepartment = null;
+    }
+
+    // Build filter for posts based on scope
+    const filters = [];
+    
+    // Always include campus-wide posts
+    filters.push({ scope: 'campus' });
+    
+    // If user has a department and post is department-scoped, only include if in user's department
+    if (userDepartment) {
+      filters.push({
+        scope: 'department',
+        visibleToDepartments: userDepartment
+      });
+    }
+
+    // For admin users, show all posts regardless of scope
+    let query = Post.find();
+    if (req.user?.userType !== 'admin') {
+      query = query.find({ $or: filters });
+    }
+
+    const posts = await query.populate('linkedOpportunity').sort({ createdAt: -1 });
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -145,7 +179,7 @@ router.get('/', verifyToken, async (_req, res) => {
 // Create post
 router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), async (req, res) => {
   try {
-    const { content, images, linkedOpportunity } = req.body || {};
+    const { content, images, linkedOpportunity, scope } = req.body || {};
     const uploadedMedia = Array.isArray(req.files)
       ? req.files.map((file) => toAbsoluteUploadUrl(req, file.path || `/uploads/${file.filename}`))
       : [];
@@ -165,11 +199,29 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
       return res.status(404).json({ message: 'Author not found' });
     }
 
+    // Handle scope for faculty/department admin
+    let postScope = 'campus'; // default
+    let visibleToDepartments = [];
+
+    if (req.user?.userType === 'faculty' && scope) {
+      const normalizedScope = String(scope).trim().toLowerCase();
+      if (['campus', 'department'].includes(normalizedScope)) {
+        postScope = normalizedScope;
+        
+        // If department scope, only visible to author's department
+        if (normalizedScope === 'department' && author.department) {
+          visibleToDepartments = [author.department];
+        }
+      }
+    }
+
     const post = new Post({
       author,
       content: normalizedContent,
       images: [...bodyImages, ...uploadedMedia],
       linkedOpportunity: linkedOpportunity || undefined,
+      scope: postScope,
+      visibleToDepartments,
     });
 
     await post.save();

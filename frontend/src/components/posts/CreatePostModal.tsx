@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Image, Send, Loader2 } from 'lucide-react';
+import { X, Image, Send, Loader2, Globe, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { opportunityAPI, postAPI } from '../../services/api';
+import { opportunityAPI, postAPI, adminAPI } from '../../services/api';
 import type { Post } from '../../types';
 import './posts.css';
 
@@ -19,6 +19,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const { user } = useAuth();
   const [publishMode, setPublishMode] = useState<'post' | 'opportunity'>('post');
   const [content, setContent] = useState('');
+  const [postScope, setPostScope] = useState<'campus' | 'department'>('campus');
   const [opportunityTitle, setOpportunityTitle] = useState('');
   const [opportunityType, setOpportunityType] = useState<'competition' | 'internship' | 'certification'>('competition');
   const [applicationLink, setApplicationLink] = useState('');
@@ -61,6 +62,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     }
     return user?.name || 'User';
   };
+
+  const isFaculty = user?.userType === 'faculty';
 
   const handleSubmit = async () => {
     if (publishMode === 'post' && !content.trim() && selectedFiles.length === 0) return;
@@ -125,14 +128,28 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         return;
       }
 
-      const newPost = await postAPI.create({
-        content: content.trim(),
-        files: selectedFiles,
-      });
+      let newPost: Post;
+      
+      if (isFaculty) {
+        // Use department admin endpoint for faculty
+        newPost = await adminAPI.createDepartmentPost({
+          content: content.trim(),
+          images: selectedFiles.length > 0 ? selectedFiles.map((f) => f.name) : undefined,
+          scope: postScope,
+        });
+      } else {
+        // Use regular post endpoint for non-faculty
+        newPost = await postAPI.create({
+          content: content.trim(),
+          files: selectedFiles,
+        });
+      }
+      
       onPostCreated(newPost);
       setContent('');
       setSelectedFiles([]);
       setUploadError('');
+      setPostScope('campus');
       onClose();
     } catch (error) {
       console.error('Failed to create post:', error);
@@ -233,6 +250,36 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               </span>
             </div>
           </div>
+
+          {publishMode === 'post' && isFaculty && (
+            <div className="post-scope-selector">
+              <label className="scope-label">Post Visibility</label>
+              <div className="scope-options">
+                <button
+                  type="button"
+                  className={`scope-option ${postScope === 'campus' ? 'active' : ''}`}
+                  onClick={() => setPostScope('campus')}
+                >
+                  <Globe size={18} />
+                  <div>
+                    <span className="scope-title">Campus Wide</span>
+                    <span className="scope-desc">Visible to all students and faculty</span>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className={`scope-option ${postScope === 'department' ? 'active' : ''}`}
+                  onClick={() => setPostScope('department')}
+                >
+                  <Users size={18} />
+                  <div>
+                    <span className="scope-title">Department Only</span>
+                    <span className="scope-desc">Visible only to {user?.department}</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
 
           {publishMode === 'opportunity' && (
             <div className="opportunity-fields">

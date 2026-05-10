@@ -17,8 +17,9 @@ import {
   Award,
   FileCheck,
   LogOut,
-  Plus
-    , MessageSquare,
+  Plus,
+  MessageSquare,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CreatePostModal } from '../posts';
@@ -215,6 +216,7 @@ export const DashboardLayout: React.FC = () => {
           { path: '/admin/students', label: 'Manage Students', icon: <Users size={20} /> },
           { path: '/admin/faculty', label: 'Manage Faculty', icon: <GraduationCap size={20} /> },
           { path: '/admin/analytics', label: 'Admin Analytics', icon: <TrendingUp size={20} /> },
+          { path: '/admin/department/audit-logs', label: 'Department Logs', icon: <ClipboardList size={20} /> },
           { path: '/admin/settings', label: 'Admin Settings', icon: <Settings size={20} /> }
         );
       }
