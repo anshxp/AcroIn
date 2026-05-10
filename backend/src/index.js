@@ -28,15 +28,15 @@ app.use(
 app.use(express.json());
 
 
-app.use('/api/auth', authRoutes);
-app.use('/api/students', studentRoutes);
-app.use('/api/faculty', facultyRoutes);
-app.use('/api/posts', postRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/competitions', competitionRoutes);
-app.use('/api/internships', internshipRoutes);
-app.use('/api/chats', chatRoutes);
+app.use('/auth', authRoutes);
+app.use('/students', studentRoutes);
+app.use('/faculty', facultyRoutes);
+app.use('/posts', postRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/admin', adminRoutes);
+app.use('/competitions', competitionRoutes);
+app.use('/internships', internshipRoutes);
+app.use('/chats', chatRoutes);
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
