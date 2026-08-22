@@ -135,41 +135,51 @@ router.put('/:id', verifyToken, async (req, res) => {
 // Get all posts
 router.get('/', verifyToken, async (req, res) => {
   try {
-    // Get user's department if they're a student or faculty
+    const user = await User.findById(req.user.id).select('email userType');
     let userDepartment = null;
-    
-    if (req.user?.userType === 'student' && req.user?.email) {
-      const student = await Student.findOne({ email: req.user.email }).select('department');
+
+    if (user?.userType === 'student' && user.email) {
+      const student = await Student.findOne({ email: user.email }).select('department');
       userDepartment = student?.department;
-    } else if (req.user?.userType === 'faculty' && req.user?.email) {
-      const faculty = await Faculty.findOne({ email: req.user.email }).select('department');
+    } else if (user?.userType === 'faculty' && user.email) {
+      const faculty = await Faculty.findOne({ email: user.email }).select('department');
       userDepartment = faculty?.department;
-    } else if (req.user?.userType === 'admin') {
-      // Admins can see all posts
-      userDepartment = null;
     }
 
-    // Build filter for posts based on scope
     const filters = [];
-    
-    // Always include campus-wide posts
     filters.push({ scope: 'campus' });
-    
-    // If user has a department and post is department-scoped, only include if in user's department
+
     if (userDepartment) {
       filters.push({
         scope: 'department',
-        visibleToDepartments: userDepartment
+        visibleToDepartments: userDepartment,
       });
     }
 
-    // For admin users, show all posts regardless of scope
-    let query = Post.find();
-    if (req.user?.userType !== 'admin') {
-      query = query.find({ $or: filters });
+    const baseFilter = req.user?.userType === 'admin' ? {} : { $or: filters };
+    const page = Math.max(1, parseInt(req.query.page, 10) || 0);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+
+    let query = Post.find(baseFilter).populate('linkedOpportunity').sort({ createdAt: -1 });
+
+    if (page > 0) {
+      const skip = (page - 1) * limit;
+      const [posts, total] = await Promise.all([
+        query.clone().skip(skip).limit(limit),
+        Post.countDocuments(baseFilter),
+      ]);
+
+      return res.json({
+        success: true,
+        data: posts,
+        page,
+        limit,
+        total,
+        hasMore: skip + posts.length < total,
+      });
     }
 
-    const posts = await query.populate('linkedOpportunity').sort({ createdAt: -1 });
+    const posts = await query;
     res.json(posts);
   } catch (error) {
     res.status(500).json({ message: error.message });

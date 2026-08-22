@@ -268,13 +268,15 @@ router.get('/', verifyToken, async (req, res) => {
   const normalizedStudents = students.map((student) => normalizeStudentResponse(student));
   const requesterType = String(req.user?.userType || '').trim().toLowerCase();
 
+  let result = normalizedStudents;
+
   if (requesterType === 'student') {
     const visibleStudents = normalizedStudents.filter((student) => {
       const status = String(student.verificationStatus || '').trim().toLowerCase();
       return status === 'verified' || status === 'strongly_verified';
     });
 
-    const discoveryPayload = visibleStudents.map((student) => ({
+    result = visibleStudents.map((student) => ({
       _id: student._id,
       name: student.name,
       roll: student.roll,
@@ -308,11 +310,26 @@ router.get('/', verifyToken, async (req, res) => {
           }))
         : [],
     }));
-
-    return res.json(discoveryPayload);
   }
 
-  return res.json(normalizedStudents);
+  const page = Math.max(1, parseInt(req.query.page, 10) || 0);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
+  if (page > 0) {
+    const total = result.length;
+    const skip = (page - 1) * limit;
+    const data = result.slice(skip, skip + limit);
+    return res.json({
+      success: true,
+      data,
+      page,
+      limit,
+      total,
+      hasMore: skip + data.length < total,
+    });
+  }
+
+  return res.json(result);
 });
 
 // Get student by ID

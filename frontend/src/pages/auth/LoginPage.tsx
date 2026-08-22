@@ -6,57 +6,20 @@ import './AuthPages.css';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, setUser } = useAuth();
-
-  // Demo credentials for testing
-  const DEMO_CREDENTIALS = {
-    student: { email: 'demo.student@acroin.edu', password: 'demo123' },
-    faculty: { email: 'demo.faculty@acroin.edu', password: 'demo123' },
-    admin: { email: 'demo.admin@acroin.edu', password: 'demo123' }
-  };
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Function to handle demo login (bypasses API)
-  const handleDemoLogin = (type: 'student' | 'faculty' | 'admin') => {
-    const demoUser = {
-      id: `demo-${type}-001`,
-      email: DEMO_CREDENTIALS[type].email,
-      name: type === 'student' ? 'Demo Student' : type === 'faculty' ? 'Dr. Demo Faculty' : 'Admin User',
-      userType: type,
-      firstname: type !== 'student' ? 'Demo' : undefined,
-      lastName: type !== 'student' ? (type === 'faculty' ? 'Faculty' : 'Admin') : undefined,
-      department: type === 'student' ? 'Computer Science' : 'Administration',
-      designation: type === 'faculty' ? 'Associate Professor' : type === 'admin' ? 'System Administrator' : undefined,
-    };
-
-    localStorage.setItem('token', 'demo-token-' + type);
-    localStorage.setItem('user', JSON.stringify(demoUser));
-    setUser(demoUser);
-
-    // All users go to home feed
-    navigate('/home');
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
-      // Check for demo credentials
-      const demoType = Object.entries(DEMO_CREDENTIALS).find(
-        ([_, creds]) => creds.email === email && creds.password === password
-      );
-
-      if (demoType) {
-        handleDemoLogin(demoType[0] as 'student' | 'faculty' | 'admin');
-        return;
-      }
       await login({ email, password });
 
       // All users go to home feed
@@ -229,38 +192,6 @@ export const LoginPage: React.FC = () => {
             <button type="button" className="auth-social-btn">
               {/* Apple svg */}
               <span>Apple</span>
-            </button>
-          </div>
-
-          {/* Demo Login Section */}
-          <div className="auth-divider">
-            <span>quick demo access</span>
-          </div>
-
-          <div className="auth-demo-buttons">
-            <button 
-              type="button" 
-              onClick={() => handleDemoLogin('student')}
-              className="auth-demo-btn student"
-            >
-              <GraduationCap size={16} />
-              <span>Demo Student</span>
-            </button>
-            <button 
-              type="button" 
-              onClick={() => handleDemoLogin('faculty')}
-              className="auth-demo-btn faculty"
-            >
-              <Users size={16} />
-              <span>Demo Faculty</span>
-            </button>
-            <button 
-              type="button" 
-              onClick={() => handleDemoLogin('admin')}
-              className="auth-demo-btn admin"
-            >
-              <Settings size={16} />
-              <span>Demo Admin</span>
             </button>
           </div>
 

@@ -5,30 +5,40 @@
     "version": "1.0.0",
     "scheme": "acroin",
     "orientation": "portrait",
-    "entryPoint": "./App.js",
+    "entryPoint": "./App.tsx",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "AcroIn uses the camera for profile photos and face enrollment.",
+        "NSPhotoLibraryUsageDescription": "AcroIn uses your photo library to upload profile images."
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.lavish_jangid.acroin",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
+      ]
     },
     "web": {
       "output": "single"
     },
     "plugins": [
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/splash.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ],
       "expo-secure-store",
-      "expo-router"
-    ]
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AcroIn to access your photos for profile uploads.",
+          "cameraPermission": "Allow AcroIn to use the camera for profile photos."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": null
+    }
   }
 }

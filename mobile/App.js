@@ -1,10 +1,3 @@
-import RootNavigator from "./src/navigation/RootNavigator";
-import { AuthProvider } from "./src/context/AuthContext";
-
-export default function App() {
-  return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
-  );
-}
+// This file is kept for backward compatibility.
+// The actual app entry point is App.tsx
+export { default } from './App.tsx';

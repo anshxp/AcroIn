@@ -9,7 +9,7 @@ export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   
   const [userType, setUserType] = useState<'student' | 'faculty'>('student');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);

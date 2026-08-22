@@ -2,12 +2,11 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
+import Admin from '../models/Admin.js';
 import User from '../models/User.js';
 import Student from '../models/Student.js';
-import Faculty from '../models/Faculty.js';
-import Admin from '../models/Admin.js';
 import Profile from '../models/Profile.js';
-import { syncFacultyProfile, syncStudentProfile } from '../utils/profileSync.js';
+import { syncStudentProfile } from '../utils/profileSync.js';
 
 dotenv.config();
 
@@ -16,6 +15,83 @@ const router = express.Router();
 const isCollegeEmail = (email) => {
   const normalized = String(email || '').trim().toLowerCase();
   return /^[a-z0-9._%+-]+@acropolis\.in$/i.test(normalized);
+};
+
+const loginUser = async (req, res, expectedUserType = null) => {
+  try {
+    const rawEmail = String(req.body?.email || '').trim();
+    const normalizedEmail = rawEmail.toLowerCase();
+    const password = String(req.body?.password || '');
+
+    if (!normalizedEmail || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required',
+      });
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+      });
+    }
+
+    if (expectedUserType && user.userType !== expectedUserType) {
+      return res.status(403).json({
+        success: false,
+        message: `Please log in as ${expectedUserType}`,
+      });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid email or password',
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user._id, userType: user.userType },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const { password: _, ...userWithoutPassword } = user.toObject();
+
+    if (user.userType === 'student') {
+      const student = await Student.findOne({ email: normalizedEmail });
+      if (student) {
+        const { password: __, ...studentWithoutPassword } = student.toObject();
+        return res.status(200).json({
+          success: true,
+          token,
+          user: {
+            ...studentWithoutPassword,
+            authUserId: user._id.toString(),
+            userType: user.userType,
+            role: user.role || [],
+          },
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      token,
+      user: {
+        ...userWithoutPassword,
+        authUserId: user._id.toString(),
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: err.message || 'Login failed',
+    });
+  }
 };
 
 const registerBootstrapAdmin = async (req, res) => {
@@ -168,83 +244,14 @@ const registerStudent = async (req, res) => {
       success: true,
       message: 'Student registered',
       token,
-      user: studentWithoutPassword,
+      user: {
+        ...studentWithoutPassword,
+        authUserId: user._id.toString(),
+        userType: 'student',
+      },
     });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-const registerFaculty = async (req, res) => {
-  try {
-    const { firstname, lastName, email, password, department, designation, qualification, experience, phone } = req.body;
-
-    if (!isCollegeEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please use a valid college email address',
-      });
-    }
-
-    const existingFaculty = await Faculty.findOne({ email });
-    if (existingFaculty) {
-      return res.status(409).json({
-        success: false,
-        message: 'A faculty account with this email already exists.',
-      });
-    }
-
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'A user with this email already exists.',
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const faculty = new Faculty({ firstname, lastName, email, password: hashedPassword, department, designation, qualification, experience, phone });
-    await faculty.save();
-    const user = new User({ email, password: hashedPassword, name: firstname + ' ' + lastName, userType: 'faculty' });
-    await user.save();
-    await syncFacultyProfile({ user, faculty });
-
-    const token = jwt.sign(
-      { id: user._id, userType: user.userType },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    const { password: _, ...facultyWithoutPassword } = faculty._doc;
-    res.status(201).json({
-      success: true,
-      message: 'Faculty registered',
-      token,
-      user: facultyWithoutPassword,
-    });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-const loginUser = async (req, res, expectedUserType) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    if (expectedUserType && user.userType !== expectedUserType) {
-      return res.status(403).json({ success: false, message: `Please use ${user.userType} login endpoint` });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ success: false, message: 'Invalid credentials' });
-
-    const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    const { password: _, ...userWithoutPassword } = user._doc;
-    res.json({ success: true, token, user: userWithoutPassword });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -252,14 +259,9 @@ const loginUser = async (req, res, expectedUserType) => {
 router.post('/register/student', registerStudent);
 router.post('/student/register', registerStudent);
 
-// Register Faculty
-router.post('/register/faculty', registerFaculty);
-router.post('/faculty/register', registerFaculty);
-
 // Login
 router.post('/login', (req, res) => loginUser(req, res));
 router.post('/student/login', (req, res) => loginUser(req, res, 'student'));
-router.post('/faculty/login', (req, res) => loginUser(req, res, 'faculty'));
 router.post('/internal/admin-bootstrap', registerBootstrapAdmin);
 
 export default router;
