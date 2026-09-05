@@ -25,6 +25,8 @@ jobs:
       - name: Compile Python
         run: python -m compileall -q app
       - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/face_rec_service
         run: pytest -q
 
   recommendation-service:
@@ -42,4 +44,6 @@ jobs:
       - name: Compile Python
         run: python -m compileall -q app
       - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/recomendation system
         run: pytest -q
