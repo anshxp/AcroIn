@@ -46,14 +46,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - name: Install dependencies
+      - name: Install dependencies and test tools
         working-directory: ${{ matrix.service }}
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install -r requirements.txt pytest httpx
       - name: Compile Python
         working-directory: ${{ matrix.service }}
         run: python -m compileall -q .
-      - name: Run tests when present
+      - name: Run tests
         working-directory: ${{ matrix.service }}
-        shell: bash
-        run: |
-          if compgen -G 'tests/test_*.py' > /dev/null; then python -m pytest -q; else echo 'No pytest suite present'; fi
+        run: python -m pytest -q
