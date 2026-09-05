@@ -17,20 +17,32 @@ student_ids: list[str] = []
 def load_index() -> None:
     global index, student_ids
 
-    if INDEX_PATH.exists():
-        index = faiss.read_index(str(INDEX_PATH))
+    if not INDEX_PATH.exists():
+        return
 
-    if IDS_PATH.exists():
-        with IDS_PATH.open("rb") as f:
-            loaded_ids = pickle.load(f)
-        if not isinstance(loaded_ids, list):
-            raise ValueError("Invalid student ID index")
-        student_ids = [str(student_id) for student_id in loaded_ids]
+    if not IDS_PATH.exists():
+        # A legacy repository may contain an orphaned FAISS index without its
+        # student-ID mapping. It cannot safely be searched, so start clean and
+        # let the next enrollment persist a consistent pair of files.
+        index = faiss.IndexFlatIP(DIMENSION)
+        student_ids = []
+        return
 
-    if index.ntotal != len(student_ids):
+    loaded_index = faiss.read_index(str(INDEX_PATH))
+    with IDS_PATH.open("rb") as f:
+        loaded_ids = pickle.load(f)
+
+    if not isinstance(loaded_ids, list):
+        raise ValueError("Invalid student ID index")
+
+    normalized_ids = [str(student_id) for student_id in loaded_ids]
+    if loaded_index.ntotal != len(normalized_ids):
         raise ValueError(
-            f"Face index mismatch: {index.ntotal} embeddings but {len(student_ids)} student IDs"
+            f"Face index mismatch: {loaded_index.ntotal} embeddings but {len(normalized_ids)} student IDs"
         )
+
+    index = loaded_index
+    student_ids = normalized_ids
 
 
 def save_index() -> None:
