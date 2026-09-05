@@ -20,19 +20,19 @@ jobs:
         working-directory: backend
         run: |
           npm install --ignore-scripts
-          npm audit fix --omit=dev --package-lock-only
+          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
           npm audit --omit=dev --audit-level=high
       - name: Audit frontend dependencies
         working-directory: frontend
         run: |
           npm install --ignore-scripts
-          npm audit fix --omit=dev --package-lock-only
+          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
           npm audit --omit=dev --audit-level=high
       - name: Audit mobile dependencies
         working-directory: mobile
         run: |
-          npm install --ignore-scripts
-          npm audit fix --omit=dev --package-lock-only
+          npm install --ignore-scripts --legacy-peer-deps
+          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
           npm audit --omit=dev --audit-level=high
       - uses: actions/setup-python@v5
         with:
