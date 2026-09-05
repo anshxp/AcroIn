@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import studentRoutes from './routes/student.js';
 import facultyRoutes from './routes/faculty.js';
+import recommendationRoutes from './routes/recommendation.js';
 import postRoutes from './routes/post.js';
 import certificateRoutes from './routes/certificate.js';
 import competitionRoutes from './routes/competition.js';
@@ -22,20 +23,27 @@ import { auditLogger } from './middleware/auditLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
-const app=express();
+
+const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+  app.set('trust proxy', 1);
+}
 
 const envOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
   .split(',')
-  .map((origin) => origin.trim())
+  .map((origin) => origin.trim().replace(/\/$/, ''))
   .filter(Boolean);
 
-const allowedOrigins = new Set([
+const localOrigins = isProduction ? [] : [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
   'http://127.0.0.1:4173',
-  ...envOrigins,
-]);
+];
+
+const allowedOrigins = new Set([...localOrigins, ...envOrigins]);
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -43,25 +51,42 @@ const corsOptions = {
       callback(null, true);
       return;
     }
-
-    callback(new Error(`CORS blocked for origin: ${origin}`));
+    callback(new Error('CORS origin is not allowed'));
   },
   credentials: true,
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: process.env.URLENCODED_BODY_LIMIT || '1mb' }));
 app.use(auditLogger);
 
-// Serve uploads folder statically (fallback for local storage if Cloudinary not configured)
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static('uploads', {
+  index: false,
+  dotfiles: 'deny',
+  maxAge: isProduction ? '1d' : 0,
+}));
 
 app.get('/health', (_req, res) => {
-  res.status(200).json({ success: true, message: 'Backend is reachable' });
+  const dbReady = mongoose.connection.readyState === 1;
+  res.status(dbReady ? 200 : 503).json({
+    success: dbReady,
+    status: dbReady ? 'healthy' : 'degraded',
+    database: dbReady ? 'connected' : 'disconnected',
+  });
+});
+
+app.get('/ready', (_req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  if (!dbReady) {
+    return res.status(503).json({ success: false, status: 'not_ready' });
+  }
+  return res.status(200).json({ success: true, status: 'ready' });
 });
 
 app.use('/students', studentRoutes);
+app.use('/faculty/recommendations', recommendationRoutes);
 app.use('/faculty', facultyRoutes);
 app.use('/posts', postRoutes);
 app.use('/certificates', certificateRoutes);
@@ -80,15 +105,41 @@ app.use('/ui', uiRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/AcroIn';
+const PORT = Number(process.env.PORT || 5000);
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
-if (!process.env.MONGO_URI && !process.env.MONGODB_URI) {
-  console.warn('[backend] Warning: MONGO_URI not set, falling back to local MongoDB at', mongoUri);
+if (!mongoUri) {
+  console.error('[backend] MONGO_URI or MONGODB_URI must be configured.');
+  process.exit(1);
 }
 
-mongoose.connect(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => console.error(err));
+let server;
+
+const shutdown = async (signal) => {
+  console.log(`[backend] ${signal} received; shutting down gracefully.`);
+  if (server) {
+    await new Promise((resolve) => server.close(resolve));
+  }
+  await mongoose.connection.close(false);
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+const start = async () => {
+  await mongoose.connect(mongoUri, {
+    serverSelectionTimeoutMS: Number(process.env.MONGO_SERVER_SELECTION_TIMEOUT_MS || 10000),
+    maxPoolSize: Number(process.env.MONGO_MAX_POOL_SIZE || 20),
+    minPoolSize: Number(process.env.MONGO_MIN_POOL_SIZE || 2),
+  });
+
+  server = app.listen(PORT, () => {
+    console.log(`[backend] listening on port ${PORT}`);
+  });
+};
+
+start().catch((error) => {
+  console.error('[backend] startup failed:', error instanceof Error ? error.message : 'Unknown error');
+  process.exit(1);
+});
