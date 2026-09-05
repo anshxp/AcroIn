@@ -1,0 +1,59 @@
+name: AcroIn CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: backend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --ignore-scripts
+      - run: npm run check
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: frontend }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --ignore-scripts
+      - run: npm run lint
+      - run: npm run build
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run: { working-directory: mobile }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm install --ignore-scripts
+      - run: npx tsc --noEmit
+  python-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [face_rec_service, recomendation system]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: python -m pip install -r requirements.txt
+      - name: Compile Python
+        working-directory: ${{ matrix.service }}
+        run: python -m compileall -q .
+      - name: Run tests when present
+        working-directory: ${{ matrix.service }}
+        shell: bash
+        run: |
+          if compgen -G 'tests/test_*.py' > /dev/null; then python -m pytest -q; else echo 'No pytest suite present'; fi
