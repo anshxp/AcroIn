@@ -1,0 +1,45 @@
+name: Python QA
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'face_rec_service/**'
+      - 'recomendation system/**'
+      - '.github/workflows/qa-python.yml'
+
+jobs:
+  face-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: face_rec_service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Compile Python
+        run: python -m compileall -q app
+      - name: Run tests
+        run: pytest -q
+
+  recommendation-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: recomendation system
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Compile Python
+        run: python -m compileall -q app
+      - name: Run tests
+        run: pytest -q

@@ -9,6 +9,11 @@ router = APIRouter()
 
 def verify_api_key(x_face_api_key: str | None) -> None:
     expected_api_key = os.getenv("FACE_API_KEY", "").strip()
+    environment = os.getenv("ENVIRONMENT", os.getenv("NODE_ENV", "development")).strip().lower()
+
+    if not expected_api_key and environment in {"production", "prod"}:
+        raise HTTPException(status_code=503, detail="Face service authentication is not configured")
+
     if expected_api_key and x_face_api_key != expected_api_key:
         raise HTTPException(status_code=401, detail="Unauthorized request")
 
