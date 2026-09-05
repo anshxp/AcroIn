@@ -15,16 +15,25 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
       - name: Audit backend dependencies
         working-directory: backend
-        run: npm install --ignore-scripts && npm audit --omit=dev --audit-level=high
+        run: |
+          npm install --ignore-scripts
+          npm audit fix --omit=dev --package-lock-only
+          npm audit --omit=dev --audit-level=high
       - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm install --ignore-scripts && npm audit --omit=dev --audit-level=high
+        run: |
+          npm install --ignore-scripts
+          npm audit fix --omit=dev --package-lock-only
+          npm audit --omit=dev --audit-level=high
       - name: Audit mobile dependencies
         working-directory: mobile
-        run: npm install --ignore-scripts && npm audit --omit=dev --audit-level=high
+        run: |
+          npm install --ignore-scripts
+          npm audit fix --omit=dev --package-lock-only
+          npm audit --omit=dev --audit-level=high
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
