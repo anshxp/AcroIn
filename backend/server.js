@@ -86,8 +86,8 @@ app.get('/ready', (_req, res) => {
 });
 
 app.use('/students', studentRoutes);
-app.use('/faculty', facultyRoutes);
 app.use('/faculty/recommendations', recommendationRoutes);
+app.use('/faculty', facultyRoutes);
 app.use('/posts', postRoutes);
 app.use('/certificates', certificateRoutes);
 app.use('/competitions', competitionRoutes);
