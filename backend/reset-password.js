@@ -1,7 +1,17 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 
-const MONGO_URI = 'mongodb://localhost:27017/AcroIn';
+dotenv.config();
+
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+const email = String(process.env.RESET_PASSWORD_EMAIL || '').trim().toLowerCase();
+const newPassword = String(process.env.RESET_PASSWORD || '');
+
+if (!MONGO_URI || !email || !newPassword) {
+  console.error('Required environment variables: MONGO_URI, RESET_PASSWORD_EMAIL, RESET_PASSWORD');
+  process.exit(1);
+}
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -17,32 +27,23 @@ async function run() {
     await mongoose.connect(MONGO_URI);
     console.log('Connected to MongoDB');
 
-    const email = 'lavishjangid230719@acropolis.in';
-    const newPassword = 'Lavish@262';
-
     const user = await User.findOne({ email });
-    if (user) {
-      console.log('User found. Checking current password hash...');
-      const matchesExisting = await bcrypt.compare(newPassword, user.password);
-      console.log('Does existing hash match "Lavish@262"?', matchesExisting);
-
-      if (!matchesExisting) {
-        console.log('Updating password hash to "Lavish@262"...');
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-        user.password = hashedPassword;
-        await user.save();
-        console.log('Password successfully reset to "Lavish@262"!');
-      } else {
-        console.log('Password hash already matches "Lavish@262". No update needed.');
-      }
-    } else {
-      console.log(`User ${email} not found in database!`);
+    if (!user) {
+      console.error(`User ${email} not found in database.`);
+      process.exitCode = 1;
+      return;
     }
 
-    await mongoose.disconnect();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    console.log(`Password reset successfully for ${email}.`);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Password reset failed:', error instanceof Error ? error.message : 'Unknown error');
+    process.exitCode = 1;
+  } finally {
+    await mongoose.disconnect();
   }
 }
 
