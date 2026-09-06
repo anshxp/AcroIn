@@ -1,0 +1,36 @@
+name: Refresh mobile lockfile
+
+on:
+  push:
+    branches:
+      - tmp/lock-refresh-v4
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: tmp/lock-refresh-v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Refresh mobile lockfile
+        working-directory: mobile
+        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+      - name: Commit refreshed lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes"
+            exit 0
+          fi
+          git commit -m "chore(mobile): refresh lockfile [skip ci]"
+          git push origin HEAD:tmp/lock-refresh-v4
