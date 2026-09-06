@@ -6,6 +6,8 @@ import { chatAPI } from '../../services/api';
 import type { Chat } from '../../types';
 import './chat.css';
 
+type Participant = string | { _id: string; name?: string; email?: string; userType?: string };
+
 export const ChatWindow: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const { user } = useAuth();
@@ -17,195 +19,74 @@ export const ChatWindow: React.FC = () => {
   const [messageTag, setMessageTag] = useState<'GENERAL' | 'DOUBT'>('GENERAL');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const authUserId = user?.authUserId || user?.id || user?._id || '';
 
   const loadChat = async () => {
-    if (!chatId) return;
+    if (!chatId || !authUserId) return;
     try {
-      setIsLoading(true);
-      setApiError('');
-      const response = await chatAPI.getChats(user?.id || '');
-      const foundChat = response.find(c => c._id === chatId);
-      if (foundChat) {
-        setChat(foundChat);
-      } else {
-        setApiError('Chat not found');
-      }
-    } catch {
-      setApiError('Failed to load chat');
-    } finally {
-      setIsLoading(false);
-    }
+      setIsLoading(true); setApiError('');
+      const response = await chatAPI.getChats(authUserId);
+      const foundChat = response.find((c) => c._id === chatId);
+      if (foundChat) setChat(foundChat);
+      else setApiError('Chat not found');
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Failed to load chat');
+    } finally { setIsLoading(false); }
   };
 
   useEffect(() => {
     loadChat();
-    const interval = setInterval(loadChat, 3000); // Refresh every 3 seconds
+    const interval = setInterval(loadChat, 3000);
     return () => clearInterval(interval);
-  }, [chatId, user?.id]);
+  }, [chatId, authUserId]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chat?.messages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chat?.messages]);
 
   const handleSendMessage = async () => {
     if (!messageContent.trim() || !chatId) return;
-
     try {
       setIsSending(true);
       await chatAPI.sendMessage(chatId, messageContent, messageTag);
-      setMessageContent('');
-      setMessageTag('GENERAL');
-      await loadChat();
-    } catch {
-      setApiError('Failed to send message');
-    } finally {
-      setIsSending(false);
-    }
+      setMessageContent(''); setMessageTag('GENERAL'); await loadChat();
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Failed to send message');
+    } finally { setIsSending(false); }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
     if (!window.confirm('Delete this message?')) return;
-    try {
-      if (chatId) {
-        await chatAPI.deleteMessage(chatId, messageId);
-        await loadChat();
-      }
-    } catch {
-      setApiError('Failed to delete message');
-    }
+    try { if (chatId) { await chatAPI.deleteMessage(chatId, messageId); await loadChat(); } }
+    catch (error: any) { setApiError(error?.response?.data?.message || 'Failed to delete message'); }
   };
 
+  const getParticipantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const getParticipantName = (participant: Participant) => typeof participant === 'string' ? participant : (participant?.name || participant?.email || 'Unknown');
   const getOtherParticipantName = () => {
     if (!chat) return '';
-    const otherParticipantId = chat.participants.find(p => p !== user?.id);
-    return otherParticipantId || 'Unknown';
+    const other = (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== authUserId);
+    return other ? getParticipantName(other) : 'Unknown';
+  };
+  const isOwnMessage = (sender: any) => {
+    const senderId = typeof sender === 'string' ? sender : sender?._id;
+    return senderId === authUserId;
   };
 
-  if (isLoading) {
-    return (
-      <div className="chat-window-container">
-        <div className="chat-loading">Loading chat...</div>
-      </div>
-    );
-  }
-
-  if (!chat) {
-    return (
-      <div className="chat-window-container">
-        <div className="chat-error-full">
-          <p>{apiError || 'Chat not found'}</p>
-          <button onClick={() => navigate('/chat')}>Back to Messages</button>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="chat-window-container"><div className="chat-loading">Loading chat...</div></div>;
+  if (!chat) return <div className="chat-window-container"><div className="chat-error-full"><p>{apiError || 'Chat not found'}</p><button onClick={() => navigate('/chat')}>Back to Messages</button></div></div>;
 
   return (
     <div className="chat-window-container">
       <div className="chat-window-header">
-        <div className="chat-header-left">
-          <button
-            onClick={() => navigate('/chat')}
-            className="back-btn"
-            title="Back to chats"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div className="chat-header-info">
-            <h2>{getOtherParticipantName()}</h2>
-            <p className="chat-status">Active</p>
-          </div>
-        </div>
-        <button className="chat-header-menu">
-          <MoreVertical size={20} />
-        </button>
+        <div className="chat-header-left"><button type="button" onClick={() => navigate('/chat')} className="back-btn" title="Back to chats"><ArrowLeft size={20} /></button><div className="chat-header-info"><h2>{getOtherParticipantName()}</h2><p className="chat-status">Active</p></div></div>
+        <button type="button" className="chat-header-menu" aria-label="Chat options"><MoreVertical size={20} /></button>
       </div>
-
-      {apiError && (
-        <div className="chat-message-error">
-          {apiError}
-          <button onClick={() => setApiError('')}>×</button>
-        </div>
-      )}
-
+      {apiError && <div className="chat-message-error">{apiError}<button type="button" onClick={() => setApiError('')} aria-label="Dismiss">×</button></div>}
       <div className="chat-messages">
-        {chat.messages.length === 0 ? (
-          <div className="chat-messages-empty">
-            <p>No messages yet. Start the conversation!</p>
-          </div>
-        ) : (
-          <>
-            {chat.messages.map(message => (
-              <div
-                key={message._id}
-                className={`message ${message.sender === user?.id ? 'message-sent' : 'message-received'}`}
-              >
-                <div className="message-bubble">
-                  {message.tag && message.tag !== 'GENERAL' && (
-                    <span className="message-tag">{message.tag}</span>
-                  )}
-                  <p className="message-text">{message.content}</p>
-                  <span className="message-time">
-                    {new Date(message.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-                {message.sender === user?.id && (
-                  <button
-                    onClick={() => handleDeleteMessage(message._id)}
-                    className="message-delete-btn"
-                    title="Delete message"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
+        {!chat.messages?.length ? <div className="chat-messages-empty"><p>No messages yet. Start the conversation!</p></div> : <>{chat.messages.map((message) => <div key={message._id} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}><div className="message-bubble">{message.tag && message.tag !== 'GENERAL' && <span className="message-tag">{message.tag}</span>}<p className="message-text">{message.content}</p><span className="message-time">{new Date(message.createdAt).toLocaleTimeString()}</span></div>{isOwnMessage(message.sender) && <button type="button" onClick={() => handleDeleteMessage(message._id)} className="message-delete-btn" title="Delete message" aria-label="Delete message"><Trash2 size={14} /></button>}</div>)}<div ref={messagesEndRef} /></>}
       </div>
-
       <div className="chat-input-area">
-        <div className="message-tag-selector">
-          <button
-            className={`tag-btn ${messageTag === 'GENERAL' ? 'active' : ''}`}
-            onClick={() => setMessageTag('GENERAL')}
-            title="General message"
-          >
-            General
-          </button>
-          <button
-            className={`tag-btn ${messageTag === 'DOUBT' ? 'active' : ''}`}
-            onClick={() => setMessageTag('DOUBT')}
-            title="Mark as doubt/question"
-          >
-            <Flag size={14} />
-            Doubt
-          </button>
-        </div>
-
-        <div className="message-input-wrapper">
-          <input
-            type="text"
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            placeholder="Type your message..."
-            disabled={isSending}
-          />
-          <button
-            onClick={handleSendMessage}
-            disabled={!messageContent.trim() || isSending}
-            className="send-message-btn"
-          >
-            <Send size={18} />
-          </button>
-        </div>
+        <div className="message-tag-selector"><button type="button" className={`tag-btn ${messageTag === 'GENERAL' ? 'active' : ''}`} onClick={() => setMessageTag('GENERAL')}>General</button><button type="button" className={`tag-btn ${messageTag === 'DOUBT' ? 'active' : ''}`} onClick={() => setMessageTag('DOUBT')}><Flag size={14} />Doubt</button></div>
+        <div className="message-input-wrapper"><input type="text" value={messageContent} onChange={(e) => setMessageContent(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder="Type your message..." disabled={isSending} /><button type="button" onClick={handleSendMessage} disabled={!messageContent.trim() || isSending} className="send-message-btn" aria-label="Send message"><Send size={18} /></button></div>
       </div>
     </div>
   );
