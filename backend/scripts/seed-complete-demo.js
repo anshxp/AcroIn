@@ -90,10 +90,22 @@ try {
     const faculty = deptFaculty[0];
     const facultyUser = faculty ? await User.findOne({ email: faculty.email }).select('_id') : null;
     if (user && facultyUser) {
-      await upsertByKey(Chat, { participants: { $all:[user._id, facultyUser._id] }, messageType:'STUDENT_TO_FACULTY' }, {
-        participants:[user._id, facultyUser._id], messageType:'STUDENT_TO_FACULTY', isActive:true,
-        messages:[{ sender:facultyUser._id, content:`Hello ${student.name}. This is your demo faculty conversation.`, senderRole:'faculty', tag:'GENERAL', createdAt:new Date() }],
-      });
+      // MongoDB cannot safely perform this array-match as an upsert while also setting participants.
+      // Find the chat first, then update by its _id or create it explicitly.
+      const chatFilter = { participants: { $all:[user._id, facultyUser._id] }, messageType:'STUDENT_TO_FACULTY' };
+      const existingChat = await Chat.findOne(chatFilter);
+      if (existingChat) {
+        existingChat.participants = [user._id, facultyUser._id];
+        existingChat.messageType = 'STUDENT_TO_FACULTY';
+        existingChat.isActive = true;
+        existingChat.messages = [{ sender:facultyUser._id, content:`Hello ${student.name}. This is your demo faculty conversation.`, senderRole:'faculty', tag:'GENERAL', createdAt:new Date() }];
+        await existingChat.save();
+      } else {
+        await Chat.create({
+          participants:[user._id, facultyUser._id], messageType:'STUDENT_TO_FACULTY', isActive:true,
+          messages:[{ sender:facultyUser._id, content:`Hello ${student.name}. This is your demo faculty conversation.`, senderRole:'faculty', tag:'GENERAL', createdAt:new Date() }],
+        });
+      }
     }
   }
 
