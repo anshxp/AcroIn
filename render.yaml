@@ -1,10 +1,61 @@
 services:
   - type: web
-    name: face_rec_service
+    name: acroin-backend
+    env: node
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RECOMMENDATION_SERVICE_URL
+        sync: false
+      - key: RECOMMENDATION_API_KEY
+        sync: false
+
+  - type: web
+    name: acroin-recommendation
     env: python
     plan: free
     branch: main
-    root: face_rec_service
+    rootDir: recomendation system
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /recommendations/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: RECOMMENDATION_API_KEY
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: acroin
+      - key: MONGO_STUDENT_COLLECTION
+        value: students
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
+    name: acroin-face-auth
+    env: python
+    plan: free
+    branch: main
+    rootDir: face_rec_service
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: FACE_API_KEY
+        sync: false
