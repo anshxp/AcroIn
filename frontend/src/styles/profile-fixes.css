@@ -1,7 +1,9 @@
-/* Targeted stability/layout fixes for the student profile and chat surfaces. */
+/* Targeted stability/layout fixes for profile, chat, plus controls, and long text. */
 
 .profile-page,
-.profile-page * {
+.profile-page *,
+.chat-list-container,
+.chat-list-container * {
   box-sizing: border-box;
 }
 
@@ -11,11 +13,7 @@
 .profile-page .profile-right-column,
 .profile-page .card,
 .profile-page .card-header,
-.profile-page .card-body {
-  min-width: 0;
-}
-
-.profile-page .profile-name-row > div:first-child,
+.profile-page .card-body,
 .profile-page .profile-info-section,
 .profile-page .experience-content,
 .profile-page .contact-content {
@@ -43,16 +41,28 @@
 .profile-page .btn-primary,
 .profile-page .btn-secondary,
 .profile-page .btn-add,
-.profile-page .btn-add-skill {
+.profile-page .btn-add-skill,
+.page-actions > button,
+.page-header .page-actions > button,
+.create-post-btn,
+.add-button {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
-.profile-page .btn-add-skill svg,
+.profile-page .btn-primary svg,
+.profile-page .btn-secondary svg,
 .profile-page .btn-add svg,
-.profile-page .face-camera-actions svg,
-.profile-page .face-camera-head svg {
+.profile-page .btn-add-skill svg,
+.page-actions > button svg,
+.create-post-btn svg,
+.add-button svg {
   flex: 0 0 auto;
+  display: block;
 }
 
 .profile-page .face-camera-video-wrap {
@@ -89,15 +99,42 @@
   box-shadow: none;
 }
 
-.profile-page .face-capture-grid {
-  min-width: 0;
-}
-
+.profile-page .face-capture-grid,
 .profile-page .face-capture-item,
 .profile-page .face-capture-preview,
 .profile-page .face-capture-preview img {
   min-width: 0;
   max-width: 100%;
+}
+
+.chat-list-container .chat-item-content,
+.chat-list-container .chat-item-name,
+.chat-list-container .chat-item-preview,
+.chat-list-container .faculty-info {
+  min-width: 0;
+}
+
+.chat-list-container .chat-item-name,
+.chat-list-container .chat-item-preview,
+.chat-list-container .faculty-info h4,
+.chat-list-container .faculty-info p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-list-container .new-chat-btn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.chat-list-container .faculty-item {
+  width: 100%;
+  text-align: left;
 }
 
 @media (max-width: 900px) {
@@ -143,40 +180,4 @@
   .profile-page .face-camera-video-wrap {
     min-height: 220px;
   }
-}
-
-/* Chat cards: prevent long participant/message text from forcing horizontal overflow. */
-.chat-list-container,
-.chat-list-container * {
-  box-sizing: border-box;
-}
-
-.chat-list-container .chat-item-content,
-.chat-list-container .chat-item-name,
-.chat-list-container .chat-item-preview,
-.chat-list-container .faculty-info {
-  min-width: 0;
-}
-
-.chat-list-container .chat-item-name,
-.chat-list-container .chat-item-preview,
-.chat-list-container .faculty-info h4,
-.chat-list-container .faculty-info p {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
-
-.chat-list-container .new-chat-btn {
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-}
-
-.chat-list-container .faculty-item {
-  width: 100%;
-  text-align: left;
 }
