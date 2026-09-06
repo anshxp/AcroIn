@@ -2,6 +2,7 @@
 
 /* Import common styles */
 @import './styles/common.css';
+@import './styles/profile-fixes.css';
 
 @tailwind base;
 @tailwind components;
@@ -44,6 +45,3 @@ input, textarea, select {
 
 input::placeholder,
 textarea::placeholder { color: #94a3b8; }
-
-/* Loaded last so targeted profile/chat fixes win over broad component styles. */
-@import './styles/profile-fixes.css';
