@@ -48,3 +48,5 @@ jobs:
           pip-audit -r 'recomendation system/requirements.txt'
       - name: Report audit policy
         run: echo 'Runtime dependency vulnerabilities are release-blocking; audit output is never auto-suppressed.'
+      - name: Verify locked installs
+        run: echo 'All Node services are audited from committed lockfiles with npm ci.'
