@@ -14,18 +14,18 @@
     "migrate:project-references": "node migrate-project-references.js"
   },
   "dependencies": {
-    "axios": "^1.14.0",
+    "axios": "^1.17.1",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "exceljs": "^4.4.0",
-    "express": "^4.18.2",
+    "express": "^4.22.2",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.0",
-    "mongoose": "^7.8.9",
-    "multer": "^2.1.1",
+    "mongoose": "^7.8.12",
+    "multer": "^2.1.2",
     "pdfkit": "^0.18.0"
   },
   "devDependencies": {
@@ -34,6 +34,12 @@
   "overrides": {
     "qs": "^6.16.0",
     "uuid": "^11.1.1",
-    "tmp": "^0.2.5"
+    "tmp": "^0.2.6",
+    "body-parser": "^1.20.6",
+    "follow-redirects": "^1.15.12",
+    "form-data": "^4.0.6",
+    "ip-address": "^10.7.0",
+    "brace-expansion@<=1.1.17": "1.1.18",
+    "brace-expansion@>=2.0.0 <2.1.4": "2.1.4"
   }
 }
