@@ -1,6 +1,13 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
+
 from app.api.routes import router
 from app.services.faiss_service import load_index
+
+# Load the service-local .env when running Uvicorn directly.
+load_dotenv()
 
 app = FastAPI(title="AcroIn Face Recognition Service", version="1.0.0")
 
@@ -12,10 +19,12 @@ def startup_event():
 
 @app.get("/")
 def root() -> dict[str, object]:
+    environment = os.getenv("ENVIRONMENT", os.getenv("NODE_ENV", "development")).strip().lower()
     return {
         "success": True,
         "service": "face_rec_service",
         "status": "healthy",
+        "environment": environment,
     }
 
 
