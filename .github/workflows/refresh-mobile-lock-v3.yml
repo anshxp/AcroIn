@@ -1,0 +1,40 @@
+name: Refresh mobile lockfile v3
+
+on:
+  push:
+    branches: [production/complete-hardening]
+    paths:
+      - 'mobile/package.json'
+      - '.github/workflows/refresh-mobile-lock-v3.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Regenerate mobile lockfile
+        working-directory: mobile
+        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+      - name: Verify clean install
+        working-directory: mobile
+        run: npm ci --ignore-scripts --legacy-peer-deps
+      - name: Capture production dependency audit
+        working-directory: mobile
+        run: npm audit --omit=dev --json > ../mobile-audit-v3.json || true
+      - name: Remove one-time workflow and commit lockfile plus audit evidence
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm .github/workflows/refresh-mobile-lock-v3.yml
+          git add mobile/package-lock.json mobile-audit-v3.json .github/workflows/refresh-mobile-lock-v3.yml
+          git commit -m 'chore(mobile): refresh final hardened lockfile and audit evidence [skip ci]'
+          git push origin HEAD:production/complete-hardening
