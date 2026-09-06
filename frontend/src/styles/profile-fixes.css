@@ -1,0 +1,182 @@
+/* Targeted stability/layout fixes for the student profile and chat surfaces. */
+
+.profile-page,
+.profile-page * {
+  box-sizing: border-box;
+}
+
+.profile-page .profile-header-content,
+.profile-page .profile-grid,
+.profile-page .profile-left-column,
+.profile-page .profile-right-column,
+.profile-page .card,
+.profile-page .card-header,
+.profile-page .card-body {
+  min-width: 0;
+}
+
+.profile-page .profile-name-row > div:first-child,
+.profile-page .profile-info-section,
+.profile-page .experience-content,
+.profile-page .contact-content {
+  min-width: 0;
+}
+
+.profile-page .profile-name,
+.profile-page .profile-tagline,
+.profile-page .profile-bio,
+.profile-page .experience-header h4,
+.profile-page .experience-company,
+.profile-page .contact-value,
+.profile-page .profile-meta span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.profile-page .profile-actions,
+.profile-page .face-camera-head,
+.profile-page .face-camera-actions,
+.profile-page .add-skill-form {
+  flex-wrap: wrap;
+}
+
+.profile-page .btn-primary,
+.profile-page .btn-secondary,
+.profile-page .btn-add,
+.profile-page .btn-add-skill {
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.profile-page .btn-add-skill svg,
+.profile-page .btn-add svg,
+.profile-page .face-camera-actions svg,
+.profile-page .face-camera-head svg {
+  flex: 0 0 auto;
+}
+
+.profile-page .face-camera-video-wrap {
+  width: 100%;
+  min-height: 260px;
+  aspect-ratio: 1 / 1;
+  max-height: 520px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #0f172a;
+}
+
+.profile-page .face-camera-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.profile-page .face-camera-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 24px;
+  text-align: center;
+}
+
+.profile-page .face-camera-actions .btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.profile-page .face-capture-grid {
+  min-width: 0;
+}
+
+.profile-page .face-capture-item,
+.profile-page .face-capture-preview,
+.profile-page .face-capture-preview img {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .profile-page .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-page .add-skill-form {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .profile-page .skill-select,
+  .profile-page .skill-input,
+  .profile-page .btn-add-skill {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-page .profile-header-content,
+  .profile-page .card-body,
+  .profile-page .card-header {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .profile-page .profile-name {
+    font-size: 23px;
+  }
+
+  .profile-page .profile-avatar-section {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .profile-page .profile-actions,
+  .profile-page .profile-actions > button {
+    width: 100%;
+  }
+
+  .profile-page .face-camera-video-wrap {
+    min-height: 220px;
+  }
+}
+
+/* Chat cards: prevent long participant/message text from forcing horizontal overflow. */
+.chat-list-container,
+.chat-list-container * {
+  box-sizing: border-box;
+}
+
+.chat-list-container .chat-item-content,
+.chat-list-container .chat-item-name,
+.chat-list-container .chat-item-preview,
+.chat-list-container .faculty-info {
+  min-width: 0;
+}
+
+.chat-list-container .chat-item-name,
+.chat-list-container .chat-item-preview,
+.chat-list-container .faculty-info h4,
+.chat-list-container .faculty-info p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.chat-list-container .new-chat-btn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.chat-list-container .faculty-item {
+  width: 100%;
+  text-align: left;
+}
