@@ -1,0 +1,44 @@
+name: Refresh Node lockfiles
+
+on:
+  push:
+    branches: [tmp/lock-refresh-v2]
+    paths:
+      - 'backend/package.json'
+      - 'frontend/package.json'
+      - 'mobile/package.json'
+      - 'backend/package-lock.json'
+      - 'frontend/package-lock.json'
+      - 'mobile/package-lock.json'
+      - '.github/workflows/lock-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Refresh backend lockfile
+        working-directory: backend
+        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+      - name: Refresh frontend lockfile
+        working-directory: frontend
+        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+      - name: Refresh mobile lockfile
+        working-directory: mobile
+        run: npm install --package-lock-only --ignore-scripts --legacy-peer-deps
+      - name: Commit lockfiles
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet -- backend/package-lock.json frontend/package-lock.json mobile/package-lock.json; then exit 0; fi
+          git add backend/package-lock.json frontend/package-lock.json mobile/package-lock.json
+          git commit -m 'chore: synchronize npm lockfiles [skip ci]'
+          git push origin HEAD:tmp/lock-refresh-v2
