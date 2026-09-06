@@ -12,31 +12,30 @@ jobs:
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
+          package-manager-cache: false
       - name: Audit backend dependencies
         working-directory: backend
         run: |
-          npm install --ignore-scripts
-          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
+          npm ci --ignore-scripts
           npm audit --omit=dev --audit-level=high
       - name: Audit frontend dependencies
         working-directory: frontend
         run: |
-          npm install --ignore-scripts
-          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
+          npm ci --ignore-scripts
           npm audit --omit=dev --audit-level=high
       - name: Audit mobile dependencies
         working-directory: mobile
         run: |
-          npm install --ignore-scripts --legacy-peer-deps
-          npm audit fix --omit=dev --package-lock-only --legacy-peer-deps
+          npm ci --ignore-scripts --legacy-peer-deps
           npm audit --omit=dev --audit-level=high
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
       - name: Audit Python services
         run: |
           python -m pip install --upgrade pip pip-audit
