@@ -16,10 +16,11 @@ jobs:
       run:
         working-directory: face_rec_service
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Compile Python
@@ -35,10 +36,11 @@ jobs:
       run:
         working-directory: recomendation system
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
       - name: Install test dependencies
         run: python -m pip install -r requirements-dev.txt
       - name: Compile Python
