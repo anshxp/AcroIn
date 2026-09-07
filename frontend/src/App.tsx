@@ -21,7 +21,6 @@ import {
   SmartSearch,
   FacialRecognition,
   Recommendations,
-  PlacementHub,
   FacultyAnalytics,
   StudentProfileView,
   ManageStudents,
@@ -60,7 +59,6 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['student']}><DashboardLayout /></ProtectedRoute>}>
-            <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/profile/:id" element={<StudentPublicProfile />} />
             <Route path="/student/skills" element={<StudentSkills />} />
@@ -71,10 +69,10 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['faculty']}><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/faculty/search" element={<SmartSearch />} />
             <Route path="/faculty/profile" element={<FacultyProfile />} />
             <Route path="/faculty/verification" element={<FacialRecognition />} />
             <Route path="/faculty/recommendations" element={<Recommendations />} />
-            <Route path="/faculty/placement" element={<PlacementHub />} />
             <Route path="/faculty/analytics" element={<FacultyAnalytics />} />
             <Route path="/faculty/verify" element={<VerifyStudents />} />
             <Route path="/faculty/opportunities" element={<PostOpportunities />} />
