@@ -9,6 +9,7 @@ import {
   RegisterPage,
   AdminBootstrapPage,
   StudentProfile,
+  StudentPublicProfile,
   StudentProjects,
   StudentInternships,
   StudentCompetitions,
@@ -30,20 +31,18 @@ import {
   DepartmentAuditLogs,
   HomeFeed,
   Notifications,
-    ChatList,
-    ChatWindow,
+  ChatList,
+  ChatWindow,
 } from './pages';
 import './App.css';
 
-// Home redirect component
 const HomeRedirect = () => {
   const { isAuthenticated } = useAuth();
-  
+
   if (!isAuthenticated) {
     return <LandingPage />;
   }
-  
-  // All logged in users go to Home Feed
+
   return <Navigate to="/home" replace />;
 };
 
@@ -53,14 +52,12 @@ function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/__internal__/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
           <Route path="/internal/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
 
-          {/* Shared Home Feed - accessible by all authenticated users */}
           <Route
             element={
               <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
@@ -72,19 +69,17 @@ function App() {
             <Route path="/notifications" element={<Notifications />} />
           </Route>
 
-            {/* Chat Routes - accessible by all authenticated users */}
-            <Route
-              element={
-                <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/chat" element={<ChatList />} />
-              <Route path="/chat/:chatId" element={<ChatWindow />} />
-            </Route>
+          <Route
+            element={
+              <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/chat" element={<ChatList />} />
+            <Route path="/chat/:chatId" element={<ChatWindow />} />
+          </Route>
 
-          {/* Student Routes */}
           <Route
             element={
               <ProtectedRoute allowedUserTypes={['student']}>
@@ -94,6 +89,7 @@ function App() {
           >
             <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/profile/:id" element={<StudentPublicProfile />} />
             <Route path="/student/skills" element={<StudentSkills />} />
             <Route path="/student/projects" element={<StudentProjects />} />
             <Route path="/student/internships" element={<StudentInternships />} />
@@ -101,7 +97,6 @@ function App() {
             <Route path="/student/certificates" element={<StudentCertificates />} />
           </Route>
 
-          {/* Faculty Routes */}
           <Route
             element={
               <ProtectedRoute allowedUserTypes={['faculty']}>
@@ -121,30 +116,18 @@ function App() {
 
           <Route
             element={
-              <ProtectedRoute allowedUserTypes={['faculty', 'admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/faculty/search" element={<SmartSearch />} />
-          </Route>
-
-          {/* Admin Routes */}
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['admin', 'faculty']} allowedRoles={['dept_admin', 'super_admin']}>
+              <ProtectedRoute allowedUserTypes={['admin', 'faculty']}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
           >
             <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/faculty" element={<ManageFaculty />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
           </Route>
 
-          {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
