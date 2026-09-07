@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, MoreVertical, Trash2, Flag } from 'lucide-react';
+import { Send, ArrowLeft, MoreVertical, Trash2, Flag, UserRound, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI } from '../../services/api';
 import type { Chat } from '../../types';
 import './chat.css';
 import './chat-layout.css';
 
-type Participant = string | { _id: string; name?: string; email?: string; userType?: string };
+type Participant = string | { _id: string; name?: string; email?: string; userType?: string; profileId?: string };
 
 export const ChatWindow: React.FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
@@ -19,30 +19,21 @@ export const ChatWindow: React.FC = () => {
   const [messageContent, setMessageContent] = useState('');
   const [messageTag, setMessageTag] = useState<'GENERAL' | 'DOUBT'>('GENERAL');
   const [isSending, setIsSending] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const authUserId = user?.authUserId || user?.id || '';
 
   const loadChat = useCallback(async (showLoading = false) => {
     if (!chatId || !authUserId) return;
-
     try {
-      // Polling must never replace the input component while the user is typing.
       if (showLoading) setIsLoading(true);
       setApiError('');
-
       const response = await chatAPI.getChats(authUserId);
       const foundChat = response.find((c) => c._id === chatId);
-
       if (foundChat) {
         setChat((current) => {
-          // Avoid unnecessary rerenders when polling returns the same conversation.
-          if (
-            current?._id === foundChat._id &&
-            JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)
-          ) {
-            return current;
-          }
+          if (current?._id === foundChat._id && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
           return foundChat;
         });
       } else {
@@ -57,9 +48,6 @@ export const ChatWindow: React.FC = () => {
 
   useEffect(() => {
     loadChat(true);
-
-    // Refresh messages silently. Never toggle isLoading during polling because
-    // that would unmount the input and steal keyboard focus every few seconds.
     const interval = window.setInterval(() => loadChat(false), 5000);
     return () => window.clearInterval(interval);
   }, [loadChat]);
@@ -70,7 +58,6 @@ export const ChatWindow: React.FC = () => {
 
   const handleSendMessage = async () => {
     if (!messageContent.trim() || !chatId || isSending) return;
-
     try {
       setIsSending(true);
       await chatAPI.sendMessage(chatId, messageContent.trim(), messageTag);
@@ -97,58 +84,37 @@ export const ChatWindow: React.FC = () => {
     }
   };
 
-  const getParticipantId = (participant: Participant) =>
-    typeof participant === 'string' ? participant : participant?._id;
-
-  const getParticipantName = (participant: Participant) =>
-    typeof participant === 'string'
-      ? participant
-      : participant?.name || participant?.email || 'Unknown';
-
+  const getParticipantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const getParticipantName = (participant: Participant) => typeof participant === 'string' ? participant : participant?.name || participant?.email || 'Unknown';
   const getOtherParticipant = (): Participant | null => {
     if (!chat) return null;
-    return (
-      (chat.participants as Participant[]).find(
-        (participant) => getParticipantId(participant) !== authUserId,
-      ) || null
-    );
+    return (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== authUserId) || null;
   };
-
-  const getOtherParticipantName = () => {
-    const other = getOtherParticipant();
-    return other ? getParticipantName(other) : 'Unknown';
-  };
-
+  const getOtherParticipantName = () => { const other = getOtherParticipant(); return other ? getParticipantName(other) : 'Unknown'; };
   const getParticipantInitials = (participant: Participant | null) => {
     const name = participant ? getParticipantName(participant) : 'U';
     const parts = name.trim().split(/\s+/).filter(Boolean);
-    if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    return name.substring(0, 2).toUpperCase();
+    return parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
+  };
+  const isOwnMessage = (sender: any) => (typeof sender === 'string' ? sender : sender?._id) === authUserId;
+
+  const openParticipantProfile = () => {
+    const participant = getOtherParticipant() as any;
+    if (!participant?.profileId) {
+      setApiError('This participant profile is not available.');
+      setShowMenu(false);
+      return;
+    }
+    if (participant.userType === 'student') {
+      navigate(user?.userType === 'faculty' || user?.userType === 'admin' ? `/faculty/student/${participant.profileId}` : `/student/profile/${participant.profileId}`);
+    } else if (participant.userType === 'faculty') {
+      navigate(`/faculty/profile/${participant.profileId}`);
+    }
+    setShowMenu(false);
   };
 
-  const isOwnMessage = (sender: any) => {
-    const senderId = typeof sender === 'string' ? sender : sender?._id;
-    return senderId === authUserId;
-  };
-
-  if (isLoading) {
-    return (
-      <div className="chat-window-container">
-        <div className="chat-loading">Loading chat...</div>
-      </div>
-    );
-  }
-
-  if (!chat) {
-    return (
-      <div className="chat-window-container">
-        <div className="chat-error-full">
-          <p>{apiError || 'Chat not found'}</p>
-          <button onClick={() => navigate('/chat')}>Back to Messages</button>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="chat-window-container"><div className="chat-loading">Loading chat...</div></div>;
+  if (!chat) return <div className="chat-window-container"><div className="chat-error-full"><p>{apiError || 'Chat not found'}</p><button onClick={() => navigate('/chat')}>Back to Messages</button></div></div>;
 
   const otherParticipant = getOtherParticipant();
 
@@ -156,130 +122,47 @@ export const ChatWindow: React.FC = () => {
     <div className="chat-window-container">
       <div className="chat-window-header">
         <div className="chat-header-left">
-          <button
-            type="button"
-            onClick={() => navigate('/chat')}
-            className="back-btn"
-            title="Back to chats"
-          >
-            <ArrowLeft size={20} />
+          <button type="button" onClick={() => navigate('/chat')} className="back-btn" title="Back to chats"><ArrowLeft size={20} /></button>
+          <button type="button" className="chat-header-profile-btn" onClick={openParticipantProfile} title="Open profile">
+            <div className="chat-header-avatar" aria-hidden="true">{getParticipantInitials(otherParticipant)}<span className="chat-online-dot" /></div>
+            <div className="chat-header-info"><h2>{getOtherParticipantName()}</h2><p className="chat-status">Active</p></div>
           </button>
-
-          <div className="chat-header-avatar" aria-hidden="true">
-            {getParticipantInitials(otherParticipant)}
-            <span className="chat-online-dot" />
-          </div>
-
-          <div className="chat-header-info">
-            <h2>{getOtherParticipantName()}</h2>
-            <p className="chat-status">Active</p>
-          </div>
         </div>
-
-        <button
-          type="button"
-          className="chat-header-menu"
-          aria-label="Chat options"
-        >
-          <MoreVertical size={20} />
-        </button>
+        <div className="chat-header-actions">
+          <button type="button" className="chat-header-menu" aria-label="Chat options" onClick={() => setShowMenu((value) => !value)}><MoreVertical size={20} /></button>
+          {showMenu && (
+            <div className="chat-options-menu">
+              <button type="button" onClick={openParticipantProfile}><UserRound size={16} /> View profile</button>
+              <button type="button" onClick={() => { setShowMenu(false); void loadChat(false); }}><RefreshCw size={16} /> Refresh messages</button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {apiError && (
-        <div className="chat-message-error">
-          {apiError}
-          <button type="button" onClick={() => setApiError('')} aria-label="Dismiss">
-            ×
-          </button>
-        </div>
-      )}
+      {apiError && <div className="chat-message-error">{apiError}<button type="button" onClick={() => setApiError('')} aria-label="Dismiss">×</button></div>}
 
       <div className="chat-messages">
-        {!chat.messages?.length ? (
-          <div className="chat-messages-empty">
-            <p>No messages yet. Start the conversation!</p>
-          </div>
-        ) : (
-          <>
-            {chat.messages.map((message) => (
-              <div
-                key={message._id}
-                className={`message ${
-                  isOwnMessage(message.sender) ? 'message-sent' : 'message-received'
-                }`}
-              >
-                <div className="message-bubble">
-                  {message.tag && message.tag !== 'GENERAL' && (
-                    <span className="message-tag">{message.tag}</span>
-                  )}
-                  <p className="message-text">{message.content}</p>
-                  <span className="message-time">
-                    {new Date(message.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-
-                {isOwnMessage(message.sender) && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteMessage(message._id)}
-                    className="message-delete-btn"
-                    title="Delete message"
-                    aria-label="Delete message"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
+        {!chat.messages?.length ? <div className="chat-messages-empty"><p>No messages yet. Start the conversation!</p></div> : <>
+          {chat.messages.map((message) => <div key={message._id} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}>
+            <div className="message-bubble">
+              {message.tag && message.tag !== 'GENERAL' && <span className="message-tag">{message.tag}</span>}
+              <p className="message-text">{message.content}</p>
+              <span className="message-time">{new Date(message.createdAt).toLocaleTimeString()}</span>
+            </div>
+            {isOwnMessage(message.sender) && <button type="button" onClick={() => handleDeleteMessage(message._id)} className="message-delete-btn" title="Delete message" aria-label="Delete message"><Trash2 size={14} /></button>}
+          </div>)}
+          <div ref={messagesEndRef} />
+        </>}
       </div>
 
       <div className="chat-input-area">
         <div className="message-tag-selector">
-          <button
-            type="button"
-            className={`tag-btn ${messageTag === 'GENERAL' ? 'active' : ''}`}
-            onClick={() => setMessageTag('GENERAL')}
-          >
-            General
-          </button>
-          <button
-            type="button"
-            className={`tag-btn ${messageTag === 'DOUBT' ? 'active' : ''}`}
-            onClick={() => setMessageTag('DOUBT')}
-          >
-            <Flag size={14} />
-            Doubt
-          </button>
+          <button type="button" className={`tag-btn ${messageTag === 'GENERAL' ? 'active' : ''}`} onClick={() => setMessageTag('GENERAL')}>General</button>
+          <button type="button" className={`tag-btn ${messageTag === 'DOUBT' ? 'active' : ''}`} onClick={() => setMessageTag('DOUBT')}><Flag size={14} /> Doubt</button>
         </div>
-
         <div className="message-input-wrapper">
-          <input
-            ref={messageInputRef}
-            type="text"
-            value={messageContent}
-            onChange={(e) => setMessageContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                void handleSendMessage();
-              }
-            }}
-            placeholder="Type a message..."
-            disabled={isSending}
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            onClick={() => void handleSendMessage()}
-            disabled={!messageContent.trim() || isSending}
-            className="send-message-btn"
-            aria-label="Send message"
-          >
-            <Send size={18} />
-          </button>
+          <input ref={messageInputRef} type="text" value={messageContent} onChange={(e) => setMessageContent(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSendMessage(); } }} placeholder="Type a message..." disabled={isSending} autoComplete="off" />
+          <button type="button" onClick={() => void handleSendMessage()} disabled={!messageContent.trim() || isSending} className="send-message-btn" aria-label="Send message"><Send size={18} /></button>
         </div>
       </div>
     </div>
