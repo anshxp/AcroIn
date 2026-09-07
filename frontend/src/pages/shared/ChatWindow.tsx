@@ -19,7 +19,7 @@ export const ChatWindow: React.FC = () => {
   const [messageTag, setMessageTag] = useState<'GENERAL' | 'DOUBT'>('GENERAL');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const authUserId = user?.authUserId || user?.id || user?._id || '';
+  const authUserId = user?.authUserId || user?.id || '';
 
   const loadChat = async () => {
     if (!chatId || !authUserId) return;
