@@ -18,7 +18,7 @@ export const ChatList: React.FC = () => {
   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false);
-  const authUserId = user?.authUserId || user?.id || user?._id || '';
+  const authUserId = user?.authUserId || user?.id || '';
 
   const loadChats = async () => {
     if (!authUserId) { setChats([]); setIsLoading(false); return; }
