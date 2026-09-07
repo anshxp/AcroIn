@@ -4,40 +4,15 @@ import { DashboardLayout } from './components/layout';
 import { ProtectedRoute } from './components/auth';
 import { ScrollToTop } from './components/common';
 import {
-  LandingPage,
-  LoginPage,
-  RegisterPage,
-  AdminBootstrapPage,
-  StudentProfile,
-  StudentPublicProfile,
-  StudentProjects,
-  StudentInternships,
-  StudentCompetitions,
-  StudentCertificates,
-  StudentSkills,
-  FacultyProfile,
-  VerifyStudents,
-  PostOpportunities,
-  SmartSearch,
-  FacialRecognition,
-  Recommendations,
-  FacultyAnalytics,
-  StudentProfileView,
-  ManageStudents,
-  ManageFaculty,
-  AdminSettings,
-  AdminAnalytics,
-  DepartmentAuditLogs,
-  HomeFeed,
-  Notifications,
-  ChatWorkspace,
+  LandingPage, LoginPage, RegisterPage, AdminBootstrapPage, StudentProfile, StudentPublicProfile, StudentProjects,
+  StudentInternships, StudentCompetitions, StudentCertificates, StudentSkills, FacultyProfile, FacultyPublicProfile,
+  VerifyStudents, PostOpportunities, SmartSearch, FacialRecognition, Recommendations, FacultyAnalytics,
+  StudentProfileView, ManageStudents, ManageFaculty, AdminSettings, AdminAnalytics, DepartmentAuditLogs,
+  HomeFeed, Notifications, ChatWorkspace,
 } from './pages';
 import './App.css';
 
-const HomeRedirect = () => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />;
-};
+const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
 
 function App() {
   return (
@@ -56,6 +31,7 @@ function App() {
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/chat" element={<ChatWorkspace />} />
             <Route path="/chat/:chatId" element={<ChatWorkspace />} />
+            <Route path="/faculty/profile/:id" element={<FacultyPublicProfile />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['student']}><DashboardLayout /></ProtectedRoute>}>
