@@ -14,7 +14,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
-  const authUserId = user?.authUserId || user?.id || user?._id || '';
+  const authUserId = user?.authUserId || user?.id || '';
 
   useEffect(() => {
     const loadUnreadNotifications = async () => {
