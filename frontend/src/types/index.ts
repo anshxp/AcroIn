@@ -64,7 +64,6 @@ export interface Student {
   certificates: Certificate[];
   createdAt: string;
   updatedAt: string;
-  // Display/computed properties for UI
   profileImage?: string;
   projectsCount?: number;
   internshipsCount?: number;
@@ -77,23 +76,15 @@ export interface Faculty {
   firstname: string;
   lastName: string;
   email: string;
-  profilepic?: string;
-  experience: number;
-  dateOfJoining?: string;
-  calculatedExperience?: boolean;
-  qualification: string;
-  subjects: string[];
   department: string;
-  headof: string[];
   designation: string;
-  dob: string;
-  linkedin?: string;
-  skills: string[];
-  techstacks: string[];
-  phone: string;
-  role: ('faculty' | 'dept_admin' | 'super_admin')[];
-  createdAt: string;
-  updatedAt: string;
+  qualification?: string;
+  experience?: number;
+  phone?: string;
+  profilepic?: string;
+  role?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Project {
@@ -103,7 +94,7 @@ export interface Project {
   technologies: string[];
   github_link?: string;
   live_link?: string;
-  student: string;
+  student?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -182,7 +173,6 @@ export interface NotificationItem {
   updatedAt: string;
 }
 
-// Auth types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -217,19 +207,20 @@ export interface AuthResponse {
 }
 
 export interface User {
+  /** Student/Faculty profile _id. Keep this for profile routes. */
   id: string;
+  /** User._id from the JWT. Use this for chats, notifications and other auth-user routes. */
+  authUserId?: string;
   email: string;
   name: string;
   userType: 'student' | 'faculty' | 'admin';
   role?: string[];
-  // Faculty-specific fields
   firstname?: string;
   lastName?: string;
   department?: string;
   designation?: string;
 }
 
-// Post types (LinkedIn-style)
 export interface Post {
   _id: string;
   author: {
@@ -243,36 +234,19 @@ export interface Post {
   content: string;
   images?: string[];
   likes: string[];
-  comments: Comment[];
-  linkedOpportunity?: string;
-  scope?: 'campus' | 'department';
-  visibleToDepartments?: string[];
+  comments?: any[];
   createdAt: string;
   updatedAt: string;
-}
-
-export interface Comment {
-  _id: string;
-  author: {
-    _id: string;
-    name: string;
-    profileImage?: string;
-    userType: 'student' | 'faculty' | 'admin';
-  };
-  content: string;
-  createdAt: string;
 }
 
 export interface CreatePostData {
   content: string;
   images?: string[];
-  files?: File[];
 }
 
-// Chat types
-export interface Message {
+export interface ChatMessage {
   _id: string;
-  sender: string;
+  sender: string | { _id: string; name?: string; email?: string; userType?: string };
   content: string;
   createdAt: string;
   flagged?: boolean;
@@ -282,44 +256,27 @@ export interface Message {
 
 export interface Chat {
   _id: string;
-  participants: string[];
-  messages: Message[];
-  facultyMediator?: string;
-  isActive: boolean;
+  participants: string[] | { _id: string; name?: string; email?: string; userType?: string }[];
+  messages: ChatMessage[];
   messageType?: 'STUDENT_TO_FACULTY' | 'FACULTY_TO_FACULTY';
-  createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+  createdAt?: string;
 }
 
-// Interest types
 export interface Interest {
   _id: string;
-  student: string | Student;
-  opportunity: string | Opportunity;
-  createdAt: string;
+  student: string;
+  opportunity: string;
+  status?: string;
+  createdAt?: string;
   updatedAt?: string;
 }
 
-// Audit Log types
 export interface AuditLog {
   _id: string;
-  actorId: string | User;
-  actorRole: 'student' | 'faculty' | 'dept_admin' | 'admin' | 'super_admin' | 'system';
-  actorDepartment?: string;
-  affectedDepartment?: string;
   action: string;
-  method: string;
-  path: string;
-  statusCode: number;
-  success: boolean;
-  ip?: string;
-  userAgent?: string;
-  payload?: {
-    params?: Record<string, any>;
-    query?: Record<string, any>;
-    body?: Record<string, any>;
-    durationMs?: number;
-  };
+  actor?: string;
+  target?: string;
+  details?: any;
   createdAt: string;
-  updatedAt: string;
 }
