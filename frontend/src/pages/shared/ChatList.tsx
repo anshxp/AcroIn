@@ -1,16 +1,17 @@
 import { MessageSquare, Plus, Search, X, Trash2 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI, facultyAPI } from '../../services/api';
 import type { Chat, Faculty } from '../../types';
 import './chat.css';
 
-type Participant = string | { _id: string; name?: string; email?: string; userType?: string };
+type Participant = string | { _id: string; name?: string; email?: string; userType?: string; avatar?: string; profileImage?: string };
 
 export const ChatList: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState('');
@@ -41,8 +42,8 @@ export const ChatList: React.FC = () => {
     finally { setIsLoadingFaculty(false); }
   };
 
-  useEffect(() => { loadChats(); }, [authUserId]);
-  useEffect(() => { loadFacultyList(); }, [showNewChatModal]);
+  useEffect(() => { void loadChats(); }, [authUserId]);
+  useEffect(() => { void loadFacultyList(); }, [showNewChatModal]);
 
   const handleStartChat = async (facultyId: string) => {
     try {
@@ -69,6 +70,12 @@ export const ChatList: React.FC = () => {
     const participants = (chat.participants || []) as Participant[];
     return participants.find((participant) => participantId(participant) !== authUserId) || 'Unknown';
   };
+  const getInitials = (participant: Participant) => {
+    const name = participantName(participant).trim();
+    const parts = name.split(/\s+/).filter(Boolean);
+    return (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : name.slice(0, 2)).toUpperCase();
+  };
+  const getAvatar = (participant: Participant) => typeof participant === 'string' ? '' : participant?.avatar || participant?.profileImage || '';
   const filteredChats = chats.filter((chat) => participantName(getOtherParticipant(chat)).toLowerCase().includes(searchQuery.toLowerCase()));
   const filteredFaculty = facultyList.filter((faculty) => `${faculty.firstname} ${faculty.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const getLastMessage = (chat: Chat) => {
@@ -76,14 +83,19 @@ export const ChatList: React.FC = () => {
     const content = chat.messages[chat.messages.length - 1].content || '';
     return content.length > 50 ? `${content.substring(0, 50)}...` : content;
   };
+  const getLastMessageTime = (chat: Chat) => {
+    const last = chat.messages?.[chat.messages.length - 1];
+    if (!last?.createdAt) return '';
+    return new Date(last.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  };
 
   return (
     <div className="chat-list-container">
-      <div className="chat-list-header"><div className="chat-list-title"><MessageSquare size={24} /><h1>Messages</h1></div><button type="button" onClick={() => setShowNewChatModal(true)} className="new-chat-btn" title="Start a new chat" aria-label="Start a new chat"><Plus size={20} /></button></div>
+      <div className="chat-list-header"><div className="chat-list-title"><MessageSquare size={0} aria-hidden="true" /><h1>Messages</h1></div><button type="button" onClick={() => setShowNewChatModal(true)} className="new-chat-btn" title="Start a new chat" aria-label="Start a new chat"><Plus size={20} /></button></div>
       {apiError && <div className="chat-error">{apiError}<button type="button" onClick={() => setApiError('')} aria-label="Dismiss error"><X size={18} /></button></div>}
       <div className="chat-search-bar"><Search size={18} /><input type="text" placeholder="Search conversations..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-      {isLoading ? <div className="chat-loading"><p>Loading chats...</p></div> : filteredChats.length === 0 ? <div className="chat-empty"><MessageSquare size={48} /><h2>No conversations yet</h2><p>Start a conversation with a faculty member to get help with your queries</p><button type="button" onClick={() => setShowNewChatModal(true)} className="start-chat-btn">Start a Chat</button></div> : <div className="chat-list">{filteredChats.map((chat) => { const other = getOtherParticipant(chat); return <div key={chat._id} className="chat-item" onClick={() => navigate(`/chat/${chat._id}`)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/chat/${chat._id}`); }}><div className="chat-item-content"><h3 className="chat-item-name">{participantName(other)}</h3><p className="chat-item-preview">{getLastMessage(chat)}</p></div><button type="button" onClick={(event) => { event.stopPropagation(); handleDeleteChat(chat._id); }} className="chat-item-delete" title="Delete chat" aria-label="Delete chat"><Trash2 size={16} /></button></div>; })}</div>}
-      {showNewChatModal && <div className="chat-modal-overlay" onClick={() => setShowNewChatModal(false)}><div className="chat-modal" onClick={(event) => event.stopPropagation()}><div className="chat-modal-header"><h2>Start a Conversation</h2><button type="button" onClick={() => setShowNewChatModal(false)} className="modal-close-btn" aria-label="Close"><X size={20} /></button></div><div className="chat-modal-search"><Search size={18} /><input type="text" placeholder="Search faculty members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>{isLoadingFaculty ? <div className="chat-modal-loading">Loading faculty...</div> : filteredFaculty.length === 0 ? <div className="chat-modal-empty">No faculty members found</div> : <div className="faculty-list">{filteredFaculty.map((faculty) => <button type="button" key={faculty._id} className="faculty-item" onClick={() => handleStartChat(faculty._id)}><div className="faculty-avatar">{faculty.firstname?.[0]?.toUpperCase() || '?'}</div><div className="faculty-info"><h4>{faculty.firstname} {faculty.lastName}</h4><p>{faculty.designation} - {faculty.department}</p></div></button>)}</div>}</div></div>}
+      {isLoading ? <div className="chat-loading"><p>Loading chats...</p></div> : filteredChats.length === 0 ? <div className="chat-empty"><MessageSquare size={48} /><h2>No conversations yet</h2><p>Start a conversation with a faculty member to get help with your queries</p><button type="button" onClick={() => setShowNewChatModal(true)} className="start-chat-btn">Start a Chat</button></div> : <div className="chat-list">{filteredChats.map((chat) => { const other = getOtherParticipant(chat); const avatar = getAvatar(other); const active = location.pathname === `/chat/${chat._id}`; return <div key={chat._id} className={`chat-item ${active ? 'chat-item-active' : ''}`} onClick={() => navigate(`/chat/${chat._id}`)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/chat/${chat._id}`); }}><div className="chat-item-avatar">{avatar ? <img src={avatar} alt="" /> : getInitials(other)}<span className="chat-item-online-dot" /></div><div className="chat-item-content"><h3 className="chat-item-name">{participantName(other)}</h3><p className="chat-item-preview">{getLastMessage(chat)}</p></div><div className="chat-item-meta"><span>{getLastMessageTime(chat)}</span><button type="button" onClick={(event) => { event.stopPropagation(); void handleDeleteChat(chat._id); }} className="chat-item-delete" title="Delete chat" aria-label="Delete chat"><Trash2 size={14} /></button></div></div>; })}</div>}
+      {showNewChatModal && <div className="chat-modal-overlay" onClick={() => setShowNewChatModal(false)}><div className="chat-modal" onClick={(event) => event.stopPropagation()}><div className="chat-modal-header"><h2>Start a Conversation</h2><button type="button" onClick={() => setShowNewChatModal(false)} className="modal-close-btn" aria-label="Close"><X size={20} /></button></div><div className="chat-modal-search"><Search size={18} /><input type="text" placeholder="Search faculty members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>{isLoadingFaculty ? <div className="chat-modal-loading">Loading faculty...</div> : filteredFaculty.length === 0 ? <div className="chat-modal-empty">No faculty members found</div> : <div className="faculty-list">{filteredFaculty.map((faculty) => <button type="button" key={faculty._id} className="faculty-item" onClick={() => void handleStartChat(faculty._id)}><div className="faculty-avatar">{faculty.firstname?.[0]?.toUpperCase() || '?'}</div><div className="faculty-info"><h4>{faculty.firstname} {faculty.lastName}</h4><p>{faculty.designation} - {faculty.department}</p></div></button>)}</div>}</div></div>}
     </div>
   );
 };
