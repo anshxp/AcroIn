@@ -54,7 +54,9 @@ export const Notifications: React.FC = () => {
     try {
       const updated = await notificationAPI.markAsRead(notificationId);
       setNotifications((current) => current.map((item) => item._id === updated._id ? updated : item));
-    } catch {}
+    } catch {
+      // Keep the current notification state when the API update fails.
+    }
   };
 
   const getNotificationPath = (notification: NotificationItem) => {
