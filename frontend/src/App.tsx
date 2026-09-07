@@ -3,13 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { DashboardLayout } from './components/layout';
 import { ProtectedRoute } from './components/auth';
 import { ScrollToTop } from './components/common';
-import {
-  LandingPage, LoginPage, RegisterPage, AdminBootstrapPage, StudentProfile, StudentPublicProfile, StudentProjects,
-  StudentInternships, StudentCompetitions, StudentCertificates, StudentSkills, FacultyProfile, FacultyPublicProfile,
-  VerifyStudents, PostOpportunities, SmartSearch, FacialRecognition, Recommendations, FacultyAnalytics,
-  StudentProfileView, ManageStudents, ManageFaculty, AdminSettings, AdminAnalytics, DepartmentAuditLogs,
-  HomeFeed, Notifications, ChatWorkspace,
-} from './pages';
+import { LandingPage, LoginPage, RegisterPage, AdminBootstrapPage, StudentProfile, StudentPublicProfile, StudentProjects, StudentInternships, StudentCompetitions, StudentCertificates, StudentSkills, FacultyProfile, FacultyPublicProfile, VerifyStudents, PostOpportunities, SmartSearch, FacialRecognition, Recommendations, FacultyAnalytics, StudentProfileView, ManageStudents, ManageFaculty, AdminSettings, AdminAnalytics, DepartmentAuditLogs, HomeFeed, Notifications, ChatWorkspace } from './pages';
 import './App.css';
 
 const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
@@ -35,6 +29,7 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['student']}><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/profile/:id" element={<StudentPublicProfile />} />
             <Route path="/student/skills" element={<StudentSkills />} />
@@ -62,12 +57,10 @@ function App() {
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
           </Route>
-
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
-
 export default App;
