@@ -31,20 +31,13 @@ import {
   DepartmentAuditLogs,
   HomeFeed,
   Notifications,
-  ChatList,
-  ChatWindow,
   ChatWorkspace,
 } from './pages';
 import './App.css';
 
 const HomeRedirect = () => {
   const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <LandingPage />;
-  }
-
-  return <Navigate to="/home" replace />;
+  return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />;
 };
 
 function App() {
@@ -59,35 +52,14 @@ function App() {
           <Route path="/__internal__/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
           <Route path="/internal/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
 
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/home" element={<HomeFeed />} />
             <Route path="/notifications" element={<Notifications />} />
-          </Route>
-
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
             <Route path="/chat" element={<ChatWorkspace />} />
             <Route path="/chat/:chatId" element={<ChatWorkspace />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['student']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['student']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
             <Route path="/student/profile/:id" element={<StudentPublicProfile />} />
@@ -98,13 +70,7 @@ function App() {
             <Route path="/student/certificates" element={<StudentCertificates />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['faculty']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['faculty']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/faculty/profile" element={<FacultyProfile />} />
             <Route path="/faculty/verification" element={<FacialRecognition />} />
             <Route path="/faculty/recommendations" element={<Recommendations />} />
@@ -115,13 +81,7 @@ function App() {
             <Route path="/faculty/student/:id" element={<StudentProfileView />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['admin', 'faculty']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['admin', 'faculty']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/faculty" element={<ManageFaculty />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
