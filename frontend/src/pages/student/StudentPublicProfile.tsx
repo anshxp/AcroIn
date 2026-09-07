@@ -73,6 +73,12 @@ export const StudentPublicProfile: React.FC = () => {
   const internships = Array.isArray(student.internships) ? student.internships : [];
   const certificates = Array.isArray(student.certificates) ? student.certificates : [];
   const competitions = Array.isArray(student.competitions) ? student.competitions : [];
+  const stats: Array<{ label: string; count: number; Icon: React.ComponentType<{ size?: number }> }> = [
+    { label: 'Projects', count: projects.length, Icon: FolderKanban },
+    { label: 'Internships', count: internships.length, Icon: Briefcase },
+    { label: 'Certificates', count: certificates.length, Icon: Award },
+    { label: 'Competitions', count: competitions.length, Icon: Trophy },
+  ];
 
   return (
     <div className="page-container">
@@ -118,13 +124,8 @@ export const StudentPublicProfile: React.FC = () => {
       {student.bio && <div className="card" style={{ marginBottom: '20px' }}><div className="card-header"><div><h2>About</h2><p>Profile summary</p></div></div><div className="card-body"><p style={{ margin: 0, color: '#334155', lineHeight: 1.7 }}>{student.bio}</p></div></div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '20px' }}>
-        {[
-          ['Projects', projects.length, FolderKanban],
-          ['Internships', internships.length, Briefcase],
-          ['Certificates', certificates.length, Award],
-          ['Competitions', competitions.length, Trophy],
-        ].map(([label, count, Icon]) => (
-          <div className="card" key={String(label)}><div className="card-body" style={{ display: 'grid', gap: '6px' }}><span style={{ color: '#64748b', fontSize: '12px' }}>{label}</span><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Icon size={17} /><strong style={{ fontSize: '20px' }}>{String(count)}</strong></div></div></div>
+        {stats.map(({ label, count, Icon }) => (
+          <div className="card" key={label}><div className="card-body" style={{ display: 'grid', gap: '6px' }}><span style={{ color: '#64748b', fontSize: '12px' }}>{label}</span><div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Icon size={17} /><strong style={{ fontSize: '20px' }}>{count}</strong></div></div></div>
         ))}
       </div>
 
