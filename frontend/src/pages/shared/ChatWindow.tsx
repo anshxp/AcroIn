@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { chatAPI } from '../../services/api';
 import type { Chat } from '../../types';
 import './chat.css';
+import './chat-layout.css';
 
 type Participant = string | { _id: string; name?: string; email?: string; userType?: string };
 
