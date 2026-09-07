@@ -1,5 +1,5 @@
 import { MessageSquare, Plus, Search, X, Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI, facultyAPI } from '../../services/api';
@@ -21,18 +21,20 @@ export const ChatList: React.FC = () => {
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false);
   const authUserId = user?.authUserId || user?.id || '';
 
-  const loadChats = async () => {
+  const loadChats = useCallback(async (showLoading = false) => {
     if (!authUserId) { setChats([]); setIsLoading(false); return; }
     try {
-      setIsLoading(true); setApiError('');
-      setChats(await chatAPI.getChats(authUserId));
+      if (showLoading) setIsLoading(true);
+      const nextChats = await chatAPI.getChats(authUserId);
+      setChats((current) => JSON.stringify(current) === JSON.stringify(nextChats) ? current : nextChats);
+      setApiError('');
     } catch (error: any) {
       setApiError(error?.response?.data?.message || 'Failed to load chats');
-      setChats([]);
-    } finally { setIsLoading(false); }
-  };
+      if (showLoading) setChats([]);
+    } finally { if (showLoading) setIsLoading(false); }
+  }, [authUserId]);
 
-  const loadFacultyList = async () => {
+  const loadFacultyList = useCallback(async () => {
     if (!showNewChatModal) return;
     try {
       setIsLoadingFaculty(true);
@@ -40,16 +42,22 @@ export const ChatList: React.FC = () => {
       setFacultyList(Array.isArray(response) ? response : []);
     } catch { setFacultyList([]); }
     finally { setIsLoadingFaculty(false); }
-  };
+  }, [showNewChatModal]);
 
-  useEffect(() => { void loadChats(); }, [authUserId]);
-  useEffect(() => { void loadFacultyList(); }, [showNewChatModal]);
+  useEffect(() => {
+    void loadChats(true);
+    const interval = window.setInterval(() => void loadChats(false), 5000);
+    return () => window.clearInterval(interval);
+  }, [loadChats]);
+
+  useEffect(() => { void loadFacultyList(); }, [loadFacultyList]);
 
   const handleStartChat = async (facultyId: string) => {
     try {
       const chat = await chatAPI.createChat(facultyId);
       setShowNewChatModal(false);
-      await loadChats();
+      setSearchQuery('');
+      await loadChats(false);
       navigate(`/chat/${chat._id}`);
     } catch (error: any) {
       setApiError(error?.response?.data?.message || 'Failed to create chat');
@@ -66,10 +74,7 @@ export const ChatList: React.FC = () => {
 
   const participantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
   const participantName = (participant: Participant) => typeof participant === 'string' ? participant : (participant?.name || participant?.email || 'Unknown');
-  const getOtherParticipant = (chat: Chat) => {
-    const participants = (chat.participants || []) as Participant[];
-    return participants.find((participant) => participantId(participant) !== authUserId) || 'Unknown';
-  };
+  const getOtherParticipant = (chat: Chat) => ((chat.participants || []) as Participant[]).find((participant) => participantId(participant) !== authUserId) || 'Unknown';
   const getInitials = (participant: Participant) => {
     const name = participantName(participant).trim();
     const parts = name.split(/\s+/).filter(Boolean);
