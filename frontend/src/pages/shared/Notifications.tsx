@@ -22,7 +22,7 @@ export const Notifications: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterMode>('all');
   const [activeType, setActiveType] = useState<'all' | NotificationItem['type']>('all');
-  const authUserId = user?.authUserId || user?.id || user?._id || '';
+  const authUserId = user?.authUserId || user?.id || '';
 
   useEffect(() => {
     const loadNotifications = async () => {
