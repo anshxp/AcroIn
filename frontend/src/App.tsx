@@ -33,6 +33,7 @@ import {
   Notifications,
   ChatList,
   ChatWindow,
+  ChatWorkspace,
 } from './pages';
 import './App.css';
 
@@ -76,8 +77,8 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/chat" element={<ChatList />} />
-            <Route path="/chat/:chatId" element={<ChatWindow />} />
+            <Route path="/chat" element={<ChatWorkspace />} />
+            <Route path="/chat/:chatId" element={<ChatWorkspace />} />
           </Route>
 
           <Route
