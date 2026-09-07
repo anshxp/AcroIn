@@ -270,13 +270,10 @@ router.get('/', verifyToken, async (req, res) => {
 
   let result = normalizedStudents;
 
+  // Students can discover every student profile in Smart Search. Verification
+  // status is displayed as metadata, but it does not hide profiles from search.
   if (requesterType === 'student') {
-    const visibleStudents = normalizedStudents.filter((student) => {
-      const status = String(student.verificationStatus || '').trim().toLowerCase();
-      return status === 'verified' || status === 'strongly_verified';
-    });
-
-    result = visibleStudents.map((student) => ({
+    result = normalizedStudents.map((student) => ({
       _id: student._id,
       name: student.name,
       roll: student.roll,
@@ -339,9 +336,11 @@ router.get('/:id', verifyToken, async (req, res) => {
 
   const requester = await getRequesterContext(req);
   const isPrivileged = requester.userType === 'admin' || requester.userType === 'faculty';
-  const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
+  const isStudent = requester.userType === 'student';
 
-  if (!isPrivileged && !isSelf) {
+  // Any authenticated student may view another student's public profile.
+  // Editing remains protected by the separate PUT authorization below.
+  if (!isPrivileged && !isStudent) {
     return res.status(403).json({ message: 'Not authorized to access this profile' });
   }
 
