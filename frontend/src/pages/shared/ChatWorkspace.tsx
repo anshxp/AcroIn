@@ -3,12 +3,12 @@ import { useParams } from 'react-router-dom';
 import { ChatList } from './ChatList';
 import { ChatWindow } from './ChatWindow';
 import './chat-workspace.css';
+import './chat-reference.css';
 
 /**
- * Desktop chat workspace matching the Acro-In reference layout:
- * conversation list on the left, selected conversation on the right.
- * DashboardLayout owns the global navigation/header; this component only
- * controls the area underneath it.
+ * Desktop chat workspace matching the supplied reference layout.
+ * DashboardLayout owns the global navigation/header; this component owns
+ * the split conversation list + selected conversation area below it.
  */
 export const ChatWorkspace: React.FC = () => {
   const { chatId } = useParams<{ chatId?: string }>();
