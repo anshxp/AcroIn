@@ -48,17 +48,19 @@ const resolveParticipantUser = async (participantId) => {
   return User.findOne({ email: normalized.toLowerCase() });
 };
 
-// Get all chats for a user. Accepts either User._id, Student/Faculty._id, or email.
+// Get chats. For normal users the authenticated JWT identity is authoritative;
+// the path parameter is only a compatibility alias for older clients that sent
+// a Student/Faculty profile id instead of User._id. Admins may query another user.
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
-    const requestedUser = await resolveParticipantUser(req.params.userId);
     const authenticatedUser = await resolveParticipantUser(req.user?.id);
+    if (!authenticatedUser) return res.status(401).json({ success: false, message: 'Authenticated user not found' });
 
-    if (!requestedUser || !authenticatedUser) return res.status(400).json({ success: false, message: 'Invalid user id' });
+    const requestedUser = req.user?.userType === 'admin'
+      ? await resolveParticipantUser(req.params.userId)
+      : authenticatedUser;
 
-    if (req.user?.userType !== 'admin' && requestedUser._id.toString() !== authenticatedUser._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized to view these chats' });
-    }
+    if (!requestedUser) return res.status(400).json({ success: false, message: 'Invalid user id' });
 
     const chats = await Chat.find({ participants: requestedUser._id })
       .populate('participants', 'name email userType')
