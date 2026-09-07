@@ -64,6 +64,7 @@ export interface Student {
   certificates: Certificate[];
   createdAt: string;
   updatedAt: string;
+  // Display/computed properties for UI
   profileImage?: string;
   projectsCount?: number;
   internshipsCount?: number;
@@ -76,15 +77,23 @@ export interface Faculty {
   firstname: string;
   lastName: string;
   email: string;
-  department: string;
-  designation: string;
-  qualification?: string;
-  experience?: number;
-  phone?: string;
   profilepic?: string;
-  role?: string[];
-  createdAt?: string;
-  updatedAt?: string;
+  experience: number;
+  dateOfJoining?: string;
+  calculatedExperience?: boolean;
+  qualification: string;
+  subjects: string[];
+  department: string;
+  headof: string[];
+  designation: string;
+  dob: string;
+  linkedin?: string;
+  skills: string[];
+  techstacks: string[];
+  phone: string;
+  role: ('faculty' | 'dept_admin' | 'super_admin')[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Project {
@@ -94,7 +103,7 @@ export interface Project {
   technologies: string[];
   github_link?: string;
   live_link?: string;
-  student?: string;
+  student: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +182,7 @@ export interface NotificationItem {
   updatedAt: string;
 }
 
+// Auth types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -207,20 +217,22 @@ export interface AuthResponse {
 }
 
 export interface User {
-  /** Student/Faculty profile _id. Keep this for profile routes. */
+  /** Student/Faculty profile _id. */
   id: string;
-  /** User._id from the JWT. Use this for chats, notifications and other auth-user routes. */
+  /** User._id from the JWT; use this for chats, notifications and other auth-user APIs. */
   authUserId?: string;
   email: string;
   name: string;
   userType: 'student' | 'faculty' | 'admin';
   role?: string[];
+  // Faculty-specific fields
   firstname?: string;
   lastName?: string;
   department?: string;
   designation?: string;
 }
 
+// Post types (LinkedIn-style)
 export interface Post {
   _id: string;
   author: {
@@ -234,19 +246,36 @@ export interface Post {
   content: string;
   images?: string[];
   likes: string[];
-  comments?: any[];
+  comments: Comment[];
+  linkedOpportunity?: string;
+  scope?: 'campus' | 'department';
+  visibleToDepartments?: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Comment {
+  _id: string;
+  author: {
+    _id: string;
+    name: string;
+    profileImage?: string;
+    userType: 'student' | 'faculty' | 'admin';
+  };
+  content: string;
+  createdAt: string;
 }
 
 export interface CreatePostData {
   content: string;
   images?: string[];
+  files?: File[];
 }
 
-export interface ChatMessage {
+// Chat types
+export interface Message {
   _id: string;
-  sender: string | { _id: string; name?: string; email?: string; userType?: string };
+  sender: string;
   content: string;
   createdAt: string;
   flagged?: boolean;
@@ -256,27 +285,44 @@ export interface ChatMessage {
 
 export interface Chat {
   _id: string;
-  participants: string[] | { _id: string; name?: string; email?: string; userType?: string }[];
-  messages: ChatMessage[];
+  participants: string[];
+  messages: Message[];
+  facultyMediator?: string;
+  isActive: boolean;
   messageType?: 'STUDENT_TO_FACULTY' | 'FACULTY_TO_FACULTY';
-  updatedAt?: string;
-  createdAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
+// Interest types
 export interface Interest {
   _id: string;
-  student: string;
-  opportunity: string;
-  status?: string;
-  createdAt?: string;
+  student: string | Student;
+  opportunity: string | Opportunity;
+  createdAt: string;
   updatedAt?: string;
 }
 
+// Audit Log types
 export interface AuditLog {
   _id: string;
+  actorId: string | User;
+  actorRole: 'student' | 'faculty' | 'dept_admin' | 'admin' | 'super_admin' | 'system';
+  actorDepartment?: string;
+  affectedDepartment?: string;
   action: string;
-  actor?: string;
-  target?: string;
-  details?: any;
+  method: string;
+  path: string;
+  statusCode: number;
+  success: boolean;
+  ip?: string;
+  userAgent?: string;
+  payload?: {
+    params?: Record<string, any>;
+    query?: Record<string, any>;
+    body?: Record<string, any>;
+    durationMs?: number;
+  };
   createdAt: string;
+  updatedAt: string;
 }
