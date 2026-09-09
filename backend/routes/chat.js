@@ -27,45 +27,56 @@ const canSendMessageInChat = (senderRole, otherRole, messageType) => {
 const resolveParticipantUser = async (participantId) => {
   const normalized = String(participantId || '').trim();
   if (!normalized) return null;
-
   if (mongoose.Types.ObjectId.isValid(normalized)) {
     const directUser = await User.findById(normalized);
     if (directUser) return directUser;
-
     const faculty = await Faculty.findById(normalized).select('email');
     if (faculty?.email) {
       const facultyUser = await User.findOne({ email: faculty.email });
       if (facultyUser) return facultyUser;
     }
-
     const student = await Student.findById(normalized).select('email');
     if (student?.email) {
       const studentUser = await User.findOne({ email: student.email });
       if (studentUser) return studentUser;
     }
   }
-
   return User.findOne({ email: normalized.toLowerCase() });
 };
 
-// Get chats. For normal users the authenticated JWT identity is authoritative;
-// the path parameter is only a compatibility alias for older clients that sent
-// a Student/Faculty profile id instead of User._id. Admins may query another user.
+const enrichChatParticipants = async (chats) => Promise.all(chats.map(async (chat) => {
+  const participants = await Promise.all((chat.participants || []).map(async (participant) => {
+    const participantData = participant?.toObject ? participant.toObject() : participant;
+    if (!participantData?._id || !participantData?.email) return participantData;
+
+    let profileId = null;
+    if (participantData.userType === 'student') {
+      const profile = await Student.findOne({ email: participantData.email }).select('_id');
+      profileId = profile?._id || null;
+    } else if (participantData.userType === 'faculty') {
+      const profile = await Faculty.findOne({ email: participantData.email }).select('_id');
+      profileId = profile?._id || null;
+    }
+
+    return { ...participantData, profileId };
+  }));
+
+  const data = chat?.toObject ? chat.toObject() : chat;
+  return { ...data, participants };
+}));
+
+// Get chats. The authenticated JWT identity is authoritative for normal users.
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
     const authenticatedUser = await resolveParticipantUser(req.user?.id);
     if (!authenticatedUser) return res.status(401).json({ success: false, message: 'Authenticated user not found' });
-
-    const requestedUser = req.user?.userType === 'admin'
-      ? await resolveParticipantUser(req.params.userId)
-      : authenticatedUser;
-
+    const requestedUser = req.user?.userType === 'admin' ? await resolveParticipantUser(req.params.userId) : authenticatedUser;
     if (!requestedUser) return res.status(400).json({ success: false, message: 'Invalid user id' });
 
     const chats = await Chat.find({ participants: requestedUser._id })
       .populate('participants', 'name email userType')
       .sort({ updatedAt: -1 });
-    res.json({ success: true, chats });
+    res.json({ success: true, chats: await enrichChatParticipants(chats) });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -75,11 +86,9 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const targetUserId = req.body.facultyId || req.body.participantId;
     if (!['student', 'faculty'].includes(req.user?.userType)) return res.status(403).json({ success: false, message: 'Only students and faculty can initiate chats' });
-
     const targetUser = await resolveParticipantUser(targetUserId);
     if (!targetUser || !['student', 'faculty'].includes(targetUser.userType)) return res.status(404).json({ success: false, message: 'Participant not found' });
     if (targetUser._id.toString() === req.user.id) return res.status(400).json({ success: false, message: 'Cannot create a chat with yourself' });
-
     const chatMessageType = getChatMessageType(req.user.userType, targetUser.userType);
     if (!chatMessageType) return res.status(403).json({ success: false, message: 'Student to student chats are not allowed' });
 
@@ -88,7 +97,6 @@ router.post('/', verifyToken, async (req, res) => {
       await existingChat.populate('participants', 'name email userType');
       return res.json({ success: true, message: 'Chat already exists', chat: existingChat, existing: true });
     }
-
     const chat = new Chat({ participants: [req.user.id, targetUser._id], messageType: chatMessageType });
     await chat.save();
     await chat.populate('participants', 'name email userType');
@@ -103,16 +111,13 @@ router.post('/:chatId/message', verifyToken, async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) return res.status(400).json({ success: false, message: 'Invalid chat id' });
     const { content, tag } = req.body;
     if (!content || !content.trim()) return res.status(400).json({ success: false, message: 'Message content is required' });
-
     const chat = await Chat.findById(req.params.chatId);
     if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
     if (!chat.participants.some((p) => p.toString() === req.user.id)) return res.status(403).json({ success: false, message: 'Not authorized to message in this chat' });
-
     const otherParticipant = chat.participants.find((p) => p.toString() !== req.user.id);
     const otherUser = await User.findById(otherParticipant).select('userType');
     const messageTag = tag && ['DOUBT', 'GENERAL'].includes(tag) ? tag : 'GENERAL';
     if (!otherUser || !canSendMessageInChat(req.user.userType, otherUser.userType, chat.messageType)) return res.status(403).json({ success: false, message: 'This chat does not allow messages between these user roles' });
-
     chat.messages.push({ sender: req.user.id, content: content.trim(), tag: messageTag, senderRole: req.user.userType, createdAt: new Date() });
     await chat.save();
     await chat.populate('participants', 'name email userType');

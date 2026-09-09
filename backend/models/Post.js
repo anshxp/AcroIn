@@ -2,10 +2,7 @@ import mongoose from 'mongoose';
 
 const commentSchema = new mongoose.Schema({
   author: {
-    _id: { type: mongoose.Schema.Types.ObjectId, required: true },
-    name: String,
-    profileImage: String,
-    department: String,
+    _id: { type: mongoose.Schema.Types.ObjectId, required: true }, name: String, profileImage: String, department: String,
     userType: { type: String, enum: ['student', 'faculty', 'admin'] },
   },
   content: String,
@@ -15,11 +12,12 @@ const commentSchema = new mongoose.Schema({
 const postSchema = new mongoose.Schema({
   author: {
     _id: { type: mongoose.Schema.Types.ObjectId, required: true },
+    profileId: { type: mongoose.Schema.Types.ObjectId, default: null },
     name: String,
     designation: String,
     department: String,
     profileImage: String,
-    userType: { type: String, enum: ['faculty', 'admin'] },
+    userType: { type: String, enum: ['student', 'faculty', 'admin'] },
   },
   content: String,
   images: [String],
