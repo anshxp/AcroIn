@@ -17,6 +17,15 @@ router.use(authRateLimiter);
 const isCollegeEmail = (email) => /^[a-z0-9._%+-]+@acropolis\.in$/i.test(String(email || '').trim());
 const isStrongPassword = (password) => typeof password === 'string' && password.length >= 8 && password.length <= 128;
 
+const signAccessToken = (user) => {
+  const options = { expiresIn: process.env.JWT_EXPIRES_IN || '1h', algorithm: 'HS256' };
+  const issuer = process.env.JWT_ISSUER?.trim();
+  const audience = process.env.JWT_AUDIENCE?.trim();
+  if (issuer) options.issuer = issuer;
+  if (audience) options.audience = audience;
+  return jwt.sign({ id: user._id.toString(), userType: user.userType }, process.env.JWT_SECRET, options);
+};
+
 const loginUser = async (req, res, expectedUserType = null) => {
   try {
     const normalizedEmail = String(req.body?.email || '').trim().toLowerCase();
@@ -30,7 +39,7 @@ const loginUser = async (req, res, expectedUserType = null) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ success: false, message: 'Invalid email or password' });
 
-    const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1h' });
+    const token = signAccessToken(user);
     const { password: _, ...userWithoutPassword } = user.toObject();
 
     if (user.userType === 'student') {
@@ -41,7 +50,7 @@ const loginUser = async (req, res, expectedUserType = null) => {
       }
     }
     return res.status(200).json({ success: true, token, user: { ...userWithoutPassword, authUserId: user._id.toString() } });
-  } catch (err) {
+  } catch (_err) {
     return res.status(500).json({ success: false, message: 'Login failed' });
   }
 };
@@ -70,10 +79,10 @@ const registerBootstrapAdmin = async (req, res) => {
     await Admin.create({ user: user._id, permissions: ['all'] });
     await Profile.findOneAndUpdate({ user: user._id }, { $set: { userType: 'admin', displayName: normalizedName, email: normalizedEmail, department: 'Administration', designation: 'System Administrator', skills: [], tags: ['admin'], profileCompleteness: 100, verificationStatus: 'verified', isActive: true } }, { new: true, upsert: true, setDefaultsOnInsert: true });
 
-    const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1h' });
+    const token = signAccessToken(user);
     const { password: _, ...userWithoutPassword } = user.toObject();
     return res.status(201).json({ success: true, message: 'Admin account created', token, user: userWithoutPassword });
-  } catch (err) {
+  } catch (_err) {
     return res.status(500).json({ success: false, message: 'Admin bootstrap failed' });
   }
 };
@@ -93,10 +102,10 @@ const registerStudent = async (req, res) => {
     const student = await Student.create({ name: String(name).trim(), roll: String(roll).trim(), email: normalizedEmail, password: hashedPassword, department: String(department).trim() });
     const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: String(name).trim(), userType: 'student' });
     await syncStudentProfile({ user, student });
-    const token = jwt.sign({ id: user._id, userType: user.userType }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '1h' });
+    const token = signAccessToken(user);
     const { password: _, ...studentWithoutPassword } = student.toObject();
     return res.status(201).json({ success: true, message: 'Student registered', token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: 'student' } });
-  } catch (err) {
+  } catch (_err) {
     return res.status(400).json({ success: false, message: 'Registration failed' });
   }
 };
