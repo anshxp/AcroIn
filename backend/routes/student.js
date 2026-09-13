@@ -16,8 +16,11 @@ const faceImageUpload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (_req, file, cb) => {
     const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('Invalid file type. Only images are allowed.'));
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images are allowed.'));
+    }
   },
   limits: { fileSize: 5 * 1024 * 1024 },
 });
@@ -25,9 +28,17 @@ const faceImageUpload = multer({
 const getRequesterContext = async (req) => {
   const userType = req.user?.userType;
   const userId = req.user?.id;
-  if (!userId) return { userType, userId: null, email: '' };
+
+  if (!userId) {
+    return { userType, userId: null, email: '' };
+  }
+
   const userRecord = await User.findById(userId).select('email');
-  return { userType, userId, email: userRecord?.email || '' };
+  return {
+    userType,
+    userId,
+    email: userRecord?.email || '',
+  };
 };
 
 const canStudentAccessOwnRecord = async (req, student) => {
@@ -37,23 +48,19 @@ const canStudentAccessOwnRecord = async (req, student) => {
 
 const syncStudentProfileFromDoc = async (student) => {
   if (!student?.email) return;
+
   const user = await User.findOne({ email: student.email }).select('_id email name userType');
   if (!user) return;
+
   await syncStudentProfile({ user, student });
 };
 
 const deleteIfLocalFile = (filePath) => {
   if (!filePath || typeof filePath !== 'string') return;
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) return;
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-};
-
-const toAbsoluteUploadUrl = (req, value) => {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  if (/^https?:\/\//i.test(raw)) return raw;
-  const normalized = raw.replace(/\\/g, '/').replace(/^\.?\/+/, '');
-  return `${req.protocol}://${req.get('host')}/${normalized}`;
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
 };
 
 const getOrdinalSuffix = (value) => {
@@ -70,30 +77,71 @@ const getOrdinalSuffix = (value) => {
 const deriveYearFromSemester = (semester) => {
   const match = String(semester || '').match(/(\d+)/);
   if (!match) return '';
+
   const semesterNumber = Number(match[1]);
   if (!Number.isFinite(semesterNumber) || semesterNumber <= 0) return '';
+
   const yearNumber = Math.ceil(semesterNumber / 2);
   return `${yearNumber}${getOrdinalSuffix(yearNumber)} Year`;
 };
 
 const calculateProfileCompleteness = (studentDoc) => {
-  const student = typeof studentDoc?.toObject === 'function' ? studentDoc.toObject() : (studentDoc || {});
+  const student = typeof studentDoc?.toObject === 'function'
+    ? studentDoc.toObject()
+    : (studentDoc || {});
+            
   const hasValue = (value) => {
     if (Array.isArray(value)) return value.length > 0;
     if (typeof value === 'number') return Number.isFinite(value);
     return Boolean(String(value || '').trim());
   };
-  const checkpoints = [student.name, student.roll, student.email, student.department, student.year || deriveYearFromSemester(student.semester), student.semester, student.phone, student.birthday, student.address, student.location || student.address, student.bio, student.linkedin, student.github, student.portfolio, student.cgpa, student.resume, student.profile_image, student.tech_stack, student.skills, student.experiences];
-  return Math.round((checkpoints.filter(hasValue).length / checkpoints.length) * 100);
+
+  const checkpoints = [
+    student.name,
+    student.roll,
+    student.email,
+    student.department,
+    student.year || deriveYearFromSemester(student.semester),
+    student.semester,
+    student.phone,
+    student.birthday,
+    student.address,
+    student.location || student.address,
+    student.bio,
+    student.linkedin,
+    student.github,
+    student.portfolio,
+    student.cgpa,
+    student.resume,
+    student.profile_image,
+    student.tech_stack,
+    student.skills,
+    student.experiences,
+  ];
+
+  const completed = checkpoints.filter((value) => hasValue(value)).length;
+  return Math.round((completed / checkpoints.length) * 100);
 };
 
 const normalizeStudentResponse = (studentDoc) => {
-  const plainStudent = typeof studentDoc?.toObject === 'function' ? studentDoc.toObject() : studentDoc;
+  const plainStudent = typeof studentDoc?.toObject === 'function'
+    ? studentDoc.toObject()
+    : studentDoc;
+
   const normalizedYear = String(plainStudent?.year || '').trim() || deriveYearFromSemester(plainStudent?.semester);
   const normalizedLocation = String(plainStudent?.location || '').trim() || String(plainStudent?.address || '').trim();
+
   const { password, ...safeStudent } = plainStudent || {};
-  const completeness = Number.isFinite(safeStudent.profileCompleteness) ? safeStudent.profileCompleteness : calculateProfileCompleteness(safeStudent);
-  return { ...safeStudent, year: normalizedYear, location: normalizedLocation, profileCompleteness: completeness };
+  const completeness = Number.isFinite(safeStudent.profileCompleteness)
+    ? safeStudent.profileCompleteness
+    : calculateProfileCompleteness(safeStudent);
+
+  return {
+    ...safeStudent,
+    year: normalizedYear,
+    location: normalizedLocation,
+    profileCompleteness: completeness,
+  };
 };
 
 const resolveStudent = async (identifier) => {
@@ -101,84 +149,186 @@ const resolveStudent = async (identifier) => {
     const byId = await Student.findById(identifier);
     if (byId) return byId;
   }
+
   const normalizedIdentifier = String(identifier || '').trim();
   if (!normalizedIdentifier) return null;
+
   const byRoll = await Student.findOne({ roll: normalizedIdentifier });
   if (byRoll) return byRoll;
-  return Student.findOne({ email: normalizedIdentifier });
+
+  const byEmail = await Student.findOne({ email: normalizedIdentifier });
+  if (byEmail) return byEmail;
+
+  return null;
 };
 
-const SELF_EDIT_FIELDS = new Set([
-  'name', 'firstname', 'firstName', 'lastName', 'lastname', 'roll', 'rollNo',
-  'department', 'year', 'semester', 'phone', 'birthday', 'address', 'location',
-  'bio', 'linkedin', 'github', 'portfolio', 'cgpa', 'resume', 'tech_stack',
-  'skills', 'experiences', 'projects', 'certificates', 'internships', 'competitions',
-  'parentInfo'
-]);
-
-const ADMIN_EDIT_FIELDS = new Set([...SELF_EDIT_FIELDS, 'verificationStatus', 'verifiedBy', 'verifiedAt']);
-
-const pickAllowedFields = (payload, allowed) => {
-  const result = {};
-  for (const [key, value] of Object.entries(payload || {})) {
-    if (allowed.has(key)) result[key] = value;
-  }
-  return result;
-};
-
-// Create student
+/// Create student
 router.post('/', verifyToken, isAdmin, async (req, res) => {
   try {
-    const { password, name, firstname, firstName, lastName, lastname, roll, rollNo, department, ...rest } = req.body || {};
-    const normalizedName = String(name || `${firstname || firstName || ''} ${lastName || lastname || ''}`).trim();
+    const {
+      password,
+      name,
+      firstname,
+      firstName,
+      lastName,
+      lastname,
+      roll,
+      rollNo,
+      department,
+      ...rest
+    } = req.body || {};
+
+    const normalizedName = String(
+      name || `${firstname || firstName || ''} ${lastName || lastname || ''}`
+    ).trim();
     const normalizedRoll = String(roll || rollNo || '').trim();
     const normalizedDepartment = String(department || '').trim();
     const normalizedEmail = String(rest.email || '').trim().toLowerCase();
-    if (!password || !String(password).trim()) return res.status(400).json({ message: 'Password is required' });
-    if (!normalizedName) return res.status(400).json({ message: 'Student name is required' });
-    if (!normalizedRoll) return res.status(400).json({ message: 'Roll number is required' });
-    if (!normalizedEmail) return res.status(400).json({ message: 'Email is required' });
-    if (!normalizedDepartment) return res.status(400).json({ message: 'Department is required' });
+
+    if (!password || !String(password).trim()) {
+      return res.status(400).json({ message: 'Password is required' });
+    }
+
+    if (!normalizedName) {
+      return res.status(400).json({ message: 'Student name is required' });
+    }
+
+    if (!normalizedRoll) {
+      return res.status(400).json({ message: 'Roll number is required' });
+    }
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!normalizedDepartment) {
+      return res.status(400).json({ message: 'Department is required' });
+    }
+
+    console.log('Creating student with payload:', {
+      name: normalizedName,
+      roll: normalizedRoll,
+      email: normalizedEmail,
+      department: normalizedDepartment,
+      requester: req.user?.id,
+    });
+
+    // hash password
     const hashedPassword = await bcrypt.hash(String(password), 10);
-    const student = new Student({ ...rest, name: normalizedName, roll: normalizedRoll, email: normalizedEmail, department: normalizedDepartment, password: hashedPassword });
+
+    const student = new Student({
+      ...rest,
+      name: normalizedName,
+      roll: normalizedRoll,
+      email: normalizedEmail,
+      department: normalizedDepartment,
+      password: hashedPassword,
+    });
     student.profileCompleteness = calculateProfileCompleteness(student);
+
     await student.save();
     await syncStudentProfileFromDoc(student);
+
+    // remove password from response
     const { password: _, ...studentData } = student._doc;
+
     res.status(201).json(studentData);
+
   } catch (err) {
-    console.error('Student create failed:', { name: err?.name, message: err?.message, code: err?.code, keyValue: err?.keyValue });
-    if (err?.code === 11000) return res.status(409).json({ message: 'A student with this email or roll number already exists' });
+    console.error('Student create failed:', {
+      name: err?.name,
+      message: err?.message,
+      code: err?.code,
+      keyValue: err?.keyValue,
+      errors: err?.errors ? Object.fromEntries(Object.entries(err.errors).map(([key, value]) => [key, value?.message || String(value)])) : undefined,
+    });
+
+    if (err?.code === 11000) {
+      const duplicateKey = Object.keys(err?.keyValue || {})[0];
+      const duplicateValue = duplicateKey ? err.keyValue[duplicateKey] : '';
+      return res.status(409).json({
+        message: duplicateKey
+          ? `${duplicateKey} already exists${duplicateValue ? `: ${duplicateValue}` : ''}`
+          : 'A student with this email or roll number already exists',
+      });
+    }
+
     res.status(400).json({ message: err?.message || 'Failed to create student' });
   }
 });
 
 // Get all students
 router.get('/', verifyToken, async (req, res) => {
-  const students = await Student.find().populate([{ path: 'projects' }, { path: 'internships' }, { path: 'competitions' }, { path: 'certificates' }]);
+  const students = await Student.find().populate([
+    { path: 'projects' },
+    { path: 'internships' },
+    { path: 'competitions' },
+    { path: 'certificates' },
+  ]);
   const normalizedStudents = students.map((student) => normalizeStudentResponse(student));
   const requesterType = String(req.user?.userType || '').trim().toLowerCase();
+
   let result = normalizedStudents;
+
   if (requesterType === 'student') {
     const visibleStudents = normalizedStudents.filter((student) => {
       const status = String(student.verificationStatus || '').trim().toLowerCase();
       return status === 'verified' || status === 'strongly_verified';
     });
+
     result = visibleStudents.map((student) => ({
-      _id: student._id, name: student.name, roll: student.roll, department: student.department, year: student.year, semester: student.semester, location: student.location, address: student.address, profile_image: student.profile_image, verificationStatus: student.verificationStatus, tech_stack: Array.isArray(student.tech_stack) ? student.tech_stack : [],
-      skills: Array.isArray(student.skills) ? student.skills.map((skill) => ({ name: skill?.name || skill, category: skill?.category })) : [],
-      projects: Array.isArray(student.projects) ? student.projects.map((project) => ({ _id: project?._id, title: project?.title, description: project?.description, technologies: Array.isArray(project?.technologies) ? project.technologies : [] })) : [],
-      certificates: Array.isArray(student.certificates) ? student.certificates.map((certificate) => ({ _id: certificate?._id, title: certificate?.title, organization: certificate?.organization })) : [],
+      _id: student._id,
+      name: student.name,
+      roll: student.roll,
+      department: student.department,
+      year: student.year,
+      semester: student.semester,
+      location: student.location,
+      address: student.address,
+      profile_image: student.profile_image,
+      verificationStatus: student.verificationStatus,
+      tech_stack: Array.isArray(student.tech_stack) ? student.tech_stack : [],
+      skills: Array.isArray(student.skills)
+        ? student.skills.map((skill) => ({
+            name: skill?.name || skill,
+            category: skill?.category,
+          }))
+        : [],
+      projects: Array.isArray(student.projects)
+        ? student.projects.map((project) => ({
+            _id: project?._id,
+            title: project?.title,
+            description: project?.description,
+            technologies: Array.isArray(project?.technologies) ? project.technologies : [],
+          }))
+        : [],
+      certificates: Array.isArray(student.certificates)
+        ? student.certificates.map((certificate) => ({
+            _id: certificate?._id,
+            title: certificate?.title,
+            organization: certificate?.organization,
+          }))
+        : [],
     }));
   }
+
   const page = Math.max(1, parseInt(req.query.page, 10) || 0);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+
   if (page > 0) {
     const total = result.length;
     const skip = (page - 1) * limit;
     const data = result.slice(skip, skip + limit);
-    return res.json({ success: true, data, page, limit, total, hasMore: skip + data.length < total });
+    return res.json({
+      success: true,
+      data,
+      page,
+      limit,
+      total,
+      hasMore: skip + data.length < total,
+    });
   }
+
   return res.json(result);
 });
 
@@ -186,21 +336,38 @@ router.get('/', verifyToken, async (req, res) => {
 router.get('/:id', verifyToken, async (req, res) => {
   const student = await resolveStudent(req.params.id);
   if (!student) return res.status(404).json({ message: 'Student not found' });
+
   const requester = await getRequesterContext(req);
   const isPrivileged = requester.userType === 'admin' || requester.userType === 'faculty';
   const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
-  if (!isPrivileged && !isSelf) return res.status(403).json({ message: 'Not authorized to access this profile' });
-  const populatedStudent = await student.populate([{ path: 'projects' }, { path: 'internships' }, { path: 'competitions' }, { path: 'certificates' }]);
+
+  if (!isPrivileged && !isSelf) {
+    return res.status(403).json({ message: 'Not authorized to access this profile' });
+  }
+
+  const populatedStudent = await student.populate([
+    { path: 'projects' },
+    { path: 'internships' },
+    { path: 'competitions' },
+    { path: 'certificates' },
+  ]);
   const normalizedStudent = normalizeStudentResponse(populatedStudent);
+
   const shouldPersistYear = !String(student.year || '').trim() && normalizedStudent.year;
   const shouldPersistLocation = !String(student.location || '').trim() && normalizedStudent.location;
+
   if (shouldPersistYear || shouldPersistLocation) {
-    if (shouldPersistYear) student.year = normalizedStudent.year;
-    if (shouldPersistLocation) student.location = normalizedStudent.location;
+    if (shouldPersistYear) {
+      student.year = normalizedStudent.year;
+    }
+    if (shouldPersistLocation) {
+      student.location = normalizedStudent.location;
+    }
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
     await syncStudentProfileFromDoc(student);
   }
+
   res.json(normalizedStudent);
 });
 
@@ -209,103 +376,179 @@ router.get('/:id/skills', verifyToken, async (req, res) => {
   try {
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
+
     const requester = await getRequesterContext(req);
     const isPrivileged = requester.userType === 'admin' || requester.userType === 'faculty';
     const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
-    if (!isPrivileged && !isSelf) return res.status(403).json({ message: 'Not authorized to access this student skills data' });
-    const normalizedSkills = Array.isArray(student.skills) && student.skills.length ? student.skills : (student.tech_stack || []).map((name) => ({ category: 'General', name, level: 'Beginner', verified: false, endorsements: 0, progress: 10 }));
+
+    if (!isPrivileged && !isSelf) {
+      return res.status(403).json({ message: 'Not authorized to access this student skills data' });
+    }
+
+    const normalizedSkills = Array.isArray(student.skills) && student.skills.length
+      ? student.skills
+      : (student.tech_stack || []).map((name) => ({
+          category: 'General',
+          name,
+          level: 'Beginner',
+          verified: false,
+          endorsements: 0,
+          progress: 10,
+        }));
+
     res.json({ skills: normalizedSkills });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Add student skill
 router.post('/:id/skills', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, endorsements, progress } = req.body || {};
-    if (!name || !String(name).trim()) return res.status(400).json({ message: 'Skill name is required' });
+    const { category, name, level, verified, endorsements, progress } = req.body || {};
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: 'Skill name is required' });
+    }
+
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
-    if (!(await canStudentAccessOwnRecord(req, student))) return res.status(403).json({ message: 'You can only add skills to your own profile' });
-    const skillToAdd = { category: String(category || 'General').trim(), name: String(name).trim(), level: ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner', verified: false, endorsements: Math.max(0, Number(endorsements) || 0), progress: Math.min(100, Math.max(0, Number(progress) || 10)) };
+
+    const isSelf = await canStudentAccessOwnRecord(req, student);
+    if (!isSelf) {
+      return res.status(403).json({ message: 'You can only add skills to your own profile' });
+    }
+
+    const skillToAdd = {
+      category: String(category || 'General').trim(),
+      name: String(name).trim(),
+      level: ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner',
+      verified: false,
+      endorsements: Math.max(0, Number(endorsements) || 0),
+      progress: Math.min(100, Math.max(0, Number(progress) || 10)),
+    };
+
     student.skills = [...(student.skills || []), skillToAdd];
+
     const existingTechStack = new Set((student.tech_stack || []).map((item) => String(item).trim()).filter(Boolean));
     existingTechStack.add(skillToAdd.name);
     student.tech_stack = Array.from(existingTechStack);
+
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
     await syncStudentProfileFromDoc(student);
-    res.status(201).json({ message: 'Skill added successfully', skill: student.skills[student.skills.length - 1], skills: student.skills });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+
+    res.status(201).json({
+      message: 'Skill added successfully',
+      skill: student.skills[student.skills.length - 1],
+      skills: student.skills,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Update student skill
 router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, endorsements, progress } = req.body || {};
-    if (!name || !String(name).trim()) return res.status(400).json({ message: 'Skill name is required' });
+    const { category, name, level, verified, endorsements, progress } = req.body || {};
+
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: 'Skill name is required' });
+    }
+
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
-    if (!(await canStudentAccessOwnRecord(req, student))) return res.status(403).json({ message: 'You can only edit skills on your own profile' });
+
+    const isSelf = await canStudentAccessOwnRecord(req, student);
+    if (!isSelf) {
+      return res.status(403).json({ message: 'You can only edit skills on your own profile' });
+    }
+
     const skill = (student.skills || []).id(req.params.skillId);
-    if (!skill) return res.status(404).json({ message: 'Skill not found' });
+    if (!skill) {
+      return res.status(404).json({ message: 'Skill not found' });
+    }
+
     const previousName = String(skill.name || '').trim();
     const nextName = String(name).trim();
+
     skill.category = String(category || 'General').trim();
     skill.name = nextName;
     skill.level = ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner';
     skill.verified = Boolean(skill.verified);
     skill.endorsements = Math.max(0, Number(endorsements) || 0);
     skill.progress = Math.min(100, Math.max(0, Number(progress) || 10));
+
     const techStack = new Set((student.tech_stack || []).map((item) => String(item).trim()).filter(Boolean));
-    if (previousName && previousName !== nextName) techStack.delete(previousName);
+    if (previousName && previousName !== nextName) {
+      techStack.delete(previousName);
+    }
     techStack.add(nextName);
     student.tech_stack = Array.from(techStack);
+
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
     await syncStudentProfileFromDoc(student);
-    res.json({ message: 'Skill updated successfully', skill, skills: student.skills });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+
+    res.json({
+      message: 'Skill updated successfully',
+      skill,
+      skills: student.skills,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Update student
 router.put('/:id', verifyToken, async (req, res) => {
-  try {
-    const student = await resolveStudent(req.params.id);
-    if (!student) return res.status(404).json({ message: 'Student not found' });
-    const requester = await getRequesterContext(req);
-    const isAdminUser = requester.userType === 'admin';
-    const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
-    if (!isAdminUser && !isSelf) return res.status(403).json({ message: 'Not authorized to update this profile' });
+  const student = await resolveStudent(req.params.id);
+  if (!student) return res.status(404).json({ message: 'Student not found' });
 
-    if (isSelf && req.body.parentInfo) {
-      if (student.parentInfo?.isParentInfoLocked) return res.status(403).json({ message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.' });
-      if (req.body.parentInfo.fatherName && req.body.parentInfo.fatherPhone) {
-        req.body.parentInfo = { ...req.body.parentInfo, isParentInfoLocked: true, parentInfoLockedAt: new Date() };
-      }
-    }
-    if (!isAdminUser && student.parentInfo?.isParentInfoLocked && req.body.parentInfo) return res.status(403).json({ message: 'Only department admin can edit locked parent information' });
+  const requester = await getRequesterContext(req);
+  const isAdminUser = requester.userType === 'admin';
+  const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
 
-    const updates = pickAllowedFields(req.body, isAdminUser ? ADMIN_EDIT_FIELDS : SELF_EDIT_FIELDS);
-    if (isSelf && updates.parentInfo) updates.parentInfo = { ...updates.parentInfo, isParentInfoLocked: Boolean(updates.parentInfo.isParentInfoLocked), parentInfoLockedAt: updates.parentInfo.parentInfoLockedAt };
-    if (typeof updates.email === 'string') updates.email = updates.email.trim().toLowerCase();
-    if (typeof updates.name === 'string') updates.name = updates.name.trim();
-    if (typeof updates.department === 'string') updates.department = updates.department.trim();
-    if (typeof updates.roll === 'string') updates.roll = updates.roll.trim();
-
-    Object.assign(student, updates);
-    student.profileCompleteness = calculateProfileCompleteness(student);
-    await student.save();
-    await syncStudentProfileFromDoc(student);
-    res.json(normalizeStudentResponse(student));
-  } catch (err) {
-    res.status(400).json({ message: err?.message || 'Failed to update student profile' });
+  if (!isAdminUser && !isSelf) {
+    return res.status(403).json({ message: 'Not authorized to update this profile' });
   }
+
+  // Check if student is trying to edit locked parent info
+  if (isSelf && req.body.parentInfo) {
+    if (student.parentInfo?.isParentInfoLocked) {
+      return res.status(403).json({ 
+        message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.' 
+      });
+    }
+    
+    // If parent info is being submitted for the first time and all fields are present, lock it
+    if (!student.parentInfo?.isParentInfoLocked && 
+        req.body.parentInfo.fatherName && req.body.parentInfo.fatherPhone) {
+      req.body.parentInfo.isParentInfoLocked = true;
+      req.body.parentInfo.parentInfoLockedAt = new Date();
+    }
+  }
+
+  // Only admin can unlock or edit locked parent info
+  if (!isAdminUser && student.parentInfo?.isParentInfoLocked && req.body.parentInfo) {
+    return res.status(403).json({ 
+      message: 'Only department admin can edit locked parent information' 
+    });
+  }
+
+  Object.assign(student, req.body);
+  student.profileCompleteness = calculateProfileCompleteness(student);
+  await student.save();
+  await syncStudentProfileFromDoc(student);
+  res.json(normalizeStudentResponse(student));
 });
 
 // Delete student
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
   const student = await resolveStudent(req.params.id);
   if (!student) return res.status(404).json({ message: 'Student not found' });
+
   await Student.deleteOne({ _id: student._id });
   res.json({ message: 'Student deleted' });
 });
@@ -313,56 +556,159 @@ router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
 // Upload profile image
 router.post('/:id/upload-profile-image', verifyToken, upload.single('profileImage'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
-    if (!(await canStudentAccessOwnRecord(req, student))) return res.status(403).json({ message: 'You can only update your own profile image' });
-    const imageUrl = toAbsoluteUploadUrl(req, req.file.path || `/uploads/${req.file.filename}`);
+
+    const isSelf = await canStudentAccessOwnRecord(req, student);
+    if (!isSelf) {
+      return res.status(403).json({ message: 'You can only update your own profile image' });
+    }
+
+    // Use Cloudinary URL if available, otherwise use local path
+    const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
     student.profile_image = imageUrl;
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
     await syncStudentProfileFromDoc(student);
-    res.json({ message: 'Profile image uploaded successfully', profile_image: imageUrl });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+
+    res.json({
+      message: 'Profile image uploaded successfully',
+      profile_image: imageUrl,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Upload cover image
 router.post('/:id/upload-cover-image', verifyToken, upload.single('coverImage'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ message: 'Student not found' });
-    if (!(await canStudentAccessOwnRecord(req, student))) return res.status(403).json({ message: 'You can only update your own cover image' });
-    const imageUrl = toAbsoluteUploadUrl(req, req.file.path || `/uploads/${req.file.filename}`);
+
+    const isSelf = await canStudentAccessOwnRecord(req, student);
+    if (!isSelf) {
+      return res.status(403).json({ message: 'You can only update your own cover image' });
+    }
+
+    // Use Cloudinary URL if available, otherwise use local path
+    const imageUrl = req.file.path || `/uploads/${req.file.filename}`;
     student.cover_image = imageUrl;
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
     await syncStudentProfileFromDoc(student);
-    res.json({ message: 'Cover image uploaded successfully', cover_image: imageUrl });
-  } catch (err) { res.status(500).json({ message: err.message }); }
+
+    res.json({
+      message: 'Cover image uploaded successfully',
+      cover_image: imageUrl,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Enroll student face embeddings (front, left, right)
-router.post('/:id/face/enroll', verifyToken, faceImageUpload.fields([{ name: 'front', maxCount: 1 }, { name: 'left', maxCount: 1 }, { name: 'right', maxCount: 1 }]), async (req, res) => {
+router.post(
+  '/:id/face/enroll',
+  verifyToken,
+  faceImageUpload.fields([
+    { name: 'front', maxCount: 1 },
+    { name: 'left', maxCount: 1 },
+    { name: 'right', maxCount: 1 },
+  ]),
+  async (req, res) => {
+    const front = req.files?.front?.[0];
+    const left = req.files?.left?.[0];
+    const right = req.files?.right?.[0];
+    let student = null;
+
+    try {
+      if (!front || !left || !right) {
+        return res.status(400).json({ message: 'front, left, and right face images are required' });
+      }
+
+      student = await resolveStudent(req.params.id);
+      if (!student) return res.status(404).json({ message: 'Student not found' });
+
+      const isSelf = await canStudentAccessOwnRecord(req, student);
+      if (!isSelf) {
+        return res.status(403).json({ message: 'You can only enroll face data for your own profile' });
+      }
+
+      const enrollResult = await enrollFace(String(student._id), front, left, right);
+
+      const frontEmbedding = enrollResult?.embeddings?.front;
+      const leftEmbedding = enrollResult?.embeddings?.left;
+      const rightEmbedding = enrollResult?.embeddings?.right;
+
+      if (!Array.isArray(frontEmbedding) || !Array.isArray(leftEmbedding) || !Array.isArray(rightEmbedding)) {
+        throw new Error('Face service did not return valid embeddings.');
+      }
+
+      student.faceEmbeddings = {
+        front: frontEmbedding,
+        left: leftEmbedding,
+        right: rightEmbedding,
+        modelVersion: enrollResult?.model_version || 'arcface_v1',
+        updatedAt: new Date(),
+      };
+
+      student.faceVerificationStatus = 'complete';
+      student.profileCompleteness = calculateProfileCompleteness(student);
+      await student.save();
+      await syncStudentProfileFromDoc(student);
+
+      res.json({
+        success: true,
+        message: 'Face data enrolled successfully',
+        faceVerificationStatus: student.faceVerificationStatus,
+      });
+    } catch (err) {
+      if (student) {
+        student.faceVerificationStatus = 'partial';
+        student.profileCompleteness = calculateProfileCompleteness(student);
+        await student.save();
+        await syncStudentProfileFromDoc(student);
+      }
+      res.status(500).json({ success: false, message: err.message || 'Failed to enroll face data' });
+    }
+  }
+);
+
+// Verify parent phone number (admin only)
+router.patch('/:id/verify-parent-phone', verifyToken, async (req, res) => {
   try {
-    const { front, left, right } = req.files || {};
-    if (!front?.[0] || !left?.[0] || !right?.[0]) return res.status(400).json({ success: false, message: 'Front, left, and right face images are required' });
+    if (req.user?.userType !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can verify parent phone' });
+    }
+
     const student = await resolveStudent(req.params.id);
-    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-    const requester = await getRequesterContext(req);
-    if (requester.userType !== 'student' || requester.email !== student.email) return res.status(403).json({ success: false, message: 'You can only enroll your own face' });
-    const embeddings = await enrollFace(String(student._id), front[0], left[0], right[0]);
-    if (!embeddings?.front?.length || !embeddings?.left?.length || !embeddings?.right?.length) throw new Error('Face recognition service returned incomplete embeddings');
-    student.faceEmbeddings = { front: embeddings.front, left: embeddings.left, right: embeddings.right };
-    student.faceVerificationStatus = 'complete';
-    student.profileCompleteness = calculateProfileCompleteness(student);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
+
+    if (!student.parentInfo?.fatherPhone) {
+      return res.status(400).json({ message: 'Parent phone not found' });
+    }
+
+    student.parentInfo.isParentPhoneVerified = true;
+    student.parentInfo.parentPhoneVerifiedAt = new Date();
     await student.save();
     await syncStudentProfileFromDoc(student);
-    return res.json({ success: true, message: 'Face enrolled successfully', faceVerificationStatus: student.faceVerificationStatus });
+
+    res.json({ 
+      success: true, 
+      message: 'Parent phone verified successfully',
+      student: normalizeStudentResponse(student)
+    });
   } catch (err) {
-    studentFaceEnrollmentFailure: {
-      return res.status(500).json({ success: false, message: err?.message || 'Face enrollment failed' });
-    }
+    res.status(500).json({ message: err.message });
   }
 });
 
