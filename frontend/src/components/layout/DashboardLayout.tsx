@@ -88,7 +88,11 @@ export const DashboardLayout: React.FC = () => {
   const handleSearchSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     const query = searchTerm.trim();
-    if (!query || user?.userType === 'student') return;
+    if (!query) return;
+    if (user?.userType === 'student') {
+      navigate(`/student/search?query=${encodeURIComponent(query)}`);
+      return;
+    }
     navigate(`/faculty/search?query=${encodeURIComponent(query)}`);
   };
 
@@ -115,7 +119,8 @@ export const DashboardLayout: React.FC = () => {
       return facultyItems;
     }
     return [
-      { path: '/home', label: 'Home', icon: <Home size={20} /> }, { path: '/chat', label: 'Messages', icon: <MessageSquare size={20} /> },
+      { path: '/home', label: 'Home', icon: <Home size={20} /> }, { path: '/chat', label: 'Messages', icon: <MessageSquare size={20} />,
+      }, { path: '/student/search', label: 'Smart Search', icon: <Search size={20} /> },
       { path: '/student/profile', label: 'Profile', icon: <Users size={20} /> }, { path: '/student/skills', label: 'Skills', icon: <Award size={20} /> },
       { path: '/student/projects', label: 'Projects', icon: <FolderOpen size={20} /> }, { path: '/student/competitions', label: 'Competitions', icon: <Trophy size={20} /> },
       { path: '/student/certificates', label: 'Certificates', icon: <FileCheck size={20} /> }, { path: '/student/internships', label: 'Internships', icon: <Briefcase size={20} /> },
@@ -134,7 +139,7 @@ export const DashboardLayout: React.FC = () => {
         <div className="sidebar-footer"><div className="sidebar-stats">{sidebarStats.map((stat, index) => <div key={index} className="sidebar-stat"><span className="sidebar-stat-label">{stat.label}</span><span className={`sidebar-stat-value ${stat.color}`}>{stat.value}</span></div>)}</div></div>
       </aside>
       <div className="main-content">
-        <header className="top-header"><form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
+        <header className="top-header"><form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search students, skills, projects...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
         <main className="page-content"><Outlet /></main>
         {canPost && <button className="floating-post-btn" onClick={() => setShowCreatePost(true)} title="Create a post"><Plus size={24} /></button>}
       </div>
