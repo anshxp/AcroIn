@@ -65,7 +65,6 @@ const enrichChatParticipants = async (chats) => Promise.all(chats.map(async (cha
   return { ...data, participants };
 }));
 
-// Get chats. The authenticated JWT identity is authoritative for normal users.
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
     const authenticatedUser = await resolveParticipantUser(req.user?.id);
@@ -78,7 +77,7 @@ router.get('/:userId', verifyToken, async (req, res) => {
       .sort({ updatedAt: -1 });
     res.json({ success: true, chats: await enrichChatParticipants(chats) });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ success: false, message: 'Unable to load chats' });
   }
 });
 
@@ -101,8 +100,8 @@ router.post('/', verifyToken, async (req, res) => {
     await chat.save();
     await chat.populate('participants', 'name email userType');
     res.status(201).json({ success: true, message: 'Chat created', chat });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+  } catch (_err) {
+    res.status(400).json({ success: false, message: 'Unable to create chat' });
   }
 });
 
@@ -110,7 +109,7 @@ router.post('/:chatId/message', verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) return res.status(400).json({ success: false, message: 'Invalid chat id' });
     const { content, tag } = req.body;
-    if (!content || !content.trim()) return res.status(400).json({ success: false, message: 'Message content is required' });
+    if (typeof content !== 'string' || !content.trim() || content.length > 5000) return res.status(400).json({ success: false, message: 'Message content must be 1-5000 characters' });
     const chat = await Chat.findById(req.params.chatId);
     if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
     if (!chat.participants.some((p) => p.toString() === req.user.id)) return res.status(403).json({ success: false, message: 'Not authorized to message in this chat' });
@@ -122,8 +121,8 @@ router.post('/:chatId/message', verifyToken, async (req, res) => {
     await chat.save();
     await chat.populate('participants', 'name email userType');
     res.json({ success: true, message: 'Message sent', chat });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+  } catch (_err) {
+    res.status(400).json({ success: false, message: 'Unable to send message' });
   }
 });
 
@@ -131,10 +130,14 @@ router.put('/:chatId', verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) return res.status(400).json({ success: false, message: 'Invalid chat id' });
     if (req.user?.userType !== 'admin') return res.status(403).json({ success: false, message: 'Only admin can modify chat' });
-    const chat = await Chat.findByIdAndUpdate(req.params.chatId, req.body, { new: true });
+    const allowedUpdates = {};
+    if (typeof req.body?.isActive === 'boolean') allowedUpdates.isActive = req.body.isActive;
+    if (typeof req.body?.facultyMediator === 'string' && mongoose.Types.ObjectId.isValid(req.body.facultyMediator)) allowedUpdates.facultyMediator = req.body.facultyMediator;
+    if (!Object.keys(allowedUpdates).length) return res.status(400).json({ success: false, message: 'No permitted chat fields supplied' });
+    const chat = await Chat.findByIdAndUpdate(req.params.chatId, { $set: allowedUpdates }, { new: true, runValidators: true });
     if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
     res.json({ success: true, chat });
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (_err) { res.status(400).json({ success: false, message: 'Unable to update chat' }); }
 });
 
 router.delete('/:chatId', verifyToken, async (req, res) => {
@@ -144,7 +147,7 @@ router.delete('/:chatId', verifyToken, async (req, res) => {
     const result = await Chat.findByIdAndDelete(req.params.chatId);
     if (!result) return res.status(404).json({ success: false, message: 'Chat not found' });
     res.json({ success: true, message: 'Chat deleted' });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (_err) { res.status(500).json({ success: false, message: 'Unable to delete chat' }); }
 });
 
 router.delete('/:chatId/message/:messageId', verifyToken, async (req, res) => {
@@ -158,7 +161,7 @@ router.delete('/:chatId/message/:messageId', verifyToken, async (req, res) => {
     chat.messages = chat.messages.filter((m) => m._id.toString() !== req.params.messageId);
     await chat.save();
     res.json({ success: true, message: 'Message deleted', chat });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (_err) { res.status(500).json({ success: false, message: 'Unable to delete message' }); }
 });
 
 export default router;
