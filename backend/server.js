@@ -23,6 +23,7 @@ import uiRoutes from './routes/ui.js';
 import { auditLogger } from './middleware/auditLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter, requestId } from './middleware/security.js';
+import { normalizeImageUrlsMiddleware } from './middleware/imageUrl.js';
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: process.env.URLENCODED_BODY_LIMIT || '1mb' }));
 app.use(apiRateLimiter);
 app.use(auditLogger);
+app.use(normalizeImageUrlsMiddleware);
 
 app.use('/uploads', express.static('uploads', {
   index: false,
