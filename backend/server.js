@@ -24,6 +24,7 @@ import { auditLogger } from './middleware/auditLogger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter, requestId } from './middleware/security.js';
 import { normalizeImageUrlsMiddleware } from './middleware/imageUrl.js';
+import { studentUpdateGuard } from './middleware/studentUpdateGuard.js';
 
 dotenv.config();
 
@@ -101,7 +102,7 @@ app.get('/ready', (_req, res) => {
   return res.status(dbReady ? 200 : 503).json({ success: dbReady, status: dbReady ? 'ready' : 'not_ready' });
 });
 
-app.use('/students', studentRoutes);
+app.use('/students', studentUpdateGuard, studentRoutes);
 app.use('/faculty/recommendations', recommendationRoutes);
 app.use('/faculty', facultyRoutes);
 app.use('/posts', postRoutes);
