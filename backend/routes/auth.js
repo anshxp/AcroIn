@@ -70,7 +70,7 @@ const registerBootstrapAdmin = async (req, res) => {
     if (!isCollegeEmail(normalizedEmail)) return res.status(400).json({ success: false, message: 'Please use a valid college email address' });
     if (!isStrongPassword(normalizedPassword)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
 
-    const maxAdmins = Math.max(1, Number(process.env.ADMIN_MAX_COUNT || 2));
+    const maxAdmins = 2;
     if (await User.countDocuments({ userType: 'admin' }) >= maxAdmins) return res.status(409).json({ success: false, message: `Admin limit reached (${maxAdmins})` });
     if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
 
