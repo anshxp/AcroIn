@@ -44,7 +44,6 @@ function App() {
             <Route path="/student/internships" element={<StudentInternships />} />
             <Route path="/student/competitions" element={<StudentCompetitions />} />
             <Route path="/student/certificates" element={<StudentCertificates />} />
-            <Route path="/student/skills" element={<StudentSkills />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['faculty']}><DashboardLayout /></ProtectedRoute>}>
