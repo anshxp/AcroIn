@@ -1,42 +1,99 @@
-# Node
-node_modules/
-dist/
-build/
-
-# Environment
+# =========================
+# Environment / Secrets
+# =========================
 .env
-.venv/
-venv/
-ENV/
+.env.*
+!.env.example
 
+# =========================
+# Node.js
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Frontend builds
+# =========================
+frontend/dist/
+frontend/.vite/
+
+# =========================
 # Python
+# =========================
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
-*.egg-info/
 
-# IDE
-.vscode/
-.idea/
+.venv/
+venv/
+env/
 
-# OS
+.pytest_cache/
+.mypy_cache/
+
+# =========================
+# Python ML / generated data
+# =========================
+*.bin
+*.faiss
+*.index
+*.pkl
+*.pickle
+*.joblib
+
+# =========================
+# Face Recognition
+# =========================
+face_rec_service/faiss_index.bin
+face_rec_service/uploads/
+face_rec_service/__pycache__/
+
+# =========================
+# Backend uploads
+# =========================
+backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+backend/logs/
+face_rec_service/logs/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
 
-# Misc
-*.swp
-*.swo
-*.iml
+# =========================
+# IDE
+# =========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Heavy ML/Data Files
-face_rec_service/models/
-face_rec_service/data/
-face_rec_service/cache/
+.idea/
 
-# Optional
-*.onnx
-*.pth
-*.pt
-*.h5
-*.pkl
+# =========================
+# Coverage
+# =========================
+coverage/
+.nyc_output/
+htmlcov/
+
+# =========================
+# OS
+# =========================
+desktop.ini
