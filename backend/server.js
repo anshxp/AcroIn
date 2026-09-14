@@ -15,6 +15,7 @@ import internshipRoutes from './routes/internship.js';
 import opportunityRoutes from './routes/opportunity.js';
 import interestRoutes from './routes/interest.js';
 import notificationRoutes from './routes/notification.js';
+import adminHierarchyRoutes from './routes/adminHierarchy.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import landingRoutes from './routes/landing.js';
@@ -127,7 +128,12 @@ app.use('/internships', internshipRoutes);
 app.use('/opportunities', opportunityUpdateGuard, opportunityRoutes);
 app.use('/interests', interestRoutes);
 app.use('/notifications', notificationRoutes);
+
+// Enforced hierarchy routes must run before the legacy admin router so the
+// old super_admin-based handlers cannot bypass the new admin/dept_admin rules.
+app.use('/admin', adminHierarchyRoutes);
 app.use('/admin', adminRoutes);
+
 app.use('/chats', chatRoutes);
 app.use('/auth', authRoutes);
 app.use('/landing', landingRoutes);
