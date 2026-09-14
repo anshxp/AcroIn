@@ -54,13 +54,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const settingsNavItem: NavItem = { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' };
 
   const isSystemAdmin = user?.userType === 'admin';
-  const isFacultyAdmin = user?.role?.includes('dept_admin');
+  const isDepartmentAdmin = user?.role?.includes('dept_admin');
 
   const getNavItems = () => {
     if (isSystemAdmin) {
-      return [...facultyNavItems, ...adminNavItems, settingsNavItem];
+      return [...adminNavItems, settingsNavItem];
     }
-    if (isFacultyAdmin) {
+    if (isDepartmentAdmin) {
       return [...facultyNavItems, ...adminNavItems];
     }
     if (user?.userType === 'faculty') {
