@@ -25,6 +25,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { apiRateLimiter, requestId } from './middleware/security.js';
 import { normalizeImageUrlsMiddleware } from './middleware/imageUrl.js';
 import { studentUpdateGuard } from './middleware/studentUpdateGuard.js';
+import { facultyUpdateGuard } from './middleware/facultyUpdateGuard.js';
 
 dotenv.config();
 
@@ -104,7 +105,7 @@ app.get('/ready', (_req, res) => {
 
 app.use('/students', studentUpdateGuard, studentRoutes);
 app.use('/faculty/recommendations', recommendationRoutes);
-app.use('/faculty', facultyRoutes);
+app.use('/faculty', facultyUpdateGuard, facultyRoutes);
 app.use('/posts', postRoutes);
 app.use('/certificates', certificateRoutes);
 app.use('/competitions', competitionRoutes);
