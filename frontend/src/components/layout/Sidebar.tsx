@@ -49,14 +49,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const adminNavItems: NavItem[] = [
     { icon: <Users size={20} />, label: 'Manage Students', path: '/admin/students' },
     { icon: <UserCog size={20} />, label: 'Manage Faculty', path: '/admin/faculty' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
   ];
 
-  const isSystemAdmin = user?.userType === 'admin' || user?.role?.includes('admin');
-  const isFacultyAdmin = user?.role?.includes('super_admin') || user?.role?.includes('dept_admin');
+  const settingsNavItem: NavItem = { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' };
+
+  const isSystemAdmin = user?.userType === 'admin';
+  const isFacultyAdmin = user?.role?.includes('dept_admin');
 
   const getNavItems = () => {
-    if (isSystemAdmin || isFacultyAdmin) {
+    if (isSystemAdmin) {
+      return [...facultyNavItems, ...adminNavItems, settingsNavItem];
+    }
+    if (isFacultyAdmin) {
       return [...facultyNavItems, ...adminNavItems];
     }
     if (user?.userType === 'faculty') {
@@ -77,7 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
     >
-      {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
         {!isCollapsed && (
           <Link to="/" className="flex items-center space-x-2">
@@ -95,7 +98,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => (
@@ -121,7 +123,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         </ul>
       </nav>
 
-      {/* Logout */}
       <div className="p-4 border-t border-gray-100">
         <button
           onClick={logout}
