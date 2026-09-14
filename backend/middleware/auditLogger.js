@@ -5,13 +5,8 @@ import User from '../models/User.js';
 const OMITTED_KEYS = new Set(['password', 'token', 'authorization']);
 
 const sanitizePayload = (value) => {
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value.slice(0, 10).map((item) => sanitizePayload(item));
-  }
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.slice(0, 10).map((item) => sanitizePayload(item));
 
   const sanitized = {};
   for (const [key, entry] of Object.entries(value)) {
@@ -19,14 +14,8 @@ const sanitizePayload = (value) => {
       sanitized[key] = '***';
       continue;
     }
-
-    if (typeof entry === 'object' && entry !== null) {
-      sanitized[key] = sanitizePayload(entry);
-    } else {
-      sanitized[key] = entry;
-    }
+    sanitized[key] = typeof entry === 'object' && entry !== null ? sanitizePayload(entry) : entry;
   }
-
   return sanitized;
 };
 
@@ -44,64 +33,50 @@ const resolveActor = async (req) => {
 
   const actorId = req.user?.id || tokenPayload?.id;
   const actorUserType = String(req.user?.userType || tokenPayload?.userType || '').trim().toLowerCase();
-
-  if (!actorId || !actorUserType) {
-    return null;
-  }
+  if (!actorId || !actorUserType) return null;
 
   const user = await User.findById(actorId).select('role userType email department');
-  const roleList = Array.isArray(user?.role) ? user.role.map((role) => String(role || '').trim().toLowerCase()) : [];
+  const roleList = Array.isArray(user?.role)
+    ? user.role.map((role) => String(role || '').trim().toLowerCase())
+    : [];
 
   let actorRole = actorUserType;
-  if (roleList.includes('super_admin')) {
-    actorRole = 'super_admin';
-  } else if (roleList.includes('dept_admin')) {
+  if (roleList.includes('dept_admin')) {
     actorRole = 'dept_admin';
   } else if (user?.userType) {
     actorRole = String(user.userType).trim().toLowerCase();
   }
 
   let actorDepartment = user?.department || null;
-  
-  // Try to resolve department from Faculty record if available
   if (!actorDepartment && user?.email && (actorRole === 'faculty' || actorRole === 'dept_admin')) {
     try {
       const Faculty = (await import('../models/Faculty.js')).default;
       const faculty = await Faculty.findOne({ email: user.email }).select('department');
       actorDepartment = faculty?.department || null;
     } catch {
-      // Department resolution failed, continue with null
+      // Department resolution failed; keep null.
     }
   }
 
-  return {
-    actorId,
-    actorRole,
-    actorDepartment,
-  };
+  return { actorId, actorRole, actorDepartment };
 };
 
 export const auditLogger = (req, res, next) => {
   const startedAt = Date.now();
 
   res.on('finish', () => {
-    if (req.method === 'OPTIONS') {
-      return;
-    }
+    if (req.method === 'OPTIONS') return;
 
     void (async () => {
       const actor = await resolveActor(req);
       if (!actor) return;
 
-      const auditableRoles = new Set(['faculty', 'admin', 'dept_admin', 'super_admin']);
-      if (!auditableRoles.has(actor.actorRole)) {
-        return;
-      }
+      const auditableRoles = new Set(['faculty', 'admin', 'dept_admin']);
+      if (!auditableRoles.has(actor.actorRole)) return;
 
       const payload = sanitizePayload(req.body);
       const success = res.statusCode >= 200 && res.statusCode < 400;
 
-      // Try to extract affected department from request body or params
       let affectedDepartment = null;
       if (req.body?.department) {
         affectedDepartment = String(req.body.department).trim();
