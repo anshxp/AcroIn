@@ -26,6 +26,7 @@ import { apiRateLimiter, requestId } from './middleware/security.js';
 import { normalizeImageUrlsMiddleware } from './middleware/imageUrl.js';
 import { studentUpdateGuard } from './middleware/studentUpdateGuard.js';
 import { facultyUpdateGuard } from './middleware/facultyUpdateGuard.js';
+import { projectUpdateGuard } from './middleware/projectUpdateGuard.js';
 
 dotenv.config();
 
@@ -117,7 +118,7 @@ app.use('/admin', adminRoutes);
 app.use('/chats', chatRoutes);
 app.use('/auth', authRoutes);
 app.use('/landing', landingRoutes);
-app.use('/projects', projectRoutes);
+app.use('/projects', projectUpdateGuard, projectRoutes);
 app.use('/ui', uiRoutes);
 
 app.use(notFoundHandler);
