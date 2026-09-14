@@ -8,7 +8,7 @@ import { postUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-const FACULTY_ADMIN_ROLES = new Set(['dept_admin', 'super_admin']);
+const FACULTY_ADMIN_ROLES = new Set(['dept_admin']);
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
@@ -209,16 +209,13 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
       return res.status(404).json({ message: 'Author not found' });
     }
 
-    // Handle scope for faculty/department admin
-    let postScope = 'campus'; // default
+    let postScope = 'campus';
     let visibleToDepartments = [];
 
     if (req.user?.userType === 'faculty' && scope) {
       const normalizedScope = String(scope).trim().toLowerCase();
       if (['campus', 'department'].includes(normalizedScope)) {
         postScope = normalizedScope;
-        
-        // If department scope, only visible to author's department
         if (normalizedScope === 'department' && author.department) {
           visibleToDepartments = [author.department];
         }
@@ -297,7 +294,6 @@ const addCommentHandler = async (req, res) => {
   }
 };
 
-// Add comment (support both /comment and /comments)
 router.post('/:id/comment', verifyToken, addCommentHandler);
 router.post('/:id/comments', verifyToken, addCommentHandler);
 
@@ -332,7 +328,6 @@ const deleteCommentHandler = async (req, res) => {
   }
 };
 
-// Delete comment (support both /comment and /comments)
 router.delete('/:id/comment/:commentId', verifyToken, deleteCommentHandler);
 router.delete('/:id/comments/:commentId', verifyToken, deleteCommentHandler);
 
