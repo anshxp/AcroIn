@@ -4,10 +4,18 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { v2 as cloudinary } from 'cloudinary';
 
-const isCloudinaryConfigured =
+const isProduction = process.env.NODE_ENV === 'production';
+const isCloudinaryConfigured = Boolean(
   process.env.CLOUDINARY_CLOUD_NAME &&
   process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET;
+  process.env.CLOUDINARY_API_SECRET,
+);
+
+if (isProduction && !isCloudinaryConfigured) {
+  throw new Error(
+    'Production uploads require Cloudinary. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
+  );
+}
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
@@ -77,6 +85,7 @@ if (isCloudinaryConfigured) {
     },
   });
 } else {
+  // Local disk storage is intentionally retained for development only.
   const uploadsDir = './uploads';
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
   storage = multer.diskStorage({
