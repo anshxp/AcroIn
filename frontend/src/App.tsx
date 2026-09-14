@@ -5,6 +5,7 @@ import { DashboardLayout } from './components/layout';
 import { ProtectedRoute } from './components/auth';
 import { ScrollToTop } from './components/common';
 import { LandingPage, LoginPage, RegisterPage, AdminBootstrapPage, StudentProfile, StudentPublicProfile, StudentProjects, StudentInternships, StudentCompetitions, StudentCertificates, StudentSkills, FacultyProfile, FacultyPublicProfile, VerifyStudents, PostOpportunities, SmartSearch, FacialRecognition, Recommendations, FacultyAnalytics, StudentProfileView, ManageStudents, ManageFaculty, AdminSettings, AdminAnalytics, DepartmentAuditLogs, HomeFeed, Notifications, ChatWorkspace } from './pages';
+import DepartmentAdminManagement from './pages/admin/DepartmentAdminManagement';
 import './App.css';
 
 const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
@@ -43,6 +44,7 @@ function App() {
             <Route path="/student/internships" element={<StudentInternships />} />
             <Route path="/student/competitions" element={<StudentCompetitions />} />
             <Route path="/student/certificates" element={<StudentCertificates />} />
+            <Route path="/student/skills" element={<StudentSkills />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedUserTypes={['faculty']}><DashboardLayout /></ProtectedRoute>}>
@@ -59,6 +61,7 @@ function App() {
           <Route element={<ProtectedRoute allowedUserTypes={['admin', 'faculty']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/faculty" element={<ManageFaculty />} />
+            <Route path="/admin/department-admins" element={<AdminOnly><DepartmentAdminManagement /></AdminOnly>} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
             <Route path="/admin/settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
