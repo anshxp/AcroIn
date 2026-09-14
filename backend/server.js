@@ -27,6 +27,7 @@ import { normalizeImageUrlsMiddleware } from './middleware/imageUrl.js';
 import { studentUpdateGuard } from './middleware/studentUpdateGuard.js';
 import { facultyUpdateGuard } from './middleware/facultyUpdateGuard.js';
 import { projectUpdateGuard } from './middleware/projectUpdateGuard.js';
+import { opportunityUpdateGuard } from './middleware/opportunityUpdateGuard.js';
 
 dotenv.config();
 
@@ -111,7 +112,7 @@ app.use('/posts', postRoutes);
 app.use('/certificates', certificateRoutes);
 app.use('/competitions', competitionRoutes);
 app.use('/internships', internshipRoutes);
-app.use('/opportunities', opportunityRoutes);
+app.use('/opportunities', opportunityUpdateGuard, opportunityRoutes);
 app.use('/interests', interestRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/admin', adminRoutes);
