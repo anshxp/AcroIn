@@ -40,7 +40,11 @@ const requiredProductionEnv = [
   'FRONTEND_URL',
   'RECOMMENDATION_SERVICE_URL',
   'RECOMMENDATION_API_KEY',
+  'FACE_REC_SERVICE_URL',
+  'FACE_API_KEY',
 ];
+
+const hasUsableHttpUrl = (value) => /^https:\/\/[^\s/]+/i.test(String(value || '').trim());
 
 if (isProduction) {
   const missing = requiredProductionEnv.filter((name) => !process.env[name]?.trim());
@@ -50,6 +54,14 @@ if (isProduction) {
   }
   if (process.env.JWT_SECRET.length < 32) {
     console.error('[backend] JWT_SECRET must be at least 32 characters in production.');
+    process.exit(1);
+  }
+  if (!hasUsableHttpUrl(process.env.RECOMMENDATION_SERVICE_URL)) {
+    console.error('[backend] RECOMMENDATION_SERVICE_URL must be an absolute HTTPS URL in production.');
+    process.exit(1);
+  }
+  if (!hasUsableHttpUrl(process.env.FACE_REC_SERVICE_URL)) {
+    console.error('[backend] FACE_REC_SERVICE_URL must be an absolute HTTPS URL in production.');
     process.exit(1);
   }
 }
