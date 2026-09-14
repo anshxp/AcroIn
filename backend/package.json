@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon --config nodemon.json --exec node scripts/run-with-freeport.cjs",
-    "check": "node --check server.js && node --check middleware/authMiddleware.js && node --check middleware/studentUpdateGuard.js && node --check routes/student.js && node --check routes/recommendation.js && node --check routes/opportunity.js && node --check routes/chat.js && node --check scripts/seed-complete-demo.js && node --check scripts/seed-100-posts.js",
+    "check": "node --check server.js && node --check middleware/authMiddleware.js && node --check middleware/studentUpdateGuard.js && node --check middleware/facultyUpdateGuard.js && node --check middleware/projectUpdateGuard.js && node --check routes/auth.js && node --check routes/student.js && node --check routes/faculty.js && node --check routes/recommendation.js && node --check routes/opportunity.js && node --check routes/chat.js && node --check scripts/seed-complete-demo.js && node --check scripts/seed-100-posts.js",
     "seed:demo": "node scripts/seed-complete-demo.js",
     "seed:posts": "node scripts/seed-100-posts.js",
     "sync:profiles": "node sync-profiles.js",
