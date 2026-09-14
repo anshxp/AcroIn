@@ -75,7 +75,7 @@ const registerBootstrapAdmin = async (req, res) => {
     if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
 
     const hashedPassword = await bcrypt.hash(normalizedPassword, 12);
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'admin', role: ['super_admin'] });
+    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'admin', role: ['admin'] });
     await Admin.create({ user: user._id, permissions: ['all'] });
     await Profile.findOneAndUpdate({ user: user._id }, { $set: { userType: 'admin', displayName: normalizedName, email: normalizedEmail, department: 'Administration', designation: 'System Administrator', skills: [], tags: ['admin'], profileCompleteness: 100, verificationStatus: 'verified', isActive: true } }, { new: true, upsert: true, setDefaultsOnInsert: true });
 
