@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DashboardLayout } from './components/layout';
 import { ProtectedRoute } from './components/auth';
@@ -8,7 +9,7 @@ import './App.css';
 
 const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
 
-const SuperAdminOnly = ({ children }: { children: React.ReactNode }) => {
+const SuperAdminOnly = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
   const roles = Array.isArray(user?.role) ? user.role : [];
   return roles.includes('super_admin') ? <>{children}</> : <Navigate to="/home" replace />;
