@@ -9,10 +9,9 @@ import './App.css';
 
 const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
 
-const SuperAdminOnly = ({ children }: { children: ReactNode }) => {
+const AdminOnly = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const roles = Array.isArray(user?.role) ? user.role : [];
-  return roles.includes('super_admin') ? <>{children}</> : <Navigate to="/home" replace />;
+  return user?.userType === 'admin' ? <>{children}</> : <Navigate to="/home" replace />;
 };
 
 function App() {
@@ -62,7 +61,7 @@ function App() {
             <Route path="/admin/faculty" element={<ManageFaculty />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
-            <Route path="/admin/settings" element={<SuperAdminOnly><AdminSettings /></SuperAdminOnly>} />
+            <Route path="/admin/settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
