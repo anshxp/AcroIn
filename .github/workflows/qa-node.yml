@@ -16,6 +16,10 @@ jobs:
     defaults:
       run:
         working-directory: frontend
+    env:
+      # CI only needs a syntactically valid public HTTPS backend URL for the
+      # production Vite configuration check. No secret is exposed here.
+      VITE_API_URL: https://api.acroin.invalid
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
