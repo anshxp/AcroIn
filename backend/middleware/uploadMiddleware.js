@@ -12,9 +12,7 @@ const isCloudinaryConfigured = Boolean(
 );
 
 if (isProduction && !isCloudinaryConfigured) {
-  throw new Error(
-    'Production uploads require Cloudinary. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.',
-  );
+  throw new Error('Production uploads require Cloudinary. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
 }
 
 if (isCloudinaryConfigured) {
@@ -46,8 +44,8 @@ class CloudinaryStorage {
     resolveParams(this.params, req, file)
       .then((params) => {
         const uploadOptions = {
-          folder: 'acroin/profiles',
-          resource_type: 'image',
+          folder: params.folder || 'acroin/profiles',
+          resource_type: params.resource_type || 'image',
           ...params,
           public_id: params.public_id || `${Date.now()}-${randomUUID()}`,
         };
@@ -69,14 +67,19 @@ class CloudinaryStorage {
 
   _removeFile(req, file, cb) {
     if (!file?.filename) return cb(null);
-    this.cloudinary.uploader.destroy(file.filename, { resource_type: file.cloudinaryResourceType || 'image' }, (error) => cb(error || null));
+    this.cloudinary.uploader.destroy(
+      file.filename,
+      { resource_type: file.cloudinaryResourceType || 'image' },
+      (error) => cb(error || null),
+    );
   }
 }
 
-let storage;
+let profileStorage;
+let postStorage;
 
 if (isCloudinaryConfigured) {
-  storage = new CloudinaryStorage({
+  profileStorage = new CloudinaryStorage({
     cloudinary,
     params: {
       folder: 'acroin/profiles',
@@ -84,17 +87,26 @@ if (isCloudinaryConfigured) {
       resource_type: 'image',
     },
   });
+
+  postStorage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: 'acroin/posts',
+      resource_type: 'auto',
+    },
+  });
 } else {
-  // Local disk storage is intentionally retained for development only.
   const uploadsDir = './uploads';
   if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-  storage = multer.diskStorage({
+  const diskStorage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadsDir),
     filename: (req, file, cb) => {
       const extension = path.extname(file.originalname).toLowerCase();
       cb(null, `${Date.now()}-${randomUUID()}${extension}`);
     },
   });
+  profileStorage = diskStorage;
+  postStorage = diskStorage;
 }
 
 const IMAGE_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -110,8 +122,17 @@ const postMediaFileFilter = (_req, file, cb) => {
   cb(new Error('Invalid file type. Only images, videos, and PDFs are allowed.'));
 };
 
-export const upload = multer({ storage, fileFilter: imageFileFilter, limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 } });
-export const postUpload = multer({ storage, fileFilter: postMediaFileFilter, limits: { fileSize: 25 * 1024 * 1024, files: 10, fields: 30 } });
+export const upload = multer({
+  storage: profileStorage,
+  fileFilter: imageFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 20 },
+});
+
+export const postUpload = multer({
+  storage: postStorage,
+  fileFilter: postMediaFileFilter,
+  limits: { fileSize: 25 * 1024 * 1024, files: 4, fields: 30 },
+});
 
 export { cloudinary };
 export default upload;
