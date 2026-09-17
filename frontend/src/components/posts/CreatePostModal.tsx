@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
 import { X, Image, Send, Loader2, Globe, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { opportunityAPI, postAPI, adminAPI } from '../../services/api';
+import { opportunityAPI, postAPI } from '../../services/api';
 import type { Post } from '../../types';
 import './posts.css';
 
@@ -10,6 +11,32 @@ interface CreatePostModalProps {
   onClose: () => void;
   onPostCreated: (post: Post) => void;
 }
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+const createPostWithFiles = async ({
+  content,
+  files,
+  scope,
+}: {
+  content: string;
+  files: File[];
+  scope: 'campus' | 'department';
+}): Promise<Post> => {
+  const formData = new FormData();
+  formData.append('content', content);
+  formData.append('scope', scope);
+  files.forEach((file) => formData.append('files', file));
+
+  const token = localStorage.getItem('token');
+  const response = await axios.post(`${API_BASE_URL}/posts`, formData, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  return response.data?.data || response.data;
+};
 
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
@@ -128,31 +155,22 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         return;
       }
 
-      let newPost: Post;
-      
-      if (isFaculty) {
-        // Use department admin endpoint for faculty
-        newPost = await adminAPI.createDepartmentPost({
-          content: content.trim(),
-          images: selectedFiles.length > 0 ? selectedFiles.map((f) => f.name) : undefined,
-          scope: postScope,
-        });
-      } else {
-        // Use regular post endpoint for non-faculty
-        newPost = await postAPI.create({
-          content: content.trim(),
-          files: selectedFiles,
-        });
-      }
-      
+      const newPost = await createPostWithFiles({
+        content: content.trim(),
+        files: selectedFiles,
+        scope: isFaculty ? postScope : 'campus',
+      });
+
       onPostCreated(newPost);
       setContent('');
       setSelectedFiles([]);
       setUploadError('');
       setPostScope('campus');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create post:', error);
+      const message = error?.response?.data?.message || error?.message || 'Failed to create post. Please try again.';
+      setSubmitError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -217,37 +235,15 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
         <div className="modal-body">
           <div className="post-mode-toggle" role="tablist" aria-label="Publish mode">
-            <button
-              type="button"
-              className={`mode-chip ${publishMode === 'post' ? 'active' : ''}`}
-              onClick={() => {
-                setPublishMode('post');
-                setSubmitError('');
-              }}
-            >
-              Post
-            </button>
-            <button
-              type="button"
-              className={`mode-chip ${publishMode === 'opportunity' ? 'active' : ''}`}
-              onClick={() => {
-                setPublishMode('opportunity');
-                setUploadError('');
-                setSelectedFiles([]);
-                setSubmitError('');
-              }}
-            >
-              Opportunity
-            </button>
+            <button type="button" className={`mode-chip ${publishMode === 'post' ? 'active' : ''}`} onClick={() => { setPublishMode('post'); setSubmitError(''); }}>Post</button>
+            <button type="button" className={`mode-chip ${publishMode === 'opportunity' ? 'active' : ''}`} onClick={() => { setPublishMode('opportunity'); setUploadError(''); setSelectedFiles([]); setSubmitError(''); }}>Opportunity</button>
           </div>
 
           <div className="post-author-info">
             <div className="author-avatar">{getUserInitials()}</div>
             <div className="author-details">
               <span className="author-name">{getUserName()}</span>
-              <span className="author-meta">
-                {user?.designation || user?.userType} • {user?.department || 'Acropolis Institute'}
-              </span>
+              <span className="author-meta">{user?.designation || user?.userType} • {user?.department || 'Acropolis Institute'}</span>
             </div>
           </div>
 
@@ -255,27 +251,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             <div className="post-scope-selector">
               <label className="scope-label">Post Visibility</label>
               <div className="scope-options">
-                <button
-                  type="button"
-                  className={`scope-option ${postScope === 'campus' ? 'active' : ''}`}
-                  onClick={() => setPostScope('campus')}
-                >
-                  <Globe size={18} />
-                  <div>
-                    <span className="scope-title">Campus Wide</span>
-                    <span className="scope-desc">Visible to all students and faculty</span>
-                  </div>
+                <button type="button" className={`scope-option ${postScope === 'campus' ? 'active' : ''}`} onClick={() => setPostScope('campus')}>
+                  <Globe size={18} /><div><span className="scope-title">Campus Wide</span><span className="scope-desc">Visible to all students and faculty</span></div>
                 </button>
-                <button
-                  type="button"
-                  className={`scope-option ${postScope === 'department' ? 'active' : ''}`}
-                  onClick={() => setPostScope('department')}
-                >
-                  <Users size={18} />
-                  <div>
-                    <span className="scope-title">Department Only</span>
-                    <span className="scope-desc">Visible only to {user?.department}</span>
-                  </div>
+                <button type="button" className={`scope-option ${postScope === 'department' ? 'active' : ''}`} onClick={() => setPostScope('department')}>
+                  <Users size={18} /><div><span className="scope-title">Department Only</span><span className="scope-desc">Visible only to {user?.department}</span></div>
                 </button>
               </div>
             </div>
@@ -283,93 +263,29 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {publishMode === 'opportunity' && (
             <div className="opportunity-fields">
-              <input
-                className="post-input"
-                placeholder="Opportunity title"
-                value={opportunityTitle}
-                onChange={(e) => setOpportunityTitle(e.target.value)}
-              />
-
+              <input className="post-input" placeholder="Opportunity title" value={opportunityTitle} onChange={(e) => setOpportunityTitle(e.target.value)} />
               <div className="post-input-row">
-                <select
-                  className="post-input"
-                  value={opportunityType}
-                  onChange={(e) => setOpportunityType(e.target.value as 'competition' | 'internship' | 'certification')}
-                >
-                  <option value="competition">Competition</option>
-                  <option value="internship">Internship</option>
-                  <option value="certification">Certification</option>
+                <select className="post-input" value={opportunityType} onChange={(e) => setOpportunityType(e.target.value as 'competition' | 'internship' | 'certification')}>
+                  <option value="competition">Competition</option><option value="internship">Internship</option><option value="certification">Certification</option>
                 </select>
-
-                <input
-                  className="post-input"
-                  placeholder="Venue"
-                  value={opportunityVenue}
-                  onChange={(e) => setOpportunityVenue(e.target.value)}
-                />
+                <input className="post-input" placeholder="Venue" value={opportunityVenue} onChange={(e) => setOpportunityVenue(e.target.value)} />
               </div>
-
               <div className="post-input-row">
-                <label className="date-input-wrap">
-                  <span>Date</span>
-                  <input
-                    className="post-input"
-                    type="date"
-                    value={opportunityDate}
-                    onChange={(e) => setOpportunityDate(e.target.value)}
-                  />
-                </label>
-                <label className="date-input-wrap">
-                  <span>Deadline</span>
-                  <input
-                    className="post-input"
-                    type="date"
-                    value={opportunityDeadline}
-                    onChange={(e) => setOpportunityDeadline(e.target.value)}
-                  />
-                </label>
+                <label className="date-input-wrap"><span>Date</span><input className="post-input" type="date" value={opportunityDate} onChange={(e) => setOpportunityDate(e.target.value)} /></label>
+                <label className="date-input-wrap"><span>Deadline</span><input className="post-input" type="date" value={opportunityDeadline} onChange={(e) => setOpportunityDeadline(e.target.value)} /></label>
               </div>
-
-              <input
-                className="post-input"
-                placeholder="Application link (https://...)"
-                value={applicationLink}
-                onChange={(e) => setApplicationLink(e.target.value)}
-              />
+              <input className="post-input" placeholder="Application link (https://...)" value={applicationLink} onChange={(e) => setApplicationLink(e.target.value)} />
             </div>
           )}
 
-          <textarea
-            className="post-textarea"
-            placeholder={publishMode === 'post' ? 'What do you want to talk about?' : 'Add opportunity details'}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-          />
+          <textarea className="post-textarea" placeholder={publishMode === 'post' ? 'What do you want to talk about?' : 'Add opportunity details'} value={content} onChange={(e) => setContent(e.target.value)} onKeyDown={handleKeyDown} autoFocus />
 
           {previewUrls.length > 0 && (
             <div className="post-attachments-grid">
               {previewUrls.map((preview, index) => (
                 <div className="attachment-preview" key={`${preview.name}-${index}`}>
-                  {preview.type.startsWith('image/') ? (
-                    <img src={preview.url} alt={preview.name} />
-                  ) : preview.type.startsWith('video/') ? (
-                    <video src={preview.url} controls />
-                  ) : (
-                    <div className="attachment-file-placeholder">
-                      <span>PDF</span>
-                      <small>{preview.name}</small>
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    className="attachment-remove-btn"
-                    onClick={() => handleRemoveFile(index)}
-                    aria-label={`Remove ${preview.name}`}
-                  >
-                    <X size={14} />
-                  </button>
+                  {preview.type.startsWith('image/') ? <img src={preview.url} alt={preview.name} /> : preview.type.startsWith('video/') ? <video src={preview.url} controls /> : <div className="attachment-file-placeholder"><span>PDF</span><small>{preview.name}</small></div>}
+                  <button type="button" className="attachment-remove-btn" onClick={() => handleRemoveFile(index)} aria-label={`Remove ${preview.name}`}><X size={14} /></button>
                 </div>
               ))}
             </div>
@@ -377,54 +293,17 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
           {(uploadError || submitError) && <div className="post-upload-error">{uploadError || submitError}</div>}
 
-          <div className="post-hint">
-            {publishMode === 'post' ? (
-              <>
-                Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to post
-              </>
-            ) : (
-              <>Opportunity creates an announcement post automatically.</>
-            )}
-          </div>
+          <div className="post-hint">{publishMode === 'post' ? <>Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to post</> : <>Opportunity creates an announcement post automatically.</>}</div>
         </div>
 
         <div className="modal-footer">
           <div className="post-actions-left">
-            {(publishMode === 'post' || publishMode === 'opportunity') && (
-              <>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*,application/pdf"
-                  multiple
-                  className="post-file-input"
-                  onChange={handleFileChange}
-                />
-                <button className="post-action-btn" title="Add file" onClick={handleFilePick} type="button">
-                  <Image size={20} />
-                </button>
-                <span className="post-attachment-count">
-                  {selectedFiles.length}/{maxFiles} files (image/video/pdf)
-                </span>
-              </>
-            )}
+            <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" multiple className="post-file-input" onChange={handleFileChange} />
+            <button className="post-action-btn" title="Add file" onClick={handleFilePick} type="button"><Image size={20} /></button>
+            <span className="post-attachment-count">{selectedFiles.length}/{maxFiles} files (image/video/pdf)</span>
           </div>
-          <button
-            className="post-submit-btn"
-            onClick={handleSubmit}
-            disabled={
-              (publishMode === 'post' && !content.trim() && selectedFiles.length === 0)
-              || isSubmitting
-            }
-          >
-            {isSubmitting ? (
-              <Loader2 size={18} className="spin" />
-            ) : (
-              <>
-                <Send size={18} />
-                <span>{publishMode === 'post' ? 'Post' : 'Publish Opportunity'}</span>
-              </>
-            )}
+          <button className="post-submit-btn" onClick={handleSubmit} disabled={(publishMode === 'post' && !content.trim() && selectedFiles.length === 0) || isSubmitting}>
+            {isSubmitting ? <Loader2 size={18} className="spin" /> : <><Send size={18} /><span>{publishMode === 'post' ? 'Post' : 'Publish Opportunity'}</span></>}
           </button>
         </div>
       </div>
