@@ -37,6 +37,21 @@ const getAuthUserIdFromToken = (token: string): string | undefined => {
   }
 };
 
+const normalizeAuthId = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value);
+  if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    const nested = candidate._id ?? candidate.id ?? candidate.$oid;
+    if (nested !== undefined && nested !== value) return normalizeAuthId(nested);
+    if (typeof candidate.toString === 'function') {
+      const stringValue = candidate.toString();
+      if (stringValue && stringValue !== '[object Object]') return stringValue;
+    }
+  }
+  return '';
+};
+
 const buildUserData = (responseUser: any, fallbackUserType?: User['userType']): User => {
   const resolvedUserType = (responseUser?.userType || fallbackUserType) as User['userType'];
   const resolvedName = responseUser?.name
@@ -45,9 +60,9 @@ const buildUserData = (responseUser: any, fallbackUserType?: User['userType']): 
 
   return {
     // Keep the profile id for student/faculty profile routes.
-    id: responseUser?._id,
+    id: normalizeAuthId(responseUser?._id),
     // Keep the auth User._id separately for chats, notifications and JWT-owned APIs.
-    authUserId: responseUser?.authUserId || responseUser?._id,
+    authUserId: normalizeAuthId(responseUser?.authUserId || responseUser?._id),
     email: responseUser?.email,
     name: resolvedName,
     userType: resolvedUserType,
