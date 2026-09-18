@@ -173,7 +173,7 @@ export const StudentCompetitions: React.FC = () => {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar and Competitions Grid */}
       {isLoadingData ? (
         <div className="empty-state">
           <h3>Loading competitions...</h3>
@@ -254,21 +254,7 @@ export const StudentCompetitions: React.FC = () => {
             <span>Add Competition</span>
           </button>
         </div>
-      )}
-
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">
-                <Trophy size={40} />
-              </div>
-              <h3>No competitions found</h3>
-              <p>Start tracking your achievements by adding your first competition</p>
-              <button className="btn-primary" onClick={() => handleOpenModal()}>
-                <Plus size={18} />
-                <span>Add Competition</span>
-              </button>
-            </div>
-          )}
+      )
         </>
       )}
 
