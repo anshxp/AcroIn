@@ -80,8 +80,10 @@
 @media (max-width: 700px) {
   .chat-workspace {
     height: calc(100vh - 96px);
-    margin: -16px;
-    width: calc(100% + 32px);
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .chat-workspace-list {
