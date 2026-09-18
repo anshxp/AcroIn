@@ -61,6 +61,22 @@ const resolveAuthorDepartment = async (author) => {
   return '';
 };
 
+const serializePost = (post) => {
+  if (!post) return post;
+  const plain = typeof post.toObject === 'function' ? post.toObject() : { ...post };
+  plain._id = plain._id?.toString?.() || String(plain._id || plain.id || '');
+  if (plain.author) plain.author._id = plain.author._id?.toString?.() || String(plain.author._id || '');
+  if (Array.isArray(plain.likes)) plain.likes = plain.likes.map((id) => id?.toString?.() || String(id || '')).filter(Boolean);
+  if (Array.isArray(plain.comments)) {
+    plain.comments = plain.comments.map((comment) => ({
+      ...comment,
+      _id: comment._id?.toString?.() || String(comment._id || ''),
+      author: comment.author ? { ...comment.author, _id: comment.author._id?.toString?.() || String(comment.author._id || '') } : comment.author,
+    }));
+  }
+  return plain;
+};
+
 const toAbsoluteUploadUrl = (req, filePath) => {
   if (!filePath) return '';
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
@@ -102,9 +118,9 @@ router.get('/', verifyToken, async (req, res) => {
     if (page > 0) {
       const skip = (page - 1) * limit;
       const [posts, total] = await Promise.all([query.clone().skip(skip).limit(limit), Post.countDocuments(baseFilter)]);
-      return res.json({ success: true, data: posts, page, limit, total, hasMore: skip + posts.length < total });
+      return res.json({ success: true, data: posts.map(serializePost), page, limit, total, hasMore: skip + posts.length < total });
     }
-    res.json(await query);
+    res.json((await query).map(serializePost));
   } catch (error) {
     console.error('[posts] list failed:', error instanceof Error ? error.stack : error);
     res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to load posts' });
@@ -139,7 +155,7 @@ router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => 
     const post = new Post({ author, content: normalizedContent, images: [...bodyImages, ...uploadedMedia], linkedOpportunity: linkedOpportunity || undefined, scope: postScope, visibleToDepartments });
     await post.save();
     const createdPost = await Post.findById(post._id).populate({ path: 'linkedOpportunity', options: { lean: true } }).lean();
-    res.status(201).json(createdPost || post.toObject());
+    res.status(201).json(serializePost(createdPost || post));
   } catch (error) {
     console.error('[posts] create failed:', error instanceof Error ? error.stack : error);
     res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to create post' });
@@ -152,7 +168,7 @@ router.post('/:id/like', verifyToken, async (req, res) => {
     if (!post) return res.status(404).json({ message: 'Post not found' });
     if (!post.likes.some((id) => id.toString() === req.user.id)) post.likes.push(req.user.id);
     await post.save();
-    res.json(post);
+    res.json(serializePost(post));
   } catch (error) { res.status(400).json({ message: error.message }); }
 });
 
@@ -162,7 +178,7 @@ router.post('/:id/unlike', verifyToken, async (req, res) => {
     if (!post) return res.status(404).json({ message: 'Post not found' });
     post.likes = post.likes.filter((id) => id.toString() !== req.user.id);
     await post.save();
-    res.json(post);
+    res.json(serializePost(post));
   } catch (error) { res.status(400).json({ message: error.message }); }
 });
 
@@ -176,7 +192,7 @@ const addCommentHandler = async (req, res) => {
     if (!author) return res.status(404).json({ message: 'Comment author not found' });
     post.comments.push({ author, content: String(content).trim() });
     await post.save();
-    res.json(post);
+    res.json(serializePost(post));
   } catch (error) { res.status(400).json({ message: error.message }); }
 };
 router.post('/:id/comment', verifyToken, addCommentHandler);
