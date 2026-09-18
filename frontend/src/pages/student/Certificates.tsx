@@ -17,6 +17,7 @@ interface Certificate {
 export const StudentCertificates: React.FC = () => {
   const { user } = useAuth();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -33,9 +34,12 @@ export const StudentCertificates: React.FC = () => {
   useEffect(() => {
     const loadCertificates = async () => {
       try {
+        setIsLoadingData(true);
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) {
           setCertificates([]);
+          setCertificates([]);
+          setIsLoadingData(false);
           return;
         }
 
@@ -56,6 +60,8 @@ export const StudentCertificates: React.FC = () => {
         setCertificates(normalizedCertificates);
       } catch {
         setCertificates([]);
+      } finally {
+        setIsLoadingData(false);
       }
     };
 
@@ -179,7 +185,12 @@ export const StudentCertificates: React.FC = () => {
       </div>
 
       {/* Certificates List */}
-      {filteredCertificates.length > 0 ? (
+      {isLoadingData ? (
+        <div className="empty-state">
+          <h3>Loading certificates...</h3>
+          <p>Please wait while we load your data.</p>
+        </div>
+      ) : {filteredCertificates.length > 0 ? (
         <div className="cards-grid">
           {filteredCertificates.map((certificate) => (
             <div key={certificate._id} className="certificate-card">
