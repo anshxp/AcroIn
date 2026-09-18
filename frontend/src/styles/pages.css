@@ -2677,6 +2677,7 @@
 .notifications-page .student-card { min-width: 0; }
 .notifications-page .student-main { min-width: 0; flex: 1 1 0; }
 .notifications-page .student-meta span { min-width: 0; overflow-wrap: anywhere; }
+.notifications-page .student-meta .break-words { display: block; line-height: 1.5; white-space: normal; word-break: break-word; }
 .notifications-page .student-actions { flex-shrink: 0; }
 
 @media (max-width: 768px) {
