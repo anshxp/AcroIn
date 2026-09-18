@@ -264,6 +264,7 @@ export interface CreatePostData {
   content: string;
   images?: string[];
   files?: File[];
+  scope?: 'campus' | 'department';
 }
 
 export interface Message {
