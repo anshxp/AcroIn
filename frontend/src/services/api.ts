@@ -30,13 +30,23 @@ const api = axios.create({
 });
 
 const normalizeId = (value: unknown): string => {
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value);
+
   if (value && typeof value === 'object') {
     const candidate = value as Record<string, unknown>;
-    if (typeof candidate._id === 'string') return candidate._id;
-    if (typeof candidate.id === 'string') return candidate.id;
-    if (typeof candidate.$oid === 'string') return candidate.$oid;
+    const nested = candidate._id ?? candidate.id ?? candidate.$oid;
+    if (nested !== undefined && nested !== value) {
+      const normalizedNested = normalizeId(nested);
+      if (normalizedNested) return normalizedNested;
+    }
+
+    if (typeof candidate.toString === 'function') {
+      const stringValue = candidate.toString();
+      if (stringValue && stringValue !== '[object Object]') return stringValue;
+    }
   }
+
   return '';
 };
 
