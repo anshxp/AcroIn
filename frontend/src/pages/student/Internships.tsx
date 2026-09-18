@@ -326,7 +326,7 @@ export const StudentInternships: React.FC = () => {
       </div>
 
       {isLoadingData ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <h3>Loading internships...</h3>
           <p>Please wait while we load your internship data.</p>
         </div>
