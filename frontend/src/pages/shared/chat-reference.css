@@ -39,5 +39,39 @@
 .chat-workspace-conversation .send-message-btn { width: 54px; height: 54px; border-radius: 10px; }
 
 @media (max-width: 700px) {
-  .chat-workspace-list { display: none; }
+  .chat-workspace.has-list .chat-workspace-list {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .chat-workspace.has-chat .chat-workspace-list {
+    display: none;
+  }
+
+  .chat-workspace.has-list .chat-workspace-conversation {
+    display: none;
+  }
+
+  .chat-workspace.has-chat .chat-workspace-conversation {
+    display: block;
+    width: 100%;
+  }
+
+  .chat-workspace.has-list .chat-list-container {
+    height: 100%;
+  }
+
+  .chat-workspace-list .chat-list-header {
+    padding: 14px 16px 12px;
+  }
+
+  .chat-workspace-list .chat-search-bar {
+    margin: 0 16px 10px;
+  }
+
+  .chat-workspace-list .chat-item {
+    padding: 12px 16px;
+  }
 }
