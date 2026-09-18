@@ -179,7 +179,7 @@ export const StudentProjects: React.FC = () => {
           <h3>Loading projects...</h3>
           <p>Please wait while we load your data.</p>
         </div>
-      ) : {filteredProjects.length > 0 ? (
+      ) : filteredProjects.length > 0 ? (
         <div className="cards-grid">
           {filteredProjects.map((project, index) => (
             <div key={project._id} className="project-card">
