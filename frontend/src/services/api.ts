@@ -538,7 +538,7 @@ export const postAPI = {
 
   getById: async (id: string): Promise<Post> => {
     const response = await api.get(`/posts/${encodeURIComponent(requirePostId(id))}`);
-    return response.data;
+    return normalizePost(response.data) as Post;
   },
 
   create: async (data: CreatePostData): Promise<Post> => {
@@ -579,22 +579,22 @@ export const postAPI = {
 
   like: async (id: string): Promise<Post> => {
     const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/like`);
-    return unwrapData<Post>(response.data);
+    return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
 
   unlike: async (id: string): Promise<Post> => {
     const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/unlike`);
-    return unwrapData<Post>(response.data);
+    return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
 
   addComment: async (id: string, content: string): Promise<Post> => {
     const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/comments`, { content });
-    return unwrapData<Post>(response.data);
+    return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
 
   deleteComment: async (postId: string, commentId: string): Promise<Post> => {
     const response = await api.delete(`/posts/${encodeURIComponent(requirePostId(postId))}/comments/${encodeURIComponent(requirePostId(commentId))}`);
-    return unwrapData<Post>(response.data);
+    return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
 };
 
