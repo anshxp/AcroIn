@@ -89,10 +89,10 @@ export const Notifications: React.FC = () => {
       {!loading && filteredNotifications.length === 0 && <p className="page-subtitle">No notifications matched your filters.</p>}
       <div className="student-list">{filteredNotifications.map((notification) => {
         const meta = notificationMeta[notification.type];
-        return <div key={notification._id} className="student-card" style={{ alignItems: 'flex-start' }}>
-          <div className="student-avatar" style={{ background: notification.read ? '#e5e7eb' : '#dbeafe', color: '#1d4ed8' }}>{notification.read ? <CheckCheck size={18} /> : <Bell size={18} />}</div>
-          <div className="student-main min-w-0"><div className="student-header"><h3 className="student-name">{meta.label}</h3>{!notification.read && <span className="verified-badge">New</span>}</div><div className="student-meta break-words"><span>{notification.message}</span></div><div className="student-meta" style={{ marginTop: '8px' }}><span className="separator">{meta.icon}</span><span>{new Date(notification.createdAt).toLocaleString()}</span></div></div>
-          <div className="student-actions"><button className="view-profile-btn" onClick={() => handleOpenNotification(notification)} type="button">Open</button>{!notification.read && <button className="view-profile-btn" onClick={() => markRead(notification._id)} type="button">Mark read</button>}</div>
+        return <div key={notification._id} className="notification-card">
+          <div className={`notification-avatar ${notification.read ? 'read' : 'unread'}`}>{notification.read ? <CheckCheck size={18} /> : <Bell size={18} />}</div>
+          <div className="notification-content"><div className="notification-title-row"><h3 className="notification-title">{meta.label}</h3>{!notification.read && <span className="notification-new">New</span>}</div><div className="notification-message">{notification.message}</div><div className="notification-time">{meta.icon}<span>{new Date(notification.createdAt).toLocaleString()}</span></div></div>
+          <div className="notification-actions"><button className="notification-action-btn" onClick={() => handleOpenNotification(notification)} type="button">Open</button>{!notification.read && <button className="notification-action-btn" onClick={() => markRead(notification._id)} type="button">Mark read</button>}</div>
         </div>;
       })}</div>
     </div>
