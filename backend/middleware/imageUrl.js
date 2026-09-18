@@ -21,18 +21,40 @@ const toPublicImageUrl = (value, req) => {
   return `${baseUrl}${publicPath}`;
 };
 
-const normalizeImageUrls = (value, req) => {
+const normalizeImageUrls = (value, req, seen = new WeakSet()) => {
   if (Array.isArray(value)) {
-    return value.map((item) => normalizeImageUrls(item, req));
+    if (seen.has(value)) return value;
+    seen.add(value);
+    return value.map((item) => normalizeImageUrls(item, req, seen));
   }
 
   if (!value || typeof value !== 'object') return value;
+
+  // Mongoose documents contain internal/circular properties. Convert them
+  // to a plain object before walking response data.
+  if (typeof value.toObject === 'function') {
+    return normalizeImageUrls(value.toObject(), req, seen);
+  }
+
+  // BSON ObjectIds, Dates, Buffers and similar values must be left for
+  // JSON.stringify/Mongoose to serialize instead of recursively traversing
+  // their internal properties.
+  if (
+    value?._bsontype ||
+    value instanceof Date ||
+    Buffer.isBuffer(value)
+  ) {
+    return value;
+  }
+
+  if (seen.has(value)) return value;
+  seen.add(value);
 
   const normalized = {};
   for (const [key, item] of Object.entries(value)) {
     normalized[key] = IMAGE_FIELDS.has(key)
       ? toPublicImageUrl(item, req)
-      : normalizeImageUrls(item, req);
+      : normalizeImageUrls(item, req, seen);
   }
   return normalized;
 };
