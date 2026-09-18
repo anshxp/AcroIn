@@ -76,7 +76,7 @@ export const HomeFeed: React.FC = () => {
 
         {filteredPosts.length === 0 && !searchQuery && !hasActiveFilters && <p className="page-subtitle">No posts available from backend.</p>}
         {filteredPosts.length === 0 && (searchQuery || hasActiveFilters) && <p className="page-subtitle">No posts matched your search or filters.</p>}
-        {filteredPosts.map((post) => <div key={post._id} id={`post-${post._id}`} onClick={(event) => handlePostAuthorClick(event, post)} style={focusPostId === post._id ? { outline: '2px solid #2563eb', borderRadius: '14px', transition: 'outline 0.2s ease' } : undefined}><PostCard post={post} onPostDeleted={(postId) => setPosts((prev) => prev.filter((item) => item._id !== postId))} onPostUpdated={(updatedPost) => setPosts((prev) => prev.map((item) => item._id === updatedPost._id ? updatedPost : item))} /></div>)}
+        {filteredPosts.map((post, index) => <div key={post._id || `feed-post-${index}`} id={post._id ? `post-${post._id}` : undefined} onClick={(event) => handlePostAuthorClick(event, post)} style={focusPostId === post._id ? { outline: '2px solid #2563eb', borderRadius: '14px', transition: 'outline 0.2s ease' } : undefined}><PostCard post={post} onPostDeleted={(postId) => setPosts((prev) => prev.filter((item) => item._id !== postId))} onPostUpdated={(updatedPost) => setPosts((prev) => prev.map((item) => item._id === updatedPost._id ? updatedPost : item))} /></div>)}
       </div>
 
       <CreatePostModal isOpen={showCreateModal && canPost} onClose={() => setShowCreateModal(false)} onPostCreated={(post) => setPosts((prev) => [post, ...prev])} />
