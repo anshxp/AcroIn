@@ -1,5 +1,6 @@
 import express from 'express';
 import Post from '../models/Post.js';
+import Opportunity from '../models/Opportunity.js';
 import Student from '../models/Student.js';
 import Faculty from '../models/Faculty.js';
 import User from '../models/User.js';
