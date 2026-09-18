@@ -51,7 +51,25 @@ export const listProjectsByStudent = async (req, res, next) => {
     }
 
     const projects = await Project.find({ student: studentId }).sort({ createdAt: -1 });
-    return res.json({ success: true, data: projects });
+
+    // Older demo/seed runs could create the same project more than once.
+    // Keep one copy per student + project content so duplicate records do not
+    // appear as repeated cards in the student UI.
+    const seen = new Set();
+    const uniqueProjects = projects.filter((project) => {
+      const key = JSON.stringify({
+        title: project.title || '',
+        description: project.description || '',
+        technologies: Array.isArray(project.technologies) ? [...project.technologies].sort() : [],
+        github_link: project.github_link || '',
+        live_link: project.live_link || '',
+      });
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return res.json({ success: true, data: uniqueProjects });
   } catch (error) {
     return next(error);
   }
