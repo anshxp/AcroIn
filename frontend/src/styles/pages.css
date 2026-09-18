@@ -2669,40 +2669,322 @@
   }
 }
 
-/* ============ NOTIFICATIONS RESPONSIVE ============ */
-.notifications-page { width: 100%; min-width: 0; }
-.notifications-page .card { width: 100%; }
-.notifications-page .filters-row { display: flex; flex-wrap: wrap; gap: 16px 24px; }
-.notifications-page .filter-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.notifications-page .student-card { min-width: 0; }
-.notifications-page .student-main { min-width: 0; flex: 1 1 0; }
-.notifications-page .student-meta span { min-width: 0; overflow-wrap: anywhere; }
-.notifications-page .student-meta .break-words { display: block; line-height: 1.5; white-space: normal; word-break: break-word; }
-.notifications-page .student-actions { flex-shrink: 0; }
+/* ============ NOTIFICATIONS PAGE ============ */
+.notifications-page {
+  width: 100%;
+  max-width: 1100px;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.notifications-page .page-header {
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.notifications-page .page-title-section h1 {
+  margin: 0 0 4px;
+}
+
+.notifications-page .page-title-section p {
+  margin: 0;
+}
+
+.notifications-page .create-post-btn {
+  flex: 0 0 auto;
+  min-height: 42px;
+}
+
+.notifications-filter-card {
+  margin-bottom: 20px !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.notifications-filter-card .card-body {
+  padding: 20px;
+}
+
+.notifications-page .filters-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.notifications-page .filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.notifications-page .filter-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.notifications-page .filter-chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.notifications-page .student-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notifications-page .notification-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.notifications-page .notification-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notifications-page .notification-avatar.unread {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.notifications-page .notification-avatar.read {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.notifications-page .notification-content {
+  min-width: 0;
+  text-align: left;
+}
+
+.notifications-page .notification-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-bottom: 6px;
+}
+
+.notifications-page .notification-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 17px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.notifications-page .notification-new {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.notifications-page .notification-message {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.notifications-page .notification-time {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.notifications-page .notification-time svg {
+  flex: 0 0 auto;
+}
+
+.notifications-page .notification-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.notifications-page .notification-action-btn {
+  min-width: 92px;
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid #dbe3ee;
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notifications-page .notification-action-btn:hover {
+  background: #f8fafc;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.notifications-page .notification-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #64748b;
+}
+
+@media (max-width: 1024px) {
+  .notifications-page {
+    max-width: 100%;
+  }
+
+  .notifications-page .filters-row {
+    grid-template-columns: 1fr;
+  }
+
+  .notifications-page .notification-card {
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .notifications-page .notification-avatar {
+    width: 56px;
+    height: 56px;
+  }
+
+  .notifications-page .notification-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    padding-top: 2px;
+  }
+}
 
 @media (max-width: 768px) {
-  .notifications-page .page-header { width: 100%; }
-  .notifications-page .page-header .create-post-btn { width: 100%; justify-content: center; }
-  .notifications-page .card { margin-bottom: 16px !important; }
-  .notifications-page .card-body { padding: 14px; }
-  .notifications-page .filters-row { flex-direction: column; align-items: stretch; gap: 14px; }
-  .notifications-page .filter-group { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 3px; scrollbar-width: thin; }
-  .notifications-page .filter-label { flex: 0 0 auto; }
-  .notifications-page .filter-chip { flex: 0 0 auto; white-space: nowrap; }
-  .notifications-page .student-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start !important; }
-  .notifications-page .student-avatar { grid-row: 1; }
-  .notifications-page .student-main { grid-column: 2; }
-  .notifications-page .student-actions { grid-column: 1 / -1; width: 100%; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
-  .notifications-page .student-actions .view-profile-btn { flex: 1 1 140px; justify-content: center; }
+  .notifications-page {
+    padding: 0;
+  }
+
+  .notifications-page .page-header {
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .notifications-page .create-post-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .notifications-filter-card {
+    border-radius: 14px;
+  }
+
+  .notifications-filter-card .card-body {
+    padding: 14px;
+  }
+
+  .notifications-page .filter-group {
+    width: 100%;
+    overflow-x: auto;
+    padding: 2px 0 5px;
+    scrollbar-width: thin;
+  }
+
+  .notifications-page .notification-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    padding: 16px;
+    border-radius: 14px;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .notifications-page .notification-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .notifications-page .notification-title {
+    font-size: 16px;
+  }
+
+  .notifications-page .notification-message {
+    font-size: 13px;
+  }
+
+  .notifications-page .notification-time {
+    font-size: 12px;
+  }
+
+  .notifications-page .notification-actions {
+    grid-column: 1 / -1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .notifications-page .notification-action-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 480px) {
-  .notifications-page .page-header { margin-bottom: 16px; }
-  .notifications-page .page-title-section h1 { font-size: 22px; }
-  .notifications-page .student-card { padding: 14px; }
-  .notifications-page .student-header { justify-content: flex-start; }
-  .notifications-page .student-meta { justify-content: flex-start; }
-  .notifications-page .student-actions .view-profile-btn { flex-basis: 100%; width: 100%; }
+  .notifications-page .page-title-section h1 {
+    font-size: 22px;
+  }
+
+  .notifications-page .filters-row {
+    gap: 10px;
+  }
+
+  .notifications-page .notification-card {
+    padding: 14px;
+  }
+
+  .notifications-page .notification-title-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+  }
+
+  .notifications-page .notification-time {
+    align-items: flex-start;
+  }
+
+  .notifications-page .notification-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ============ TABLET & MOBILE RESPONSIVE ============ */
