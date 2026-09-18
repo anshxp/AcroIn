@@ -33,15 +33,35 @@ export const StudentProjects: React.FC = () => {
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) { setProjects([]); return; }
         const backendProjects = await projectAPI.getByStudent(studentIdentifier);
-        setProjects(Array.isArray(backendProjects) ? backendProjects : []);
+        const normalizedProjects = Array.isArray(backendProjects)
+          ? backendProjects
+              .filter((project): project is Project => Boolean(project && typeof project === 'object'))
+              .map((project) => ({
+                ...project,
+                _id: String(project._id ?? ''),
+                title: String(project.title ?? 'Untitled Project'),
+                description: String(project.description ?? ''),
+                technologies: Array.isArray(project.technologies)
+                  ? project.technologies.map((tech) => String(tech ?? '')).filter(Boolean)
+                  : [],
+                github_link: typeof project.github_link === 'string' ? project.github_link : '',
+                live_link: typeof project.live_link === 'string' ? project.live_link : '',
+                student: project.student == null ? '' : String(project.student),
+              }))
+              .filter((project) => project._id)
+          : [];
+        setProjects(normalizedProjects);
       } catch { setProjects([]); }
     };
     loadProjects();
   }, [user?.email, user?.id]);
 
+  const normalizedSearchQuery = String(searchQuery || '').toLowerCase();
   const filteredProjects = projects.filter((project) =>
-    project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.technologies.some((tech) => tech.toLowerCase().includes(searchQuery.toLowerCase()))
+    String(project.title || '').toLowerCase().includes(normalizedSearchQuery) ||
+    (Array.isArray(project.technologies) ? project.technologies : []).some((tech) =>
+      String(tech || '').toLowerCase().includes(normalizedSearchQuery)
+    )
   );
 
   const handleOpenModal = (project?: Project) => {
@@ -65,10 +85,38 @@ export const StudentProjects: React.FC = () => {
     try {
       if (editingProject) {
         const updatedProject = await projectAPI.update(editingProject._id, projectData);
-        setProjects((current) => current.map((project) => project._id === editingProject._id ? updatedProject : project));
+        if (updatedProject && typeof updatedProject === 'object') {
+          const normalizedProject: Project = {
+            ...updatedProject,
+            _id: String(updatedProject._id ?? editingProject._id),
+            title: String(updatedProject.title ?? projectData.title),
+            description: String(updatedProject.description ?? projectData.description),
+            technologies: Array.isArray(updatedProject.technologies)
+              ? updatedProject.technologies.map((tech) => String(tech ?? '')).filter(Boolean)
+              : projectData.technologies,
+            github_link: typeof updatedProject.github_link === 'string' ? updatedProject.github_link : '',
+            live_link: typeof updatedProject.live_link === 'string' ? updatedProject.live_link : '',
+            student: updatedProject.student == null ? '' : String(updatedProject.student),
+          };
+          setProjects((current) => current.map((project) => project._id === editingProject._id ? normalizedProject : project));
+        }
       } else {
         const createdProject = await projectAPI.create(projectData);
-        setProjects((current) => [createdProject, ...current]);
+        if (createdProject && typeof createdProject === 'object') {
+          const normalizedProject: Project = {
+            ...createdProject,
+            _id: String(createdProject._id ?? ''),
+            title: String(createdProject.title ?? projectData.title),
+            description: String(createdProject.description ?? projectData.description),
+            technologies: Array.isArray(createdProject.technologies)
+              ? createdProject.technologies.map((tech) => String(tech ?? '')).filter(Boolean)
+              : projectData.technologies,
+            github_link: typeof createdProject.github_link === 'string' ? createdProject.github_link : '',
+            live_link: typeof createdProject.live_link === 'string' ? createdProject.live_link : '',
+            student: createdProject.student == null ? '' : String(createdProject.student),
+          };
+          if (normalizedProject._id) setProjects((current) => [normalizedProject, ...current]);
+        }
       }
       setIsModalOpen(false);
     } catch { return; }
