@@ -19,6 +19,7 @@ const techColors = ['blue', 'green', 'purple', 'orange', 'pink', 'cyan'];
 export const StudentProjects: React.FC = () => {
   const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -30,6 +31,7 @@ export const StudentProjects: React.FC = () => {
   useEffect(() => {
     const loadProjects = async () => {
       try {
+        setIsLoadingData(true);
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) { setProjects([]); return; }
         const backendProjects = await projectAPI.getByStudent(studentIdentifier);
@@ -51,7 +53,7 @@ export const StudentProjects: React.FC = () => {
               .filter((project) => project._id)
           : [];
         setProjects(normalizedProjects);
-      } catch { setProjects([]); }
+      } catch { setProjects([]); } finally { setIsLoadingData(false); }
     };
     loadProjects();
   }, [user?.email, user?.id]);
@@ -172,7 +174,12 @@ export const StudentProjects: React.FC = () => {
         <input type="text" placeholder="Search projects..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
       </div>
 
-      {filteredProjects.length > 0 ? (
+      {isLoadingData ? (
+        <div className="empty-state">
+          <h3>Loading projects...</h3>
+          <p>Please wait while we load your data.</p>
+        </div>
+      ) : {filteredProjects.length > 0 ? (
         <div className="cards-grid">
           {filteredProjects.map((project, index) => (
             <div key={project._id} className="project-card">
