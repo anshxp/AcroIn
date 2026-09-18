@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Search, Camera, Star, Briefcase, TrendingUp, Users, ChevronLeft, Bell, Settings, Home, GraduationCap, FolderOpen, Trophy, Award, FileCheck, LogOut, Plus, MessageSquare, ClipboardList } from 'lucide-react';
+import { Search, Camera, Star, Briefcase, TrendingUp, Users, ChevronLeft, Menu, X, Bell, Settings, Home, GraduationCap, FolderOpen, Trophy, Award, FileCheck, LogOut, Plus, MessageSquare, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CreatePostModal } from '../posts';
 import { facultyAPI, notificationAPI, studentAPI, uiAPI } from '../../services/api';
@@ -12,6 +12,7 @@ interface SidebarStat { label: string; value: string; color: 'default' | 'blue' 
 
 export const DashboardLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -140,13 +141,14 @@ export const DashboardLayout: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header"><NavLink to="/" className="sidebar-logo"><div className="sidebar-logo-icon">AI</div><span className="sidebar-logo-text">Acro-In</span></NavLink><button className="sidebar-toggle" onClick={() => setCollapsed(!collapsed)}><ChevronLeft size={16} style={{ transform: collapsed ? 'rotate(180deg)' : 'none' }} /></button></div>
-        <nav className="sidebar-nav"><div className="nav-section">{navItems.map((item) => <NavLink key={item.path} to={item.path} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>{item.icon}<span className="nav-item-text">{item.label}</span>{item.badge && <span className={`nav-badge ${item.badgeType === 'new' ? 'new' : ''}`}>{item.badge}</span>}</NavLink>)}</div></nav>
+        <nav className="sidebar-nav"><div className="nav-section">{navItems.map((item) => <NavLink key={item.path} to={item.path} onClick={() => setMobileSidebarOpen(false)} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>{item.icon}<span className="nav-item-text">{item.label}</span>{item.badge && <span className={`nav-badge ${item.badgeType === 'new' ? 'new' : ''}`}>{item.badge}</span>}</NavLink>)}</div></nav>
         <div className="sidebar-footer"><div className="sidebar-stats">{sidebarStats.map((stat, index) => <div key={index} className="sidebar-stat"><span className="sidebar-stat-label">{stat.label}</span><span className={`sidebar-stat-value ${stat.color}`}>{stat.value}</span></div>)}</div></div>
       </aside>
       <div className="main-content">
-        <header className="top-header"><form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search students, skills, projects...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
+        {mobileSidebarOpen && <button type="button" className="mobile-sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />}
+        <header className="top-header"><button type="button" className="mobile-menu-btn" aria-label={mobileSidebarOpen ? "Close navigation" : "Open navigation"} onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>{mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}</button><form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search students, skills, projects...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
         <main className="page-content"><Outlet /></main>
         {canPost && <button className="floating-post-btn" onClick={() => setShowCreatePost(true)} title="Create a post"><Plus size={24} /></button>}
       </div>
