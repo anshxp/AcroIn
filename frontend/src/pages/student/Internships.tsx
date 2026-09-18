@@ -61,6 +61,7 @@ const normalizeInternship = (internship: Partial<Internship> & Record<string, un
 export const StudentInternships: React.FC = () => {
   const { user } = useAuth();
   const [internships, setInternships] = useState<Internship[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -86,9 +87,11 @@ export const StudentInternships: React.FC = () => {
   useEffect(() => {
     const loadInternships = async () => {
       try {
+        setIsLoadingData(true);
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) {
           setInternships([]);
+          set([]);
           return;
         }
 
@@ -97,6 +100,8 @@ export const StudentInternships: React.FC = () => {
         setInternships(backendInternships.map((internship, index) => normalizeInternship(internship as unknown as Record<string, unknown>, index)));
       } catch {
         setInternships([]);
+      } finally {
+        setIsLoadingData(false);
       }
     };
 
