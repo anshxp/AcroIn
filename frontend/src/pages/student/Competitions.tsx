@@ -18,6 +18,7 @@ interface Competition {
 export const StudentCompetitions: React.FC = () => {
   const { user } = useAuth();
   const [competitions, setCompetitions] = useState<Competition[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -35,16 +36,28 @@ export const StudentCompetitions: React.FC = () => {
   useEffect(() => {
     const loadCompetitions = async () => {
       try {
+        setIsLoadingData(true);
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) {
           setCompetitions([]);
+          setIsLoadingData(false);
           return;
         }
 
         const backendCompetitions = await competitionAPI.getByStudent(studentIdentifier);
-        setCompetitions(backendCompetitions);
+        setCompetitions(Array.isArray(backendCompetitions) ? backendCompetitions.filter(Boolean).map((competition, index) => ({
+          ...competition,
+          _id: String(competition._id || `competition-${index + 1}`),
+          name: String(competition.name || 'Untitled Competition'),
+          organizer: String(competition.organizer || 'Unknown Organizer'),
+          position: competition.position ? String(competition.position) : '',
+          date: competition.date || '',
+          certificate_link: typeof competition.certificate_link === 'string' ? competition.certificate_link : '',
+        })) : []);
       } catch {
         setCompetitions([]);
+      } finally {
+        setIsLoadingData(false);
       }
     };
 
@@ -161,7 +174,14 @@ export const StudentCompetitions: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="search-bar">
+      {isLoadingData && (
+        <div className="empty-state">
+          <h3>Loading competitions...</h3>
+          <p>Please wait while we load your data.</p>
+        </div>
+      )}
+
+      {!isLoadingData && <div className="search-bar">
         <Search size={18} />
         <input
           type="text"
@@ -172,7 +192,7 @@ export const StudentCompetitions: React.FC = () => {
       </div>
 
       {/* Competitions Grid */}
-      {filteredCompetitions.length > 0 ? (
+      {!isLoadingData && (filteredCompetitions.length > 0 ? (
         <div className="cards-grid cards-grid-3">
           {filteredCompetitions.map((competition) => (
             <div key={competition._id} className="competition-card">
@@ -233,6 +253,7 @@ export const StudentCompetitions: React.FC = () => {
             <span>Add Competition</span>
           </button>
         </div>
+      )}
       )}
 
       {/* Add/Edit Modal */}
