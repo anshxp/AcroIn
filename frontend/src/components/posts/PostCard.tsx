@@ -24,6 +24,18 @@ import './posts.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+const getAuthUserId = (user: any): string => String(user?.authUserId || user?.id || '').trim();
+
+const getPostId = (post: any): string => {
+  const value = post?._id ?? post?.id ?? post?.postId;
+  if (value && typeof value === 'object') {
+    return String(value?._id || value?.$oid || value?.id || value).trim();
+  }
+  return String(value || '').trim();
+};
+
+
+
 interface PostCardProps {
   post: Post;
   onPostUpdated?: (post: Post) => void;
@@ -52,8 +64,16 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPostDeleted 
 }) => {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(post.likes.includes(user?.id || ''));
+  const currentAuthUserId = getAuthUserId(user);
+  const postId = getPostId(post);
+  const [isLiked, setIsLiked] = useState(() => post.likes.some((id) => String(id) === currentAuthUserId));
   const [likesCount, setLikesCount] = useState(post.likes.length);
+
+  useEffect(() => {
+    const authId = getAuthUserId(user);
+    setIsLiked(post.likes.some((id) => String(id) === authId));
+    setLikesCount(post.likes.length);
+  }, [post.likes, user?.authUserId, user?.id]);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(post.comments);
   const [newComment, setNewComment] = useState('');
@@ -227,11 +247,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleLike = async () => {
     try {
       if (isLiked) {
-        const updatedPost = await postAPI.unlike(post._id);
+        const updatedPost = await postAPI.unlike(postId);
         onPostUpdated?.(updatedPost);
         setLikesCount((prev) => prev - 1);
       } else {
-        const updatedPost = await postAPI.like(post._id);
+        const updatedPost = await postAPI.like(postId);
         onPostUpdated?.(updatedPost);
         setLikesCount((prev) => prev + 1);
       }
@@ -252,7 +272,7 @@ export const PostCard: React.FC<PostCardProps> = ({
       setIsSubmittingComment(true);
       setCommentError('');
 
-      const updatedPost = await postAPI.addComment(post._id, trimmedComment);
+      const updatedPost = await postAPI.addComment(postId, trimmedComment);
       onPostUpdated?.(updatedPost);
 
       // Keep local comments in sync with backend response
@@ -270,7 +290,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     if (!confirm('Are you sure you want to delete this post?')) return;
     
     try {
-      await postAPI.delete(post._id);
+      await postAPI.delete(postId);
       onPostDeleted?.(post._id);
     } catch {
       return;
@@ -280,7 +300,7 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleShare = async () => {
     if (isSharing) return;
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}#post-${post._id}`;
+    const shareUrl = `${window.location.origin}${window.location.pathname}${postId ? `#post-${postId}` : ''}`;
     const contentPreview = (post.content || '').replace(/\s+/g, ' ').trim();
     const shareText = contentPreview.length > 120
       ? `${contentPreview.slice(0, 117)}...`
@@ -320,7 +340,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => window.clearTimeout(timer);
   }, [shareFeedback]);
 
-  const isAuthor = user?.id === post.author._id;
+  const isAuthor = getAuthUserId(user) === String(post.author._id);
 
   const resolveImageUrl = (url: string) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -364,7 +384,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
     // Backward compatibility: older comments may not have avatar saved.
     // If the comment belongs to the logged-in user, reuse current profile avatar.
-    if (comment.author?._id && user?.id && String(comment.author._id) === String(user.id)) {
+    if (comment.author?._id && user?.id && String(comment.author._id) === getAuthUserId(user)) {
       return getCurrentUserAvatar();
     }
 
@@ -422,7 +442,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     );
 
   return (
-    <div className="post-card" id={`post-${post._id}`}>
+    <div className="post-card" id={postId ? `post-${postId}` : undefined}>
       <div className="post-header">
         <div className="post-author">
           <div className="author-avatar">{getAuthorInitials()}</div>
