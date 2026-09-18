@@ -97,7 +97,7 @@ router.get('/', verifyToken, async (req, res) => {
     const baseFilter = req.user?.userType === 'admin' ? {} : { $or: filters };
     const page = Math.max(1, parseInt(req.query.page, 10) || 0);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
-    const query = Post.find(baseFilter).populate('linkedOpportunity').sort({ createdAt: -1 });
+    const query = Post.find(baseFilter).populate({ path: 'linkedOpportunity', options: { lean: true } }).lean().sort({ createdAt: -1 });
 
     if (page > 0) {
       const skip = (page - 1) * limit;
@@ -105,7 +105,10 @@ router.get('/', verifyToken, async (req, res) => {
       return res.json({ success: true, data: posts, page, limit, total, hasMore: skip + posts.length < total });
     }
     res.json(await query);
-  } catch (error) { res.status(500).json({ message: error.message }); }
+  } catch (error) {
+    console.error('[posts] list failed:', error instanceof Error ? error.stack : error);
+    res.status(500).json({ message: error instanceof Error ? error.message : 'Failed to load posts' });
+  }
 });
 
 router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => {
@@ -135,9 +138,12 @@ router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => 
 
     const post = new Post({ author, content: normalizedContent, images: [...bodyImages, ...uploadedMedia], linkedOpportunity: linkedOpportunity || undefined, scope: postScope, visibleToDepartments });
     await post.save();
-    await post.populate('linkedOpportunity');
-    res.status(201).json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+    const createdPost = await Post.findById(post._id).populate({ path: 'linkedOpportunity', options: { lean: true } }).lean();
+    res.status(201).json(createdPost || post.toObject());
+  } catch (error) {
+    console.error('[posts] create failed:', error instanceof Error ? error.stack : error);
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to create post' });
+  }
 });
 
 router.post('/:id/like', verifyToken, async (req, res) => {
