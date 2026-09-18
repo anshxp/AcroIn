@@ -174,25 +174,26 @@ export const StudentCompetitions: React.FC = () => {
       </div>
 
       {/* Search Bar */}
-      {isLoadingData && (
+      {isLoadingData ? (
         <div className="empty-state">
           <h3>Loading competitions...</h3>
           <p>Please wait while we load your data.</p>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="search-bar">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Search competitions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
-      {!isLoadingData && <div className="search-bar">
-        <Search size={18} />
-        <input
-          type="text"
-          placeholder="Search competitions..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
+          {/* Competitions Grid */}
+          {filteredCompetitions.length > 0 ? (
 
-      {/* Competitions Grid */}
-      {!isLoadingData && (filteredCompetitions.length > 0 ? (
         <div className="cards-grid cards-grid-3">
           {filteredCompetitions.map((competition) => (
             <div key={competition._id} className="competition-card">
@@ -254,6 +255,21 @@ export const StudentCompetitions: React.FC = () => {
           </button>
         </div>
       )}
+
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Trophy size={40} />
+              </div>
+              <h3>No competitions found</h3>
+              <p>Start tracking your achievements by adding your first competition</p>
+              <button className="btn-primary" onClick={() => handleOpenModal()}>
+                <Plus size={18} />
+                <span>Add Competition</span>
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add/Edit Modal */}
