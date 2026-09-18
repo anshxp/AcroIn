@@ -2745,6 +2745,29 @@
   .data-table { min-width: 680px; }
 }
 
+@media (max-width: 768px) {
+  .stats-grid .stat-card {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+
+  .stats-grid .stat-card .stat-content {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .stats-grid .stat-card .stat-value,
+  .stats-grid .stat-card .stat-label {
+    width: 100%;
+    text-align: center;
+  }
+}
+
 @media (max-width: 480px) {
   .page-container { padding: 12px; }
   .top-header { padding: 12px; }
