@@ -325,123 +325,94 @@ export const StudentInternships: React.FC = () => {
         </div>
       </div>
 
-      {/* Search & Filters */}
-      <div className="filters-section">
-        <div className="search-box">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search internships..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+      {isLoadingData ? (
+        <div className="empty-state">
+          <h3>Loading internships...</h3>
+          <p>Please wait while we load your internship data.</p>
         </div>
-        <div className="filter-tabs">
-          {filters.map((filter) => (
-            <button
-              key={filter.id}
-              className={`filter-tab ${activeFilter === filter.id ? 'active' : ''}`}
-              onClick={() => setActiveFilter(filter.id)}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Internships List */}
-      <div className="internships-list">
-        {filteredInternships.map((internship) => (
-          <div key={internship._id} className="internship-card">
-            <div className="internship-header">
-              {getCompanyLogo(internship.company)}
-              <div className="internship-info">
-                <h3 className="internship-position">{internship.position}</h3>
-                <p className="internship-company">{internship.company}</p>
-              </div>
-              <div className="internship-badges">
-                {getStatusBadge(internship.status)}
-                {getTypeBadge(internship.type)}
-              </div>
+      ) : (
+        <>
+          {/* Search & Filters */}
+          <div className="filters-section">
+            <div className="search-box">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search internships..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-
-            <div className="internship-meta">
-              <span className="meta-item">
-                <MapPin size={14} />
-                {internship.location}
-              </span>
-              <span className="meta-item">
-                <Calendar size={14} />
-                {internship.duration}
-              </span>
-              {internship.stipend && (
-                <span className="meta-item stipend">
-                  <DollarSign size={14} />
-                  {internship.stipend}
-                </span>
-              )}
-            </div>
-
-            {internship.description && (
-              <p className="internship-description">{internship.description}</p>
-            )}
-
-            <div className="internship-skills">
-              {(internship.skills || []).map((skill, index) => (
-                <span key={index} className="skill-tag">{skill}</span>
+            <div className="filter-tabs">
+              {filters.map((filter) => (
+                <button
+                  key={filter.id}
+                  className={`filter-tab ${activeFilter === filter.id ? 'active' : ''}`}
+                  onClick={() => setActiveFilter(filter.id)}
+                >
+                  {filter.label}
+                </button>
               ))}
             </div>
-
-            <div className="internship-footer">
-              <div className="internship-dates">
-                <span>
-                  {new Date(internship.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                  {internship.endDate && ` - ${new Date(internship.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`}
-                  {!internship.endDate && ' - Present'}
-                </span>
-              </div>
-              <div className="internship-actions">
-                {internship.certificate_link && (
-                  <a
-                    href={internship.certificate_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="action-link"
-                  >
-                    <ExternalLink size={16} />
-                    Certificate
-                  </a>
-                )}
-                <button
-                  type="button"
-                  className="action-btn edit"
-                  onClick={() => handleOpenModal(internship)}
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button
-                  type="button"
-                  className="action-btn delete"
-                  onClick={() => handleDelete(internship._id)}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
           </div>
-        ))}
-      </div>
 
-      {filteredInternships.length === 0 && (
-        <div className="empty-state">
-          <Briefcase size={48} />
-          <h3>No internships found</h3>
-          <p>Start adding your professional experience to showcase your work history.</p>
-          <button className="add-button" onClick={() => handleOpenModal()}>
-            <Plus size={18} />
-            Add Your First Internship
-          </button>
-        </div>
+          {/* Internships List */}
+          <div className="internships-list">
+            {filteredInternships.map((internship) => (
+              <div key={internship._id} className="internship-card">
+                <div className="internship-header">
+                  {getCompanyLogo(internship.company)}
+                  <div className="internship-info">
+                    <h3 className="internship-position">{internship.position}</h3>
+                    <p className="internship-company">{internship.company}</p>
+                  </div>
+                  <div className="internship-badges">
+                    {getStatusBadge(internship.status)}
+                    {getTypeBadge(internship.type)}
+                  </div>
+                </div>
+                <div className="internship-meta">
+                  <span className="meta-item"><MapPin size={14} />{internship.location}</span>
+                  <span className="meta-item"><Calendar size={14} />{internship.duration}</span>
+                  {internship.stipend && <span className="meta-item stipend"><DollarSign size={14} />{internship.stipend}</span>}
+                </div>
+                {internship.description && <p className="internship-description">{internship.description}</p>}
+                <div className="internship-skills">
+                  {(internship.skills || []).map((skill, index) => <span key={index} className="skill-tag">{skill}</span>)}
+                </div>
+                <div className="internship-footer">
+                  <div className="internship-dates">
+                    <span>
+                      {new Date(internship.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {internship.endDate && ` - ${new Date(internship.endDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`}
+                      {!internship.endDate && ' - Present'}
+                    </span>
+                  </div>
+                  <div className="internship-actions">
+                    {internship.certificate_link && (
+                      <a href={internship.certificate_link} target="_blank" rel="noopener noreferrer" className="action-link">
+                        <ExternalLink size={16} /> Certificate
+                      </a>
+                    )}
+                    <button type="button" className="action-btn edit" onClick={() => handleOpenModal(internship)}><Edit2 size={14} /></button>
+                    <button type="button" className="action-btn delete" onClick={() => handleDelete(internship._id)}><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {filteredInternships.length === 0 && (
+            <div className="empty-state">
+              <Briefcase size={48} />
+              <h3>No internships found</h3>
+              <p>Start adding your professional experience to showcase your work history.</p>
+              <button className="add-button" onClick={() => handleOpenModal()}>
+                <Plus size={18} /> Add Your First Internship
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Add/Edit Modal */}
