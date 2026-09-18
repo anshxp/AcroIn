@@ -18,7 +18,7 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { certificateAPI, projectAPI, studentAPI } from '../../services/api';
+import { certificateAPI, internshipAPI, projectAPI, studentAPI } from '../../services/api';
 import type { StudentExperience, StudentSkill } from '../../types';
 import { SKILL_CATALOG, SKILL_CATEGORIES } from '../../constants/skillCatalog';
 import '../../styles/profile.css';
@@ -205,11 +205,6 @@ export const StudentProfile: React.FC = () => {
         return;
       }
 
-      if (isDemoStudentAccount(user?.id, user?.email)) {
-        setIsLoading(false);
-        return;
-      }
-
       try {
         setIsLoading(true);
         setApiError(null);
@@ -228,7 +223,21 @@ export const StudentProfile: React.FC = () => {
             }));
 
         setSkills(normalizedSkills);
-        setExperience(Array.isArray(student.experiences) ? student.experiences : []);
+        const baseExperience = Array.isArray(student.experiences) ? student.experiences : [];
+        let internshipExperience: StudentExperience[] = [];
+        try {
+          const internships = await internshipAPI.getByStudent(identifier);
+          internshipExperience = (Array.isArray(internships) ? internships : []).map((internship: any) => ({
+            title: String(internship.position || 'Internship'),
+            company: String(internship.company || 'Company'),
+            duration: String(internship.duration || ''),
+            type: 'Internship',
+            verified: Boolean(internship.verified),
+          }));
+        } catch {
+          internshipExperience = [];
+        }
+        setExperience([...internshipExperience, ...baseExperience]);
         setProfileImageUrl(student.profile_image || '');
         setCoverImageUrl(student.cover_image || '');
         setVerificationStatus(student.verificationStatus || 'not_verified');
@@ -263,12 +272,6 @@ export const StudentProfile: React.FC = () => {
   useEffect(() => {
     const loadStudentCounts = async () => {
       if ((!user?.id && !user?.email) || user?.userType !== 'student') {
-        return;
-      }
-
-      if (isDemoStudentAccount(user?.id, user?.email)) {
-        setProjectCount(0);
-        setCertificateCount(0);
         return;
       }
 
