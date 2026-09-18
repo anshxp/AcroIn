@@ -40,6 +40,25 @@ const normalizeId = (value: unknown): string => {
   return '';
 };
 
+const normalizePost = (post: any): any => {
+  if (!post || typeof post !== 'object') return post;
+  const normalized = { ...post };
+  normalized._id = normalizeId(post._id);
+  if (Array.isArray(post.likes)) normalized.likes = post.likes.map((id: any) => normalizeId(id)).filter(Boolean);
+  if (Array.isArray(post.comments)) {
+    normalized.comments = post.comments.map((comment: any) => ({
+      ...comment,
+      _id: normalizeId(comment?._id),
+      author: comment?.author ? { ...comment.author, _id: normalizeId(comment.author._id) } : comment?.author,
+    }));
+  }
+  if (post.author) normalized.author = { ...post.author, _id: normalizeId(post.author._id) };
+  if (post.linkedOpportunity && typeof post.linkedOpportunity === 'object') normalized.linkedOpportunity = normalizeId(post.linkedOpportunity);
+  return normalized;
+};
+
+const normalizePosts = (value: any): any => Array.isArray(value) ? value.map(normalizePost) : value;
+
 const unwrapData = <T>(responseData: any): T => {
   if (responseData && typeof responseData === 'object' && 'data' in responseData) {
     return responseData.data as T;
@@ -486,7 +505,7 @@ export const projectAPI = {
 export const postAPI = {
   getAll: async (): Promise<Post[]> => {
     const response = await api.get('/posts');
-    return unwrapData<Post[]>(response.data);
+    return normalizePosts(unwrapData<Post[]>(response.data)) as Post[];
   },
 
   getById: async (id: string): Promise<Post> => {
@@ -509,42 +528,42 @@ export const postAPI = {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      return unwrapData<Post>(response.data);
+      return normalizePost(unwrapData<Post>(response.data)) as Post;
     }
 
     const response = await api.post('/posts', {
       content: data.content,
       images: data.images,
     });
-    return unwrapData<Post>(response.data);
+    return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
 
   update: async (id: string, data: Partial<CreatePostData>): Promise<Post> => {
-    const response = await api.put(`/posts/${id}`, data);
-    return response.data;
+    const response = await api.put(`/posts/${encodeURIComponent(normalizeId(id))}`, data);
+    return normalizePost(response.data) as Post;
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/posts/${id}`);
+    await api.delete(`/posts/${encodeURIComponent(normalizeId(id))}`);
   },
 
   like: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/like`);
+    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/like`);
     return unwrapData<Post>(response.data);
   },
 
   unlike: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/unlike`);
+    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/unlike`);
     return unwrapData<Post>(response.data);
   },
 
   addComment: async (id: string, content: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/comments`, { content });
+    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/comments`, { content });
     return unwrapData<Post>(response.data);
   },
 
   deleteComment: async (postId: string, commentId: string): Promise<Post> => {
-    const response = await api.delete(`/posts/${postId}/comments/${commentId}`);
+    const response = await api.delete(`/posts/${encodeURIComponent(normalizeId(postId))}/comments/${encodeURIComponent(normalizeId(commentId))}`);
     return unwrapData<Post>(response.data);
   },
 };
