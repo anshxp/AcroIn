@@ -632,22 +632,30 @@ export const opportunityAPI = {
 
 // Interest APIs
 export const interestAPI = {
-  markInterest: async (opportunityId: string): Promise<Interest> => {
-    const response = await api.post(`/interests/${opportunityId}/mark`);
+  markInterest: async (opportunityId: string | Record<string, unknown>): Promise<Interest> => {
+    const normalizedOpportunityId = normalizeId(opportunityId);
+    if (!normalizedOpportunityId) throw new Error('Invalid opportunity id');
+    const response = await api.post(`/interests/${encodeURIComponent(normalizedOpportunityId)}/mark`);
     return unwrapData<Interest>(response.data?.interest || response.data);
   },
 
-  unmarkInterest: async (opportunityId: string): Promise<void> => {
-    await api.delete(`/interests/${opportunityId}/unmark`);
+  unmarkInterest: async (opportunityId: string | Record<string, unknown>): Promise<void> => {
+    const normalizedOpportunityId = normalizeId(opportunityId);
+    if (!normalizedOpportunityId) throw new Error('Invalid opportunity id');
+    await api.delete(`/interests/${encodeURIComponent(normalizedOpportunityId)}/unmark`);
   },
 
-  getInterestedStudents: async (opportunityId: string): Promise<Interest[]> => {
-    const response = await api.get(`/interests/${opportunityId}/interested`);
+  getInterestedStudents: async (opportunityId: string | Record<string, unknown>): Promise<Interest[]> => {
+    const normalizedOpportunityId = normalizeId(opportunityId);
+    if (!normalizedOpportunityId) return [];
+    const response = await api.get(`/interests/${encodeURIComponent(normalizedOpportunityId)}/interested`);
     return Array.isArray(response.data?.interests) ? response.data.interests : [];
   },
 
-  hasInterest: async (opportunityId: string): Promise<boolean> => {
-    const response = await api.get(`/interests/${opportunityId}/has-interest`);
+  hasInterest: async (opportunityId: string | Record<string, unknown>): Promise<boolean> => {
+    const normalizedOpportunityId = normalizeId(opportunityId);
+    if (!normalizedOpportunityId) return false;
+    const response = await api.get(`/interests/${encodeURIComponent(normalizedOpportunityId)}/has-interest`);
     return response.data?.hasInterest || false;
   },
 };
