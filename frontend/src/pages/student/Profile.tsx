@@ -371,16 +371,8 @@ export const StudentProfile: React.FC = () => {
   };
 
   const handleSave = async () => {
-    if (!profile.birthday) {
-      setApiError('Please add your birthday before saving profile.');
-      return;
-    }
-
-    if (!profile.address.trim()) {
-      setApiError('Please add your address before saving profile.');
-      return;
-    }
-
+    // Birthday and address are optional profile fields. Saving should not be
+    // blocked just because the user has not filled them in yet.
     await persistProfile(profile, skills, experience, 'Profile saved to database.', true);
   };
 
