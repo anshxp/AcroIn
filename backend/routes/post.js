@@ -62,22 +62,6 @@ const resolveAuthorDepartment = async (author) => {
 };
 
 const serializePost = (post) => {
-  if (!post) return post;
-  const plain = typeof post.toObject === 'function' ? post.toObject() : { ...post };
-  plain._id = plain._id?.toString?.() || String(plain._id || plain.id || '');
-  if (plain.author) plain.author._id = plain.author._id?.toString?.() || String(plain.author._id || '');
-  if (Array.isArray(plain.likes)) plain.likes = plain.likes.map((id) => id?.toString?.() || String(id || '')).filter(Boolean);
-  if (Array.isArray(plain.comments)) {
-    plain.comments = plain.comments.map((comment) => ({
-      ...comment,
-      _id: comment._id?.toString?.() || String(comment._id || ''),
-      author: comment.author ? { ...comment.author, _id: comment.author._id?.toString?.() || String(comment.author._id || '') } : comment.author,
-    }));
-  }
-  return plain;
-};
-
-const serializePost = (post) => {
   if (!post) return null;
   const value = typeof post.toObject === 'function' ? post.toObject() : { ...post };
   value._id = value._id?.toString?.() || value._id || '';
