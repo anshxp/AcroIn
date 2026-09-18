@@ -202,16 +202,25 @@ router.post('/:id/unlike', verifyToken, async (req, res) => {
 
 const addCommentHandler = async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
-    if (!post) return res.status(404).json({ message: 'Post not found' });
     const { content } = req.body || {};
-    if (!content || !String(content).trim()) return res.status(400).json({ message: 'Comment content is required' });
+    const normalizedContent = String(content || '').trim();
+    if (!normalizedContent) return res.status(400).json({ message: 'Comment content is required' });
+
     const author = await getAuthorFromUser(req.user.id);
     if (!author) return res.status(404).json({ message: 'Comment author not found' });
-    post.comments.push({ author, content: String(content).trim() });
-    await post.save();
+
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $push: { comments: { author, content: normalizedContent } } },
+      { new: true, runValidators: true }
+    ).populate('linkedOpportunity');
+
+    if (!post) return res.status(404).json({ message: 'Post not found' });
     res.json(serializePost(post));
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) {
+    console.error('[posts] comment failed:', error instanceof Error ? error.stack : error);
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to add comment' });
+  }
 };
 router.post('/:id/comment', verifyToken, addCommentHandler);
 router.post('/:id/comments', verifyToken, addCommentHandler);
