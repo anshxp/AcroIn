@@ -87,10 +87,30 @@
   }
 
   .chat-workspace-list {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    border-right: 0;
+  }
+
+  .chat-workspace.has-chat .chat-workspace-list {
     display: none;
   }
 
-  .chat-workspace-conversation {
+  .chat-workspace.has-chat .chat-workspace-conversation {
+    display: block;
     width: 100%;
+  }
+
+  .chat-workspace.has-list .chat-workspace-conversation {
+    display: none;
+  }
+
+  .chat-workspace-list .chat-list-header {
+    padding: 14px 16px;
+  }
+
+  .chat-workspace-list .chat-search-bar {
+    margin: 0 16px 12px;
   }
 }
