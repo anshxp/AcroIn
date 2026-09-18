@@ -85,7 +85,12 @@ const normalizePost = (post: any): any => {
   return normalized;
 };
 
-const normalizePosts = (value: any): any => Array.isArray(value) ? value.map(normalizePost) : value;
+const normalizePosts = (value: any): any => {
+  if (!Array.isArray(value)) return value;
+  return value
+    .map(normalizePost)
+    .filter((post) => Boolean(post?._id));
+};
 
 const unwrapData = <T>(responseData: any): T => {
   if (responseData && typeof responseData === 'object' && 'data' in responseData) {
