@@ -1,6 +1,21 @@
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 const JWT_ALGORITHMS = ['HS256'];
+
+const normalizeAuthId = (value) => {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'bigint') return String(value);
+  if (value && typeof value === 'object') {
+    const nested = value._id ?? value.id ?? value.$oid;
+    if (nested !== undefined && nested !== value) return normalizeAuthId(nested);
+    if (typeof value.toString === 'function') {
+      const stringValue = value.toString();
+      if (stringValue && stringValue !== '[object Object]') return stringValue;
+    }
+  }
+  return '';
+};
 
 export const verifyToken = (req, res, next) => {
   try {
