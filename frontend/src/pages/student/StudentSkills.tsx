@@ -101,11 +101,6 @@ export const StudentSkills: React.FC = () => {
     const fetchSkills = async () => {
       if ((!user?.id && !user?.email) || user?.userType !== 'student') return;
 
-      if (isDemoStudentAccount(user?.id, user?.email)) {
-        setIsLoadingSkills(false);
-        return;
-      }
-
       try {
         setIsLoadingSkills(true);
         setApiError(null);
