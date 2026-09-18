@@ -1558,6 +1558,77 @@
   background: #2563eb;
 }
 
+.mobile-menu-btn,
+.mobile-sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .mobile-menu-btn {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: white;
+    color: #1e293b;
+    cursor: pointer;
+    z-index: 120;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.12);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: 0;
+    padding: 0;
+    background: rgba(15, 23, 42, 0.35);
+    z-index: 90;
+    cursor: pointer;
+  }
+
+  .sidebar {
+    z-index: 110;
+  }
+
+  .main-content {
+    margin-left: 0;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .top-header {
+    position: sticky;
+    z-index: 80;
+  }
+
+  .mobile-menu-btn {
+    order: 0;
+  }
+
+  .top-header .search-bar {
+    order: 1;
+  }
+
+  .top-header .header-actions {
+    order: 2;
+  }
+}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1400px) {
   .stats-grid {
