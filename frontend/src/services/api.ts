@@ -547,6 +547,7 @@ export const postAPI = {
     if (files.length > 0) {
       const formData = new FormData();
       formData.append('content', data.content);
+      if (data.scope) formData.append('scope', data.scope);
 
       files.forEach((file) => {
         formData.append('files', file);
@@ -562,6 +563,7 @@ export const postAPI = {
     const response = await api.post('/posts', {
       content: data.content,
       images: data.images,
+      ...(data.scope ? { scope: data.scope } : {}),
     });
     return normalizePost(unwrapData<Post>(response.data)) as Post;
   },
