@@ -621,10 +621,10 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <p className="post-modal-empty">No students have clicked interest yet.</p>
               ) : (
                 <div className="post-interest-list">
-                  {interestedStudents.map((interest) => {
+                  {interestedStudents.map((interest, index) => {
                     const student = typeof interest.student === 'string' ? null : interest.student;
                     return (
-                      <div className="post-interest-item" key={interest._id}>
+                      <div className="post-interest-item" key={interest._id || `interest-${index}`}>
                         <strong>{student?.name || 'Unknown student'}</strong>
                         <span>{student?.roll || 'N/A'}</span>
                         <small>Interested on {new Date(interest.createdAt).toLocaleString()}</small>
@@ -686,8 +686,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
       {showComments && (
         <div className="post-comments">
-          {comments.map((comment) => (
-            <div key={comment._id} className="comment">
+          {comments.map((comment, index) => (
+            <div key={comment._id || `comment-${index}`} className="comment">
               {getCommentAvatarUrl(comment) ? (
                 <img
                   className="comment-avatar comment-avatar--image"
