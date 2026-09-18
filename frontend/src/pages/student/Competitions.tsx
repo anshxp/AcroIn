@@ -254,7 +254,7 @@ export const StudentCompetitions: React.FC = () => {
             <span>Add Competition</span>
           </button>
         </div>
-      )
+      )}
         </>
       )}
 
