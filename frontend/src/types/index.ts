@@ -64,7 +64,6 @@ export interface Student {
   certificates: Certificate[];
   createdAt: string;
   updatedAt: string;
-  // Display/computed properties for UI
   profileImage?: string;
   projectsCount?: number;
   internshipsCount?: number;
@@ -91,7 +90,7 @@ export interface Faculty {
   skills: string[];
   techstacks: string[];
   phone: string;
-  role: ('faculty' | 'dept_admin' | 'super_admin')[];
+  role: ('faculty' | 'dept_admin')[];
   createdAt: string;
   updatedAt: string;
 }
@@ -182,7 +181,6 @@ export interface NotificationItem {
   updatedAt: string;
 }
 
-// Auth types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -218,18 +216,17 @@ export interface AuthResponse {
 
 export interface User {
   id: string;
+  authUserId?: string;
   email: string;
   name: string;
   userType: 'student' | 'faculty' | 'admin';
   role?: string[];
-  // Faculty-specific fields
   firstname?: string;
   lastName?: string;
   department?: string;
   designation?: string;
 }
 
-// Post types (LinkedIn-style)
 export interface Post {
   _id: string;
   author: {
@@ -269,7 +266,6 @@ export interface CreatePostData {
   files?: File[];
 }
 
-// Chat types
 export interface Message {
   _id: string;
   sender: string;
@@ -291,7 +287,6 @@ export interface Chat {
   updatedAt: string;
 }
 
-// Interest types
 export interface Interest {
   _id: string;
   student: string | Student;
@@ -300,11 +295,10 @@ export interface Interest {
   updatedAt?: string;
 }
 
-// Audit Log types
 export interface AuditLog {
   _id: string;
   actorId: string | User;
-  actorRole: 'student' | 'faculty' | 'dept_admin' | 'admin' | 'super_admin' | 'system';
+  actorRole: 'student' | 'faculty' | 'dept_admin' | 'admin' | 'system';
   actorDepartment?: string;
   affectedDepartment?: string;
   action: string;

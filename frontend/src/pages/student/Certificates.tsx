@@ -40,7 +40,20 @@ export const StudentCertificates: React.FC = () => {
         }
 
         const backendCertificates = await certificateAPI.getByStudent(studentIdentifier);
-        setCertificates(backendCertificates);
+        const normalizedCertificates = Array.isArray(backendCertificates)
+          ? backendCertificates
+              .filter((certificate): certificate is Certificate => Boolean(certificate && typeof certificate === 'object'))
+              .map((certificate) => ({
+                ...certificate,
+                _id: String(certificate._id || ''),
+                title: String(certificate.title || 'Untitled Certificate'),
+                organization: String(certificate.organization || 'Unknown Organization'),
+                issue_date: certificate.issue_date || '',
+                certificate_link: certificate.certificate_link || '',
+              }))
+              .filter((certificate) => certificate._id)
+          : [];
+        setCertificates(normalizedCertificates);
       } catch {
         setCertificates([]);
       }
@@ -51,8 +64,8 @@ export const StudentCertificates: React.FC = () => {
 
   const filteredCertificates = certificates.filter(
     (certificate) =>
-      certificate.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      certificate.organization.toLowerCase().includes(searchQuery.toLowerCase())
+      String(certificate.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      String(certificate.organization || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleOpenModal = (certificate?: Certificate) => {
@@ -121,14 +134,17 @@ export const StudentCertificates: React.FC = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    if (!dateStr) return 'Date not provided';
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return 'Invalid date';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
     });
   };
 
   const getIconClass = (org: string) => {
-    const orgLower = org.toLowerCase();
+    const orgLower = String(org || '').toLowerCase();
     if (orgLower.includes('aws') || orgLower.includes('amazon')) return 'aws';
     if (orgLower.includes('google')) return 'google';
     if (orgLower.includes('microsoft') || orgLower.includes('azure')) return 'azure';

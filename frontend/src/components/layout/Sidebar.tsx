@@ -11,6 +11,7 @@ import {
   CheckSquare,
   Bell,
   Settings,
+  Shield,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -49,14 +50,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   const adminNavItems: NavItem[] = [
     { icon: <Users size={20} />, label: 'Manage Students', path: '/admin/students' },
     { icon: <UserCog size={20} />, label: 'Manage Faculty', path: '/admin/faculty' },
-    { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' },
   ];
 
-  const isSystemAdmin = user?.userType === 'admin' || user?.role?.includes('admin');
-  const isFacultyAdmin = user?.role?.includes('super_admin') || user?.role?.includes('dept_admin');
+  const departmentAdminNavItem: NavItem = { icon: <Shield size={20} />, label: 'Department Admins', path: '/admin/department-admins' };
+  const settingsNavItem: NavItem = { icon: <Settings size={20} />, label: 'Settings', path: '/admin/settings' };
+
+  const isSystemAdmin = user?.userType === 'admin';
+  const isDepartmentAdmin = user?.role?.includes('dept_admin');
 
   const getNavItems = () => {
-    if (isSystemAdmin || isFacultyAdmin) {
+    if (isSystemAdmin) {
+      return [...adminNavItems, departmentAdminNavItem, settingsNavItem];
+    }
+    if (isDepartmentAdmin) {
       return [...facultyNavItems, ...adminNavItems];
     }
     if (user?.userType === 'faculty') {
@@ -66,7 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
   };
 
   const navItems = getNavItems();
-
   const isActive = (path: string) => location.pathname === path;
 
   return (
@@ -77,7 +82,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
     >
-      {/* Logo */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
         {!isCollapsed && (
           <Link to="/" className="flex items-center space-x-2">
@@ -87,15 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
             <span className="font-bold text-xl text-gray-900">AcroIn</span>
           </Link>
         )}
-        <button
-          onClick={onToggle}
-          className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-        >
+        <button onClick={onToggle} className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 py-4 overflow-y-auto">
         <ul className="space-y-1 px-3">
           {navItems.map((item) => (
@@ -103,12 +103,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
               <Link
                 to={item.path}
                 className={`
-                  flex items-center space-x-3 px-3 py-2.5 rounded-lg
-                  transition-colors duration-200
-                  ${isActive(item.path)
-                    ? 'bg-indigo-50 text-indigo-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }
+                  flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors duration-200
+                  ${isActive(item.path) ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                   ${isCollapsed ? 'justify-center' : ''}
                 `}
                 title={isCollapsed ? item.label : undefined}
@@ -121,17 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onToggle }) => {
         </ul>
       </nav>
 
-      {/* Logout */}
       <div className="p-4 border-t border-gray-100">
-        <button
-          onClick={logout}
-          className={`
-            flex items-center space-x-3 w-full px-3 py-2.5 rounded-lg
-            text-red-600 hover:bg-red-50 transition-colors duration-200
-            ${isCollapsed ? 'justify-center' : ''}
-          `}
-          title={isCollapsed ? 'Logout' : undefined}
-        >
+        <button onClick={logout} className={`flex items-center space-x-3 w-full px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors duration-200 ${isCollapsed ? 'justify-center' : ''}`} title={isCollapsed ? 'Logout' : undefined}>
           <LogOut size={20} />
           {!isCollapsed && <span className="font-medium">Logout</span>}
         </button>

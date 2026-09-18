@@ -1,14 +1,4 @@
-import axios from 'axios';
-
-const RECOMMENDATION_API_URL =
-  import.meta.env.VITE_RECOMMENDATION_API_URL || 'http://localhost:8001';
-
-const recommendationApi = axios.create({
-  baseURL: RECOMMENDATION_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import api from './api';
 
 export interface RecommendationRequest {
   requirements?: string;
@@ -48,19 +38,10 @@ export const recommendationAPI = {
   recommend: async (
     request: RecommendationRequest
   ): Promise<RecommendationResponse> => {
-    const response = await recommendationApi.post<RecommendationResponse>(
-      '/recommendations',
+    const response = await api.post<RecommendationResponse>(
+      '/faculty/recommendations',
       request
     );
     return response.data;
-  },
-
-  health: async (): Promise<boolean> => {
-    try {
-      const response = await recommendationApi.get('/recommendations/health');
-      return response.status === 200;
-    } catch {
-      return false;
-    }
   },
 };

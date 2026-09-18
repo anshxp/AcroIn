@@ -49,8 +49,13 @@ interface ProfileForm {
   };
 }
 
-const isDemoStudentAccount = (userId?: string, email?: string) => {
-  return Boolean(userId?.startsWith('demo-') || email?.startsWith('demo.'));
+const isDemoStudentAccount = (userId?: unknown, email?: unknown) => {
+  const normalizedUserId = typeof userId === 'string' ? userId : String(userId ?? '');
+  const normalizedEmail = typeof email === 'string' ? email : String(email ?? '');
+
+  return Boolean(
+    normalizedUserId.startsWith('demo-') || normalizedEmail.startsWith('demo.')
+  );
 };
 
 export const StudentProfile: React.FC = () => {

@@ -1,50 +1,18 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DashboardLayout } from './components/layout';
 import { ProtectedRoute } from './components/auth';
 import { ScrollToTop } from './components/common';
-import {
-  LandingPage,
-  LoginPage,
-  RegisterPage,
-  AdminBootstrapPage,
-  StudentProfile,
-  StudentProjects,
-  StudentInternships,
-  StudentCompetitions,
-  StudentCertificates,
-  StudentSkills,
-  FacultyProfile,
-  VerifyStudents,
-  PostOpportunities,
-  SmartSearch,
-  FacialRecognition,
-  Recommendations,
-  PlacementHub,
-  FacultyAnalytics,
-  StudentProfileView,
-  ManageStudents,
-  ManageFaculty,
-  AdminSettings,
-  AdminAnalytics,
-  DepartmentAuditLogs,
-  HomeFeed,
-  Notifications,
-    ChatList,
-    ChatWindow,
-} from './pages';
+import { LandingPage, LoginPage, RegisterPage, AdminBootstrapPage, StudentProfile, StudentPublicProfile, StudentProjects, StudentInternships, StudentCompetitions, StudentCertificates, StudentSkills, FacultyProfile, FacultyPublicProfile, VerifyStudents, PostOpportunities, SmartSearch, FacialRecognition, Recommendations, FacultyAnalytics, StudentProfileView, ManageStudents, ManageFaculty, AdminSettings, AdminAnalytics, DepartmentAuditLogs, HomeFeed, Notifications, ChatWorkspace } from './pages';
+import DepartmentAdminManagement from './pages/admin/DepartmentAdminManagement';
 import './App.css';
 
-// Home redirect component
-const HomeRedirect = () => {
-  const { isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated) {
-    return <LandingPage />;
-  }
-  
-  // All logged in users go to Home Feed
-  return <Navigate to="/home" replace />;
+const HomeRedirect = () => { const { isAuthenticated } = useAuth(); return isAuthenticated ? <Navigate to="/home" replace /> : <LandingPage />; };
+
+const AdminOnly = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  return user?.userType === 'admin' ? <>{children}</> : <Navigate to="/home" replace />;
 };
 
 function App() {
@@ -53,47 +21,24 @@ function App() {
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<HomeRedirect />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/__internal__/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
           <Route path="/internal/admin-bootstrap-setup-9x7" element={<AdminBootstrapPage />} />
 
-          {/* Shared Home Feed - accessible by all authenticated users */}
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/home" element={<HomeFeed />} />
             <Route path="/notifications" element={<Notifications />} />
+            <Route path="/chat" element={<ChatWorkspace />} />
+            <Route path="/chat/:chatId" element={<ChatWorkspace />} />
+            <Route path="/faculty/profile/:id" element={<FacultyPublicProfile />} />
           </Route>
 
-            {/* Chat Routes - accessible by all authenticated users */}
-            <Route
-              element={
-                <ProtectedRoute allowedUserTypes={['student', 'faculty', 'admin']}>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/chat" element={<ChatList />} />
-              <Route path="/chat/:chatId" element={<ChatWindow />} />
-            </Route>
-
-          {/* Student Routes */}
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['student']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['student']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/student/search" element={<SmartSearch />} />
             <Route path="/student/profile" element={<StudentProfile />} />
+            <Route path="/student/profile/:id" element={<StudentPublicProfile />} />
             <Route path="/student/skills" element={<StudentSkills />} />
             <Route path="/student/projects" element={<StudentProjects />} />
             <Route path="/student/internships" element={<StudentInternships />} />
@@ -101,55 +46,29 @@ function App() {
             <Route path="/student/certificates" element={<StudentCertificates />} />
           </Route>
 
-          {/* Faculty Routes */}
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['faculty']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['faculty']}><DashboardLayout /></ProtectedRoute>}>
+            <Route path="/faculty/search" element={<SmartSearch />} />
             <Route path="/faculty/profile" element={<FacultyProfile />} />
             <Route path="/faculty/verification" element={<FacialRecognition />} />
             <Route path="/faculty/recommendations" element={<Recommendations />} />
-            <Route path="/faculty/placement" element={<PlacementHub />} />
             <Route path="/faculty/analytics" element={<FacultyAnalytics />} />
             <Route path="/faculty/verify" element={<VerifyStudents />} />
             <Route path="/faculty/opportunities" element={<PostOpportunities />} />
             <Route path="/faculty/student/:id" element={<StudentProfileView />} />
           </Route>
 
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['faculty', 'admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/faculty/search" element={<SmartSearch />} />
-          </Route>
-
-          {/* Admin Routes */}
-          <Route
-            element={
-              <ProtectedRoute allowedUserTypes={['admin', 'faculty']} allowedRoles={['dept_admin', 'super_admin']}>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
+          <Route element={<ProtectedRoute allowedUserTypes={['admin', 'faculty']}><DashboardLayout /></ProtectedRoute>}>
             <Route path="/admin/students" element={<ManageStudents />} />
             <Route path="/admin/faculty" element={<ManageFaculty />} />
+            <Route path="/admin/department-admins" element={<AdminOnly><DepartmentAdminManagement /></AdminOnly>} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/department/audit-logs" element={<DepartmentAuditLogs />} />
+            <Route path="/admin/settings" element={<AdminOnly><AdminSettings /></AdminOnly>} />
           </Route>
-
-          {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
-
 export default App;

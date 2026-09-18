@@ -17,7 +17,7 @@ const facultySchema = new mongoose.Schema({
   skills: [String],
   techstacks: [String],
   phone: String,
-  role: [{ type: String, enum: ['faculty', 'dept_admin', 'super_admin'] }],
+  role: [{ type: String, enum: ['faculty', 'dept_admin'] }],
   password: { type: String, required: true },
 }, { timestamps: true });
 

@@ -1,14 +1,17 @@
 import { MessageSquare, Plus, Search, X, Trash2 } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { chatAPI, facultyAPI } from '../../services/api';
 import type { Chat, Faculty } from '../../types';
 import './chat.css';
 
+type Participant = string | { _id: string; name?: string; email?: string; userType?: string; avatar?: string; profileImage?: string };
+
 export const ChatList: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [chats, setChats] = useState<Chat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState('');
@@ -16,50 +19,48 @@ export const ChatList: React.FC = () => {
   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingFaculty, setIsLoadingFaculty] = useState(false);
+  const authUserId = user?.authUserId || user?.id || '';
 
-  const loadChats = async () => {
-    if (!user?.id) return;
+  const loadChats = useCallback(async (showLoading = false) => {
+    if (!authUserId) { setChats([]); setIsLoading(false); return; }
     try {
-      setIsLoading(true);
+      if (showLoading) setIsLoading(true);
+      const nextChats = await chatAPI.getChats(authUserId);
+      setChats((current) => JSON.stringify(current) === JSON.stringify(nextChats) ? current : nextChats);
       setApiError('');
-      const userChats = await chatAPI.getChats(user.id);
-      setChats(userChats);
-    } catch {
-      setApiError('Failed to load chats');
-      setChats([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Failed to load chats');
+      if (showLoading) setChats([]);
+    } finally { if (showLoading) setIsLoading(false); }
+  }, [authUserId]);
 
-  const loadFacultyList = async () => {
+  const loadFacultyList = useCallback(async () => {
     if (!showNewChatModal) return;
     try {
       setIsLoadingFaculty(true);
       const response = await facultyAPI.getAllFaculty();
       setFacultyList(Array.isArray(response) ? response : []);
-    } catch {
-      setFacultyList([]);
-    } finally {
-      setIsLoadingFaculty(false);
-    }
-  };
-
-  useEffect(() => {
-    loadChats();
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadFacultyList();
+    } catch { setFacultyList([]); }
+    finally { setIsLoadingFaculty(false); }
   }, [showNewChatModal]);
+
+  useEffect(() => {
+    void loadChats(true);
+    const interval = window.setInterval(() => void loadChats(false), 5000);
+    return () => window.clearInterval(interval);
+  }, [loadChats]);
+
+  useEffect(() => { void loadFacultyList(); }, [loadFacultyList]);
 
   const handleStartChat = async (facultyId: string) => {
     try {
       const chat = await chatAPI.createChat(facultyId);
       setShowNewChatModal(false);
+      setSearchQuery('');
+      await loadChats(false);
       navigate(`/chat/${chat._id}`);
-    } catch (error) {
-      setApiError('Failed to create chat');
+    } catch (error: any) {
+      setApiError(error?.response?.data?.message || 'Failed to create chat');
     }
   };
 
@@ -67,166 +68,39 @@ export const ChatList: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this chat?')) return;
     try {
       await chatAPI.deleteChat(chatId);
-      setChats(chats.filter(c => c._id !== chatId));
-    } catch {
-      setApiError('Failed to delete chat');
-    }
+      setChats((current) => current.filter((chat) => chat._id !== chatId));
+    } catch (error: any) { setApiError(error?.response?.data?.message || 'Failed to delete chat'); }
   };
 
-  const filteredChats = chats.filter(chat => {
-    const otherParticipantId = chat.participants.find(p => p !== user?.id);
-    const name = otherParticipantId || '';
-    return name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const filteredFaculty = facultyList.filter(faculty => {
-    const name = `${faculty.firstname} ${faculty.lastName}`;
-    return name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
-
-  const getOtherParticipantName = (chat: Chat) => {
-    const otherParticipantId = chat.participants.find(p => p !== user?.id);
-    return otherParticipantId || 'Unknown';
+  const participantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const participantName = (participant: Participant) => typeof participant === 'string' ? participant : (participant?.name || participant?.email || 'Unknown');
+  const getOtherParticipant = (chat: Chat) => ((chat.participants || []) as Participant[]).find((participant) => participantId(participant) !== authUserId) || 'Unknown';
+  const getInitials = (participant: Participant) => {
+    const name = participantName(participant).trim();
+    const parts = name.split(/\s+/).filter(Boolean);
+    return (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : name.slice(0, 2)).toUpperCase();
   };
-
+  const getAvatar = (participant: Participant) => typeof participant === 'string' ? '' : participant?.avatar || participant?.profileImage || '';
+  const filteredChats = chats.filter((chat) => participantName(getOtherParticipant(chat)).toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredFaculty = facultyList.filter((faculty) => `${faculty.firstname} ${faculty.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()));
   const getLastMessage = (chat: Chat) => {
-    if (chat.messages.length === 0) return 'No messages yet';
-    const lastMsg = chat.messages[chat.messages.length - 1];
-    return lastMsg.content.length > 50 ? lastMsg.content.substring(0, 50) + '...' : lastMsg.content;
+    if (!chat.messages?.length) return 'No messages yet';
+    const content = chat.messages[chat.messages.length - 1].content || '';
+    return content.length > 50 ? `${content.substring(0, 50)}...` : content;
+  };
+  const getLastMessageTime = (chat: Chat) => {
+    const last = chat.messages?.[chat.messages.length - 1];
+    if (!last?.createdAt) return '';
+    return new Date(last.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   };
 
   return (
     <div className="chat-list-container">
-      <div className="chat-list-header">
-        <div className="chat-list-title">
-          <MessageSquare size={24} />
-          <h1>Messages</h1>
-        </div>
-        <button
-          onClick={() => setShowNewChatModal(true)}
-          className="new-chat-btn"
-          title="Start a new chat"
-        >
-          <Plus size={20} />
-        </button>
-      </div>
-
-      {apiError && (
-        <div className="chat-error">
-          {apiError}
-          <button onClick={() => setApiError('')}>
-            <X size={18} />
-          </button>
-        </div>
-      )}
-
-      <div className="chat-search-bar">
-        <Search size={18} />
-        <input
-          type="text"
-          placeholder="Search conversations..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-
-      {isLoading ? (
-        <div className="chat-loading">
-          <p>Loading chats...</p>
-        </div>
-      ) : filteredChats.length === 0 ? (
-        <div className="chat-empty">
-          <MessageSquare size={48} />
-          <h2>No conversations yet</h2>
-          <p>Start a conversation with a faculty member to get help with your queries</p>
-          <button
-            onClick={() => setShowNewChatModal(true)}
-            className="start-chat-btn"
-          >
-            Start a Chat
-          </button>
-        </div>
-      ) : (
-        <div className="chat-list">
-          {filteredChats.map(chat => (
-            <div
-              key={chat._id}
-              className="chat-item"
-              onClick={() => navigate(`/chat/${chat._id}`)}
-            >
-              <div className="chat-item-content">
-                <h3 className="chat-item-name">
-                  {getOtherParticipantName(chat)}
-                </h3>
-                <p className="chat-item-preview">
-                  {getLastMessage(chat)}
-                </p>
-              </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteChat(chat._id);
-                }}
-                className="chat-item-delete"
-                title="Delete chat"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* New Chat Modal */}
-      {showNewChatModal && (
-        <div className="chat-modal-overlay" onClick={() => setShowNewChatModal(false)}>
-          <div className="chat-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="chat-modal-header">
-              <h2>Start a Conversation</h2>
-              <button
-                onClick={() => setShowNewChatModal(false)}
-                className="modal-close-btn"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="chat-modal-search">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Search faculty members..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {isLoadingFaculty ? (
-              <div className="chat-modal-loading">Loading faculty...</div>
-            ) : filteredFaculty.length === 0 ? (
-              <div className="chat-modal-empty">No faculty members found</div>
-            ) : (
-              <div className="faculty-list">
-                {filteredFaculty.map(faculty => (
-                  <div
-                    key={faculty._id}
-                    className="faculty-item"
-                    onClick={() => handleStartChat(faculty._id)}
-                  >
-                    <div className="faculty-avatar">
-                      {faculty.firstname[0].toUpperCase()}
-                    </div>
-                    <div className="faculty-info">
-                      <h4>{faculty.firstname} {faculty.lastName}</h4>
-                      <p>{faculty.designation} - {faculty.department}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="chat-list-header"><div className="chat-list-title"><MessageSquare size={0} aria-hidden="true" /><h1>Messages</h1></div><button type="button" onClick={() => setShowNewChatModal(true)} className="new-chat-btn" title="Start a new chat" aria-label="Start a new chat"><Plus size={20} /></button></div>
+      {apiError && <div className="chat-error">{apiError}<button type="button" onClick={() => setApiError('')} aria-label="Dismiss error"><X size={18} /></button></div>}
+      <div className="chat-search-bar"><Search size={18} /><input type="text" placeholder="Search conversations..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+      {isLoading ? <div className="chat-loading"><p>Loading chats...</p></div> : filteredChats.length === 0 ? <div className="chat-empty"><MessageSquare size={48} /><h2>No conversations yet</h2><p>Start a conversation with a faculty member to get help with your queries</p><button type="button" onClick={() => setShowNewChatModal(true)} className="start-chat-btn">Start a Chat</button></div> : <div className="chat-list">{filteredChats.map((chat) => { const other = getOtherParticipant(chat); const avatar = getAvatar(other); const active = location.pathname === `/chat/${chat._id}`; return <div key={chat._id} className={`chat-item ${active ? 'chat-item-active' : ''}`} onClick={() => navigate(`/chat/${chat._id}`)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter') navigate(`/chat/${chat._id}`); }}><div className="chat-item-avatar">{avatar ? <img src={avatar} alt="" /> : getInitials(other)}<span className="chat-item-online-dot" /></div><div className="chat-item-content"><h3 className="chat-item-name">{participantName(other)}</h3><p className="chat-item-preview">{getLastMessage(chat)}</p></div><div className="chat-item-meta"><span>{getLastMessageTime(chat)}</span><button type="button" onClick={(event) => { event.stopPropagation(); void handleDeleteChat(chat._id); }} className="chat-item-delete" title="Delete chat" aria-label="Delete chat"><Trash2 size={14} /></button></div></div>; })}</div>}
+      {showNewChatModal && <div className="chat-modal-overlay" onClick={() => setShowNewChatModal(false)}><div className="chat-modal" onClick={(event) => event.stopPropagation()}><div className="chat-modal-header"><h2>Start a Conversation</h2><button type="button" onClick={() => setShowNewChatModal(false)} className="modal-close-btn" aria-label="Close"><X size={20} /></button></div><div className="chat-modal-search"><Search size={18} /><input type="text" placeholder="Search faculty members..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>{isLoadingFaculty ? <div className="chat-modal-loading">Loading faculty...</div> : filteredFaculty.length === 0 ? <div className="chat-modal-empty">No faculty members found</div> : <div className="faculty-list">{filteredFaculty.map((faculty) => <button type="button" key={faculty._id} className="faculty-item" onClick={() => void handleStartChat(faculty._id)}><div className="faculty-avatar">{faculty.firstname?.[0]?.toUpperCase() || '?'}</div><div className="faculty-info"><h4>{faculty.firstname} {faculty.lastName}</h4><p>{faculty.designation} - {faculty.department}</p></div></button>)}</div>}</div></div>}
     </div>
   );
 };
