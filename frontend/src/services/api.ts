@@ -30,23 +30,48 @@ const api = axios.create({
 });
 
 const normalizeId = (value: unknown): string => {
-  if (typeof value === 'string') return value;
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  if (value && typeof value === 'object') {
-    const candidate = value as Record<string, unknown>;
-    if (candidate._id !== undefined) return normalizeId(candidate._id);
-    if (candidate.id !== undefined) return normalizeId(candidate.id);
+
+  if (typeof value === 'object') {
+    const candidate = value as Record<string, any>;
+
+    // MongoDB Extended JSON / nested document shapes.
     if (candidate.$oid !== undefined) return normalizeId(candidate.$oid);
-    const rendered = String(value);
-    if (rendered !== '[object Object]') return rendered;
+    if (candidate._id !== undefined && candidate._id !== value) return normalizeId(candidate._id);
+    if (candidate.id !== undefined && candidate.id !== value) return normalizeId(candidate.id);
+
+    // Native BSON/Mongoose ObjectId-like values.
+    if (typeof candidate.toHexString === 'function') {
+      try { return String(candidate.toHexString()).trim(); } catch {}
+    }
+    if (typeof candidate.toString === 'function') {
+      try {
+        const rendered = String(candidate.toString()).trim();
+        if (rendered && rendered !== '[object Object]') {
+          const match = rendered.match(/^ObjectId\\(['"]?([a-f0-9]{24})['"]?\\)$/i);
+          return match ? match[1] : rendered;
+        }
+      } catch {}
+    }
   }
+
   return '';
+};
+
+const requirePostId = (id: unknown): string => {
+  const normalized = normalizeId(id);
+  if (!normalized || normalized === '[object Object]') {
+    throw new Error('Post ID is missing. Refresh the feed and try again.');
+  }
+  return normalized;
 };
 
 const normalizePost = (post: any): any => {
   if (!post || typeof post !== 'object') return post;
   const normalized = { ...post };
-  normalized._id = normalizeId(post._id);
+  normalized._id = normalizeId(post._id ?? post.id ?? post.postId);
   if (Array.isArray(post.likes)) normalized.likes = post.likes.map((id: any) => normalizeId(id)).filter(Boolean);
   if (Array.isArray(post.comments)) {
     normalized.comments = post.comments.map((comment: any) => ({
@@ -512,7 +537,7 @@ export const postAPI = {
   },
 
   getById: async (id: string): Promise<Post> => {
-    const response = await api.get(`/posts/${id}`);
+    const response = await api.get(`/posts/${encodeURIComponent(requirePostId(id))}`);
     return response.data;
   },
 
@@ -542,7 +567,7 @@ export const postAPI = {
   },
 
   update: async (id: string, data: Partial<CreatePostData>): Promise<Post> => {
-    const response = await api.put(`/posts/${encodeURIComponent(normalizeId(id))}`, data);
+    const response = await api.put(`/posts/${encodeURIComponent(requirePostId(id))}`, data);
     return normalizePost(response.data) as Post;
   },
 
@@ -551,22 +576,22 @@ export const postAPI = {
   },
 
   like: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/like`);
+    const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/like`);
     return unwrapData<Post>(response.data);
   },
 
   unlike: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/unlike`);
+    const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/unlike`);
     return unwrapData<Post>(response.data);
   },
 
   addComment: async (id: string, content: string): Promise<Post> => {
-    const response = await api.post(`/posts/${encodeURIComponent(normalizeId(id))}/comments`, { content });
+    const response = await api.post(`/posts/${encodeURIComponent(requirePostId(id))}/comments`, { content });
     return unwrapData<Post>(response.data);
   },
 
   deleteComment: async (postId: string, commentId: string): Promise<Post> => {
-    const response = await api.delete(`/posts/${encodeURIComponent(normalizeId(postId))}/comments/${encodeURIComponent(normalizeId(commentId))}`);
+    const response = await api.delete(`/posts/${encodeURIComponent(requirePostId(postId))}/comments/${encodeURIComponent(requirePostId(commentId))}`);
     return unwrapData<Post>(response.data);
   },
 };
