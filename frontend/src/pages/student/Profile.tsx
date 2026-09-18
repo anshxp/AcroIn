@@ -97,20 +97,20 @@ export const StudentProfile: React.FC = () => {
   const faceStreamRef = React.useRef<MediaStream | null>(null);
   
   const [profile, setProfile] = useState<ProfileForm>({
-    name: user?.name || 'Demo Student',
-    roll: '21CS001',
-    email: user?.email || 'demo.student@acroin.edu',
-    department: 'Computer Science & Engineering',
-    year: '3rd Year',
-    semester: '6th Semester',
-    phone: '+91 9876543210',
+    name: user?.name || '',
+    roll: '',
+    email: user?.email || '',
+    department: user?.department || '',
+    year: '',
+    semester: '',
+    phone: '',
     birthday: '',
     address: '',
-    linkedin: 'https://linkedin.com/in/johndoe',
-    github: 'https://github.com/johndoe',
-    portfolio: 'https://johndoe.dev',
-    location: 'Indore, MP',
-    bio: 'Passionate software developer with interest in web technologies and machine learning. Currently exploring AI/ML and building full-stack applications.',
+    linkedin: '',
+    github: '',
+    portfolio: '',
+    location: '',
+    bio: '',
     tech_stack: [],
   });
 
