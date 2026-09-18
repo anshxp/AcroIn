@@ -44,7 +44,7 @@ const isDemoStudentAccount = (userId?: unknown, email?: unknown) => {
 export const StudentSkills: React.FC = () => {
   const { user } = useAuth();
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [isLoadingSkills, setIsLoadingSkills] = useState(false);
+  const [isLoadingSkills, setIsLoadingSkills] = useState(true);
   const [isSubmittingSkill, setIsSubmittingSkill] = useState(false);
   const [apiMessage, setApiMessage] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -484,6 +484,12 @@ export const StudentSkills: React.FC = () => {
         </div>
       </div>
 
+      {isLoadingSkills ? (
+        <div className="empty-state">
+          <h3>Loading skills...</h3>
+          <p>Please wait while we load your skills from the database.</p>
+        </div>
+      ) : (
       <div className="dashboard-grid">
         {/*Skills List*/}
         <div className="card">
@@ -679,6 +685,7 @@ export const StudentSkills: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };
