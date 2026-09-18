@@ -29,6 +29,17 @@ const api = axios.create({
   },
 });
 
+const normalizeId = (value: unknown): string => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    if (typeof candidate._id === 'string') return candidate._id;
+    if (typeof candidate.id === 'string') return candidate.id;
+    if (typeof candidate.$oid === 'string') return candidate.$oid;
+  }
+  return '';
+};
+
 const unwrapData = <T>(responseData: any): T => {
   if (responseData && typeof responseData === 'object' && 'data' in responseData) {
     return responseData.data as T;
@@ -429,13 +440,17 @@ export const certificateAPI = {
 
 // Notification APIs
 export const notificationAPI = {
-  getByUser: async (userId: string): Promise<NotificationItem[]> => {
-    const response = await api.get(`/notifications/${userId}`);
+  getByUser: async (userId: string | Record<string, unknown>): Promise<NotificationItem[]> => {
+    const normalizedUserId = normalizeId(userId);
+    if (!normalizedUserId) return [];
+    const response = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
     return response.data;
   },
 
-  markAsRead: async (notificationId: string): Promise<NotificationItem> => {
-    const response = await api.patch(`/notifications/${notificationId}/read`);
+  markAsRead: async (notificationId: string | Record<string, unknown>): Promise<NotificationItem> => {
+    const normalizedNotificationId = normalizeId(notificationId);
+    if (!normalizedNotificationId) throw new Error('Invalid notification id');
+    const response = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return response.data;
   },
 };
