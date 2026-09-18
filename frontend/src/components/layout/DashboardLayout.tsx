@@ -27,8 +27,14 @@ export const DashboardLayout: React.FC = () => {
   useEffect(() => {
     const loadUnreadNotifications = async () => {
       const authUserId = user?.authUserId || user?.id;
-      if (!authUserId) { setUnreadCount(0); return; }
-      try { const notifications = await notificationAPI.getByUser(authUserId); setUnreadCount(notifications.filter((notification) => !notification.read).length); }
+      const normalizedAuthUserId =
+        typeof authUserId === 'string'
+          ? authUserId.trim()
+          : authUserId && typeof authUserId === 'object'
+            ? String((authUserId as any)._id || (authUserId as any).id || (authUserId as any).$oid || '')
+            : String(authUserId ?? '');
+      if (!normalizedAuthUserId || normalizedAuthUserId === '[object Object]') { setUnreadCount(0); return; }
+      try { const notifications = await notificationAPI.getByUser(normalizedAuthUserId); setUnreadCount(notifications.filter((notification) => !notification.read).length); }
       catch { setUnreadCount(0); }
     };
     loadUnreadNotifications();
