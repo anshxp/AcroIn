@@ -82,8 +82,14 @@ export const Notifications: React.FC = () => {
         {unreadCount > 0 && <button className="create-post-btn" onClick={markAllRead} type="button"><CheckCheck size={18} />Mark all read</button>}
       </div>
       <div className="card" style={{ marginBottom: '24px' }}><div className="card-body"><div className="filters-row">
-        <div className="filter-group"><span className="filter-label"><Filter size={16} /> Status:</span>{(['all', 'unread', 'read'] as const).map((mode) => <button key={mode} className={`filter-chip ${activeFilter === mode ? 'active' : ''}`} onClick={() => setActiveFilter(mode)} type="button">{mode === 'all' ? 'All' : mode === 'unread' ? 'Unread' : 'Read'}</button>)}</div>
-        <div className="filter-group"><span className="filter-label">Type:</span>{(['all', 'alert', 'message', 'profile_view', 'system', 'certificate'] as const).map((type) => <button key={type} className={`filter-chip ${activeType === type ? 'active' : ''}`} onClick={() => setActiveType(type)} type="button">{type === 'all' ? 'All Types' : notificationMeta[type].label}</button>)}</div>
+        <div className="filter-group">
+          <span className="filter-label"><Filter size={16} /> Status:</span>
+          <div className="filter-options">{(['all', 'unread', 'read'] as const).map((mode) => <button key={mode} className={`filter-chip ${activeFilter === mode ? 'active' : ''}`} onClick={() => setActiveFilter(mode)} type="button">{mode === 'all' ? 'All' : mode === 'unread' ? 'Unread' : 'Read'}</button>)}</div>
+        </div>
+        <div className="filter-group">
+          <span className="filter-label">Type:</span>
+          <div className="filter-options">{(['all', 'alert', 'message', 'profile_view', 'system', 'certificate'] as const).map((type) => <button key={type} className={`filter-chip ${activeType === type ? 'active' : ''}`} onClick={() => setActiveType(type)} type="button">{type === 'all' ? 'All Types' : notificationMeta[type].label}</button>)}</div>
+        </div>
       </div></div></div>
       {loading && <p className="page-subtitle">Loading notifications...</p>}
       {!loading && filteredNotifications.length === 0 && <p className="page-subtitle">No notifications matched your filters.</p>}
