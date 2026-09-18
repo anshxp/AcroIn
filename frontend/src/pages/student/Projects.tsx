@@ -175,7 +175,7 @@ export const StudentProjects: React.FC = () => {
       </div>
 
       {isLoadingData ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <h3>Loading projects...</h3>
           <p>Please wait while we load your data.</p>
         </div>
