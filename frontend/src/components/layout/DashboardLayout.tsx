@@ -80,7 +80,7 @@ export const DashboardLayout: React.FC = () => {
     };
 
     loadUnreadNotifications();
-  }, [user?.id]);
+  }, [user?.authUserId, user?.id]);
 
   useEffect(() => {
     const resolveImageUrl = (url?: string | null) => {
