@@ -485,7 +485,7 @@ export const StudentSkills: React.FC = () => {
       </div>
 
       {isLoadingSkills ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <h3>Loading skills...</h3>
           <p>Please wait while we load your skills from the database.</p>
         </div>
