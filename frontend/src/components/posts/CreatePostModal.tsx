@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import axios from 'axios';
 import { X, Image, Send, Loader2, Globe, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { opportunityAPI, postAPI } from '../../services/api';
@@ -13,30 +12,6 @@ interface CreatePostModalProps {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-const createPostWithFiles = async ({
-  content,
-  files,
-  scope,
-}: {
-  content: string;
-  files: File[];
-  scope: 'campus' | 'department';
-}): Promise<Post> => {
-  const formData = new FormData();
-  formData.append('content', content);
-  formData.append('scope', scope);
-  files.forEach((file) => formData.append('files', file));
-
-  const token = localStorage.getItem('token');
-  const response = await axios.post(`${API_BASE_URL}/posts`, formData, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  return response.data?.data || response.data;
-};
 
 export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   isOpen,
@@ -155,7 +130,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         return;
       }
 
-      const newPost = await createPostWithFiles({
+      const newPost = await postAPI.create({
         content: content.trim(),
         files: selectedFiles,
         scope: isFaculty ? postScope : 'campus',
