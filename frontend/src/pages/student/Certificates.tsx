@@ -186,7 +186,7 @@ export const StudentCertificates: React.FC = () => {
 
       {/* Certificates List */}
       {isLoadingData ? (
-        <div className="empty-state">
+        <div className="empty-state" style={{ minHeight: '280px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <h3>Loading certificates...</h3>
           <p>Please wait while we load your data.</p>
         </div>
