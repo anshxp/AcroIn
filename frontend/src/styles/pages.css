@@ -2786,3 +2786,20 @@
   .modal-footer { flex-wrap: wrap; }
   .modal-footer > * { flex: 1; min-width: 120px; }
 }
+
+/* Notification cards keep their content left-aligned on narrow screens. */
+.notifications-page .student-main,
+.notifications-page .student-header,
+.notifications-page .student-meta {
+  text-align: left;
+}
+.notifications-page .student-header { justify-content: flex-start; }
+.notifications-page .student-meta { justify-content: flex-start; }
+.notifications-page .student-actions { justify-content: flex-start; }
+
+@media (max-width: 480px) {
+  .notifications-page .student-main { text-align: left; }
+  .notifications-page .student-header { justify-content: flex-start; }
+  .notifications-page .student-meta { justify-content: flex-start; }
+  .notifications-page .student-actions { justify-content: flex-start; }
+}
