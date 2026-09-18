@@ -245,20 +245,25 @@ export const PostCard: React.FC<PostCardProps> = ({
   };
 
   const handleLike = async () => {
+    if (!postId) {
+      setCommentError('This post has no valid ID. Refresh the feed.');
+      return;
+    }
+
+    const previousLiked = isLiked;
     try {
-      if (isLiked) {
-        const updatedPost = await postAPI.unlike(postId);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev - 1);
-      } else {
-        const updatedPost = await postAPI.like(postId);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev + 1);
-      }
-      setIsLiked(!isLiked);
+      const updatedPost = previousLiked
+        ? await postAPI.unlike(postId)
+        : await postAPI.like(postId);
+
+      const authId = getAuthUserId(user);
+      const updatedLikes = Array.isArray(updatedPost.likes) ? updatedPost.likes : [];
+      setIsLiked(updatedLikes.some((id) => String(id) === authId));
+      setLikesCount(updatedLikes.length);
+      onPostUpdated?.(updatedPost);
     } catch (error) {
-      setIsLiked(!isLiked);
-      setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      console.error('Failed to update like:', error);
+      setIsLiked(previousLiked);
     }
   };
 
