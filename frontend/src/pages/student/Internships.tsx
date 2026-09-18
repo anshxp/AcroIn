@@ -91,7 +91,7 @@ export const StudentInternships: React.FC = () => {
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) {
           setInternships([]);
-          set([]);
+          setIsLoadingData(false);
           return;
         }
 
