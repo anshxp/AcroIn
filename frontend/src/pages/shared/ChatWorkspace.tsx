@@ -14,7 +14,7 @@ export const ChatWorkspace: React.FC = () => {
   const { chatId } = useParams<{ chatId?: string }>();
 
   return (
-    <div className="chat-workspace">
+    <div className={`chat-workspace ${chatId ? 'has-chat' : 'has-list'}`}>
       <aside className="chat-workspace-list">
         <ChatList />
       </aside>
