@@ -77,6 +77,30 @@ const serializePost = (post) => {
   return plain;
 };
 
+const serializePost = (post) => {
+  if (!post) return null;
+  const value = typeof post.toObject === 'function' ? post.toObject() : { ...post };
+  value._id = value._id?.toString?.() || value._id || '';
+  value.author = value.author ? {
+    ...value.author,
+    _id: value.author._id?.toString?.() || value.author._id || '',
+  } : value.author;
+  value.likes = Array.isArray(value.likes)
+    ? value.likes.map((id) => id?.toString?.() || String(id)).filter(Boolean)
+    : [];
+  value.comments = Array.isArray(value.comments)
+    ? value.comments.map((comment) => ({
+        ...comment,
+        _id: comment._id?.toString?.() || comment._id || '',
+        author: comment.author ? {
+          ...comment.author,
+          _id: comment.author._id?.toString?.() || comment.author._id || '',
+        } : comment.author,
+      }))
+    : [];
+  return value;
+};
+
 const toAbsoluteUploadUrl = (req, filePath) => {
   if (!filePath) return '';
   if (filePath.startsWith('http://') || filePath.startsWith('https://')) return filePath;
@@ -164,22 +188,32 @@ router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => 
 
 router.post('/:id/like', verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $addToSet: { likes: req.user.id } },
+      { new: true }
+    ).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
-    if (!post.likes.some((id) => id.toString() === req.user.id)) post.likes.push(req.user.id);
-    await post.save();
     res.json(serializePost(post));
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) {
+    console.error('[posts] like failed:', error instanceof Error ? error.stack : error);
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to like post' });
+  }
 });
 
 router.post('/:id/unlike', verifyToken, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id).populate('linkedOpportunity');
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $pull: { likes: req.user.id } },
+      { new: true }
+    ).populate('linkedOpportunity');
     if (!post) return res.status(404).json({ message: 'Post not found' });
-    post.likes = post.likes.filter((id) => id.toString() !== req.user.id);
-    await post.save();
     res.json(serializePost(post));
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) {
+    console.error('[posts] unlike failed:', error instanceof Error ? error.stack : error);
+    res.status(400).json({ message: error instanceof Error ? error.message : 'Failed to unlike post' });
+  }
 });
 
 const addCommentHandler = async (req, res) => {
