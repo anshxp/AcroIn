@@ -190,7 +190,7 @@ export const StudentCertificates: React.FC = () => {
           <h3>Loading certificates...</h3>
           <p>Please wait while we load your data.</p>
         </div>
-      ) : {filteredCertificates.length > 0 ? (
+      ) : filteredCertificates.length > 0 ? (
         <div className="cards-grid">
           {filteredCertificates.map((certificate) => (
             <div key={certificate._id} className="certificate-card">
