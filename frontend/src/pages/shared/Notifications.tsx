@@ -76,7 +76,7 @@ export const Notifications: React.FC = () => {
   };
 
   return (
-    <div>
+    <div className="notifications-page">
       <div className="page-header">
         <div className="page-title-section"><h1>Notifications</h1><p>{unreadCount} unread notification{unreadCount === 1 ? '' : 's'}</p></div>
         {unreadCount > 0 && <button className="create-post-btn" onClick={markAllRead} type="button"><CheckCheck size={18} />Mark all read</button>}
