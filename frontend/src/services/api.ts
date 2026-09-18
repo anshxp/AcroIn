@@ -31,11 +31,14 @@ const api = axios.create({
 
 const normalizeId = (value: unknown): string => {
   if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   if (value && typeof value === 'object') {
     const candidate = value as Record<string, unknown>;
-    if (typeof candidate._id === 'string') return candidate._id;
-    if (typeof candidate.id === 'string') return candidate.id;
-    if (typeof candidate.$oid === 'string') return candidate.$oid;
+    if (candidate._id !== undefined) return normalizeId(candidate._id);
+    if (candidate.id !== undefined) return normalizeId(candidate.id);
+    if (candidate.$oid !== undefined) return normalizeId(candidate.$oid);
+    const rendered = String(value);
+    if (rendered !== '[object Object]') return rendered;
   }
   return '';
 };
