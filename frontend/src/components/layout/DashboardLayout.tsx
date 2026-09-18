@@ -26,12 +26,13 @@ export const DashboardLayout: React.FC = () => {
 
   useEffect(() => {
     const loadUnreadNotifications = async () => {
-      if (!user?.id) { setUnreadCount(0); return; }
-      try { const notifications = await notificationAPI.getByUser(user.id); setUnreadCount(notifications.filter((notification) => !notification.read).length); }
+      const authUserId = user?.authUserId || user?.id;
+      if (!authUserId) { setUnreadCount(0); return; }
+      try { const notifications = await notificationAPI.getByUser(authUserId); setUnreadCount(notifications.filter((notification) => !notification.read).length); }
       catch { setUnreadCount(0); }
     };
     loadUnreadNotifications();
-  }, [user?.id]);
+  }, [user?.authUserId, user?.id]);
 
   useEffect(() => {
     const resolveImageUrl = (url?: string | null) => {
