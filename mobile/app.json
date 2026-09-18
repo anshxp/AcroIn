@@ -5,9 +5,7 @@
     "version": "1.0.0",
     "scheme": "acroin",
     "orientation": "portrait",
-    "entryPoint": "./App.tsx",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -16,7 +14,6 @@
       }
     },
     "android": {
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.lavish_jangid.acroin",
       "permissions": [
@@ -35,7 +32,12 @@
           "photosPermission": "Allow AcroIn to access your photos for profile uploads.",
           "cameraPermission": "Allow AcroIn to use the camera for profile photos."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-splash-screen",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "extra": {
       "apiUrl": null
