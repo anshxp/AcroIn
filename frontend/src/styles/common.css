@@ -313,3 +313,33 @@
     display: none !important;
   }
 }
+
+
+/* ============ GLOBAL TABLET + MOBILE SAFETY ============ */
+@media (max-width: 1024px) {
+  html, body, #root { max-width: 100%; overflow-x: hidden; }
+  img, video, canvas { max-width: 100%; height: auto; }
+  button, input, select, textarea { max-width: 100%; box-sizing: border-box; }
+  .page-container, .page-content, .section__container { width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 768px) {
+  .page-container, .page-content { padding-left: 12px; padding-right: 12px; }
+  .page-header, .card-header, .data-table-header { flex-wrap: wrap; }
+  .page-header > *, .page-actions > * { max-width: 100%; }
+  .tabs, .filter-tabs, .filters-row { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .tabs > *, .filter-tabs > *, .filter-chip { flex-shrink: 0; }
+  .modal-overlay { padding: 12px; box-sizing: border-box; }
+  .modal { width: min(100%, 520px); max-height: calc(100vh - 24px); overflow-y: auto; }
+  .data-table-card { max-width: 100%; overflow-x: auto; }
+}
+
+@media (max-width: 480px) {
+  .page-container, .page-content { padding-left: 10px; padding-right: 10px; }
+  .page-actions { width: 100%; flex-wrap: wrap; }
+  .page-actions > button, .page-actions > a { flex: 1 1 100%; justify-content: center; }
+  .card, .card-body { padding: 16px; }
+  .card-header { padding: 16px; }
+  .form-grid { gap: 14px; }
+  .btn-primary, .btn-secondary, .btn-outline { width: 100%; justify-content: center; }
+}
