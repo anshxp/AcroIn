@@ -212,7 +212,7 @@ export const StudentSkills: React.FC = () => {
     }));
 
   return (
-    <div>
+    <div className="student-skills-page">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-section">
