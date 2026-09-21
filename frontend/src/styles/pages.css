@@ -3750,3 +3750,92 @@
     font-size: 11px !important;
   }
 }
+
+
+/* Final Skills mobile header spacing: keep Add Skill in normal flow */
+@media (max-width: 768px) {
+  .student-skills-page .page-header {
+    position: relative;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 10px;
+    row-gap: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 18px !important;
+    padding: 0 !important;
+    overflow: visible;
+  }
+
+  .student-skills-page .page-title-section {
+    position: static;
+    min-width: 0;
+    max-width: none !important;
+    padding-top: 2px;
+  }
+
+  .student-skills-page .page-title-section p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .student-skills-page .page-actions {
+    position: static !important;
+    grid-column: 2;
+    grid-row: 1;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: none !important;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    position: static !important;
+    display: inline-flex;
+    width: auto !important;
+    max-width: 100%;
+    min-width: 0;
+    height: 36px;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 0 10px;
+    box-sizing: border-box;
+    white-space: nowrap;
+  }
+
+  .student-skills-page .stats-grid {
+    position: relative;
+    clear: both;
+    width: 100%;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-skills-page .page-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    margin-bottom: 18px !important;
+  }
+
+  .student-skills-page .page-title-section {
+    padding-top: 1px;
+  }
+
+  .student-skills-page .page-title-section p {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    height: 35px;
+    min-height: 35px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+}
