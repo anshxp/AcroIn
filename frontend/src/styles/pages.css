@@ -3690,3 +3690,63 @@
     padding: 13px !important;
   }
 }
+
+
+/* Final mobile Skills header overflow correction */
+@media (max-width: 768px) {
+  .student-skills-page .page-header {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0 10px 0 0;
+    margin: 0 0 16px;
+    overflow: visible;
+  }
+
+  .student-skills-page .page-title-section {
+    max-width: calc(100% - 92px);
+    min-width: 0;
+  }
+
+  .student-skills-page .page-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: auto !important;
+    max-width: 86px;
+    margin: 0 !important;
+    flex: 0 0 auto;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    width: auto !important;
+    max-width: 86px;
+    min-width: 0;
+    box-sizing: border-box;
+    justify-content: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-skills-page .page-header {
+    padding-right: 8px;
+  }
+
+  .student-skills-page .page-title-section {
+    max-width: calc(100% - 84px);
+  }
+
+  .student-skills-page .page-actions {
+    max-width: 80px;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    max-width: 80px;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+    font-size: 11px !important;
+  }
+}
