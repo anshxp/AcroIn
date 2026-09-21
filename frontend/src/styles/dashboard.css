@@ -1785,3 +1785,44 @@
     padding: 12px;
   }
 }
+
+
+/* Mobile header: menu + notifications/profile on first row, search below. */
+@media (max-width: 768px) {
+  .top-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .top-header .mobile-menu-btn {
+    order: 0;
+  }
+
+  .top-header .header-actions {
+    order: 1;
+    width: auto;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+  }
+
+  .top-header .search-bar {
+    order: 2;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+
+  .top-header .search-bar input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-header .header-actions {
+    width: auto;
+    flex: 0 0 auto;
+  }
+}
