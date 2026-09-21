@@ -3547,3 +3547,146 @@
     height: 19px;
   }
 }
+
+
+/* Student Skills - compact mobile alignment */
+@media (max-width: 768px) {
+  .student-skills-page {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .student-skills-page .stats-grid {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .student-skills-page .stats-grid .stat-card {
+    width: 100%;
+    min-width: 0;
+    height: 108px;
+    min-height: 108px;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .student-skills-page .stats-grid .stat-content {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .student-skills-page .stats-grid .stat-content h3 {
+    overflow-wrap: anywhere;
+  }
+
+  .student-skills-page .dashboard-grid {
+    display: block;
+    width: 100%;
+  }
+
+  .student-skills-page .dashboard-grid > .card {
+    width: 100%;
+    min-width: 0;
+    margin: 0 0 16px;
+    border-radius: 14px;
+  }
+
+  .student-skills-page .dashboard-grid > .card .card-header {
+    padding: 18px 16px 14px;
+  }
+
+  .student-skills-page .dashboard-grid > .card .card-body {
+    padding: 14px 16px 18px;
+    min-width: 0;
+  }
+
+  .student-skills-page .skill-item {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 14px !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px !important;
+    overflow: hidden;
+  }
+
+  .student-skills-page .skill-main {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .student-skills-page .skill-title-row {
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 6px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .student-skills-page .skill-title-row h4 {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .student-skills-page .skill-progress-row {
+    width: 100%;
+    min-width: 0;
+    gap: 8px !important;
+  }
+
+  .student-skills-page .skill-progress {
+    min-width: 0;
+  }
+
+  .student-skills-page .skill-progress-row > span {
+    min-width: 38px !important;
+    flex: 0 0 38px;
+    text-align: right;
+  }
+
+  .student-skills-page .skill-endorsements {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    text-align: left !important;
+  }
+
+  .student-skills-page .skill-endorsements > div:last-child {
+    font-size: 11px !important;
+  }
+
+  .student-skills-page .skill-edit-btn {
+    width: 100%;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 7px 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .student-skills-page .stats-grid {
+    gap: 10px;
+  }
+
+  .student-skills-page .stats-grid .stat-card {
+    height: 104px;
+    min-height: 104px;
+    padding: 11px;
+  }
+
+  .student-skills-page .dashboard-grid > .card .card-header {
+    padding: 17px 14px 13px;
+  }
+
+  .student-skills-page .dashboard-grid > .card .card-body {
+    padding: 12px 14px 16px;
+  }
+
+  .student-skills-page .skill-item {
+    padding: 13px !important;
+  }
+}
