@@ -504,7 +504,7 @@ export const StudentSkills: React.FC = () => {
           <div className="card-body">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {skills.map((skill) => (
-                <div key={skill.id} style={{ 
+                <div key={skill.id} className="skill-item" style={{ 
                   padding: '16px 20px', 
                   background: '#f8fafc', 
                   borderRadius: '12px',
@@ -512,8 +512,8 @@ export const StudentSkills: React.FC = () => {
                   alignItems: 'center',
                   gap: '16px'
                 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <div className="skill-main" style={{ flex: 1 }}>
+                    <div className="skill-title-row" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       <h4 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>{skill.name}</h4>
                       <span style={{
                         padding: '2px 8px',
@@ -552,8 +552,8 @@ export const StudentSkills: React.FC = () => {
                         {skill.level}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                      <div style={{ flex: 1 }}>
+                    <div className="skill-progress-row" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div className="skill-progress" style={{ flex: 1 }}>
                         <div style={{ 
                           height: '6px', 
                           background: '#e2e8f0', 
@@ -571,13 +571,14 @@ export const StudentSkills: React.FC = () => {
                       <span style={{ fontSize: '13px', color: '#64748b', minWidth: '40px' }}>{skill.progress}%</span>
                     </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div className="skill-endorsements" style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>{skill.endorsements}</div>
                     <div style={{ fontSize: '12px', color: '#64748b' }}>endorsements</div>
                   </div>
                   <button
                     type="button"
                     onClick={() => openSkillModal(skill)}
+                    className="skill-edit-btn"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
