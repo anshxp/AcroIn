@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Camera, Star, Briefcase, TrendingUp, Users, ChevronLeft, Menu, X, Bell, Settings, Home, GraduationCap, FolderOpen, Trophy, Award, FileCheck, LogOut, Plus, MessageSquare, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CreatePostModal } from '../posts';
@@ -20,6 +20,8 @@ export const DashboardLayout: React.FC = () => {
   const [sidebarStats, setSidebarStats] = useState<SidebarStat[]>([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isStudentSkillsPage = location.pathname === '/student/skills';
   const canPost = user?.userType === 'faculty' || user?.userType === 'admin';
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -148,7 +150,7 @@ export const DashboardLayout: React.FC = () => {
       </aside>
       <div className="main-content">
         {mobileSidebarOpen && <button type="button" className="mobile-sidebar-backdrop" aria-label="Close navigation" onClick={() => setMobileSidebarOpen(false)} />}
-        <header className="top-header"><button type="button" className="mobile-menu-btn" aria-label={mobileSidebarOpen ? "Close navigation" : "Open navigation"} onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>{mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}</button><form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search students, skills, projects...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
+        <header className={`top-header ${isStudentSkillsPage ? "student-skills-header" : ""}`}><button type="button" className="mobile-menu-btn" aria-label={mobileSidebarOpen ? "Close navigation" : "Open navigation"} onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}>{mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}</button>{isStudentSkillsPage && <div className="mobile-page-title">My Skills</div>}<form className="search-bar" onSubmit={handleSearchSubmit}><Search size={20} /><input type="text" placeholder={user?.userType === 'student' ? 'Search students, skills, projects...' : 'Search students, skills, projects...'} value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} /></form><div className="header-actions"><button className="header-icon-btn" onClick={() => navigate('/notifications')} type="button" title="Notifications"><Bell size={20} />{unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}</button><div className="user-profile" onClick={() => navigate(user?.userType === 'faculty' ? '/faculty/profile' : '/student/profile')}><div className="user-avatar">{headerAvatarUrl ? <img src={headerAvatarUrl} alt="User profile" className="user-avatar-image" /> : getUserInitials()}</div><div className="user-info"><span className="user-name">{getUserDisplayName()}</span><span className="user-role">{user?.userType === 'faculty' ? 'Faculty' : user?.userType === 'admin' ? 'Admin' : 'Student'}</span></div></div><button className="header-icon-btn logout-btn" onClick={handleLogout} title="Logout" style={{ marginLeft: '8px', color: '#ef4444' }}><LogOut size={20} /></button></div></header>
         <main className="page-content"><Outlet /></main>
         {canPost && <button className="floating-post-btn" onClick={() => setShowCreatePost(true)} title="Create a post"><Plus size={24} /></button>}
       </div>
