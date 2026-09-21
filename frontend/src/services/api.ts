@@ -221,25 +221,32 @@ export const studentAPI = {
     await api.delete(`/students/${id}`);
   },
 
-  getSkills: async (id: string): Promise<StudentSkill[]> => {
-    const response = await api.get(`/students/${id}/skills`);
-    return response.data.skills || [];
+  getSkills: async (id: string | Record<string, unknown>): Promise<StudentSkill[]> => {
+    const normalizedId = normalizeId(id);
+    if (!normalizedId) throw new Error('Invalid student identifier');
+    const response = await api.get(`/students/${encodeURIComponent(normalizedId)}/skills`);
+    return Array.isArray(response.data?.skills) ? response.data.skills : [];
   },
 
   addSkill: async (
-    id: string,
+    id: string | Record<string, unknown>,
     data: Omit<StudentSkill, '_id'>
   ): Promise<{ skill: StudentSkill; skills: StudentSkill[]; message: string }> => {
-    const response = await api.post(`/students/${id}/skills`, data);
+    const normalizedId = normalizeId(id);
+    if (!normalizedId) throw new Error('Invalid student identifier');
+    const response = await api.post(`/students/${encodeURIComponent(normalizedId)}/skills`, data);
     return response.data;
   },
 
   updateSkill: async (
-    id: string,
-    skillId: string,
+    id: string | Record<string, unknown>,
+    skillId: string | Record<string, unknown>,
     data: Omit<StudentSkill, '_id'>
   ): Promise<{ skill: StudentSkill; skills: StudentSkill[]; message: string }> => {
-    const response = await api.put(`/students/${id}/skills/${skillId}`, data);
+    const normalizedId = normalizeId(id);
+    const normalizedSkillId = normalizeId(skillId);
+    if (!normalizedId || !normalizedSkillId) throw new Error('Invalid skill identifier');
+    const response = await api.put(`/students/${encodeURIComponent(normalizedId)}/skills/${encodeURIComponent(normalizedSkillId)}`, data);
     return response.data;
   },
 
