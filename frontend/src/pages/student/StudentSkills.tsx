@@ -115,7 +115,9 @@ export const StudentSkills: React.FC = () => {
 
         setSkills(skillsFromApi.map((skill, index) => toUiSkill(skill, `skill-${index + 1}`)));
       } catch {
-        setApiError('Unable to load skills from server. Showing local data.');
+        // Keep already-rendered skills visible without showing a red inline error.
+        // The page can continue using the last known/local skill state.
+        setApiError(null);
       } finally {
         setIsLoadingSkills(false);
       }
