@@ -1892,3 +1892,189 @@
     padding: 2px;
   }
 }
+
+
+/* Exact mobile My Skills layout */
+@media (max-width: 768px) {
+  .main-content .top-header {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-areas:
+      "menu actions"
+      "search search";
+    align-items: center;
+    gap: 10px 12px;
+    padding: 10px 12px;
+    background: #ffffff;
+  }
+
+  .main-content .top-header .mobile-menu-btn {
+    grid-area: menu;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #dbe4ee;
+    border-radius: 10px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .main-content .top-header .header-actions {
+    grid-area: actions;
+    width: auto;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .main-content .top-header .search-bar {
+    grid-area: search;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    display: block;
+  }
+
+  .main-content .top-header .search-bar input {
+    width: 100%;
+    min-width: 0;
+    height: 43px;
+    box-sizing: border-box;
+    background: #ffffff;
+    border: 1px solid #dbe4ee;
+    border-radius: 12px;
+    padding-left: 44px;
+    font-size: 14px;
+  }
+
+  .student-skills-page .page-header {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 16px;
+  }
+
+  .student-skills-page .page-title-section {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .student-skills-page .page-title-section h1 {
+    margin: 0 0 3px;
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .student-skills-page .page-title-section p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .student-skills-page .page-actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 9px;
+    font-size: 13px;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  .student-skills-page .page-actions .btn-primary svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .student-skills-page .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  .student-skills-page .stats-grid .stat-card {
+    min-width: 0;
+    height: 108px;
+    min-height: 108px;
+    padding: 14px;
+    border-radius: 15px;
+    box-sizing: border-box;
+  }
+
+  .student-skills-page .stats-grid .stat-content {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .student-skills-page .stats-grid .stat-content h3 {
+    margin: 0 0 7px;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .student-skills-page .stats-grid .stat-value {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .student-skills-page .stats-grid .stat-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border-radius: 12px;
+  }
+
+  .student-skills-page .stats-grid .stat-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content .top-header {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 9px 10px;
+    padding: 9px 12px 11px;
+  }
+
+  .student-skills-page .page-header {
+    gap: 8px;
+  }
+
+  .student-skills-page .page-title-section h1 {
+    font-size: 21px;
+  }
+
+  .student-skills-page .page-title-section p {
+    font-size: 12px;
+  }
+
+  .student-skills-page .page-actions .btn-primary {
+    height: 36px;
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  .student-skills-page .stats-grid {
+    gap: 10px;
+  }
+
+  .student-skills-page .stats-grid .stat-card {
+    height: 104px;
+    min-height: 104px;
+    padding: 12px;
+  }
+}
