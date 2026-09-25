@@ -15,7 +15,14 @@ export const HomeFeed: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [filters, setFilters] = useState({ department: '', postType: '' });
+  const [showFilters, setShowFilters] = useState(false);
   const canPost = user?.userType === 'faculty' || user?.userType === 'admin';
+
+  useEffect(() => {
+    const toggleFilters = () => setShowFilters((current) => !current);
+    window.addEventListener('acroin:toggle-home-filters', toggleFilters);
+    return () => window.removeEventListener('acroin:toggle-home-filters', toggleFilters);
+  }, []);
 
   useEffect(() => {
     const loadPosts = async () => {
@@ -72,7 +79,7 @@ export const HomeFeed: React.FC = () => {
         {canPost ? <div className="create-post-card"><div className="create-post-input-row"><div className="create-post-avatar">{getUserInitials()}</div><input type="text" className="create-post-input" placeholder="Share an announcement, opportunity, or update..." onClick={() => setShowCreateModal(true)} readOnly /></div><div className="create-post-actions"><button className="create-post-btn photo" onClick={() => setShowCreateModal(true)}><Image size={20} /><span>Photo</span></button><button className="create-post-btn video" onClick={() => setShowCreateModal(true)}><Video size={20} /><span>Video</span></button><button className="create-post-btn event" onClick={() => setShowCreateModal(true)}><Calendar size={20} /><span>Event</span></button><button className="create-post-btn article" onClick={() => setShowCreateModal(true)}><FileText size={20} /><span>Article</span></button></div></div> : <div className="student-notice"><Info size={20} /><p>This feed shows official announcements from faculty and CDC. Stay updated with placement drives, research opportunities, and important notices.</p></div>}
 
         <div className="feed-divider"><div className="feed-divider-line"></div><span className="feed-divider-text">Recent posts</span><div className="feed-divider-line"></div></div>
-        <div className="feed-filter-panel"><div className="feed-filter-head"><h4>Filters</h4><button type="button" className="feed-filter-clear" onClick={() => setFilters({ department: '', postType: '' })}>Clear</button></div><div className="feed-filter-grid"><div className="feed-filter-field"><span>Department</span><select value={filters.department} onChange={(event) => setFilters((prev) => ({ ...prev, department: event.target.value }))}><option value="">All Departments</option>{departments.map((department) => <option key={department} value={department}>{department}</option>)}</select></div><div className="feed-filter-field"><span>Post Type</span><select value={filters.postType} onChange={(event) => setFilters((prev) => ({ ...prev, postType: event.target.value }))}><option value="">All Types</option>{postTypes.map((postType) => <option key={postType} value={postType}>{postType.split(/[_\s]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}</option>)}</select></div></div></div>
+        <div className={`feed-filter-panel ${showFilters ? 'is-open' : ''}`}><div className="feed-filter-head"><h4>Filters</h4><button type="button" className="feed-filter-clear" onClick={() => setFilters({ department: '', postType: '' })}>Clear</button></div><div className="feed-filter-grid"><div className="feed-filter-field"><span>Department</span><select value={filters.department} onChange={(event) => setFilters((prev) => ({ ...prev, department: event.target.value }))}><option value="">All Departments</option>{departments.map((department) => <option key={department} value={department}>{department}</option>)}</select></div><div className="feed-filter-field"><span>Post Type</span><select value={filters.postType} onChange={(event) => setFilters((prev) => ({ ...prev, postType: event.target.value }))}><option value="">All Types</option>{postTypes.map((postType) => <option key={postType} value={postType}>{postType.split(/[_\s]+/).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')}</option>)}</select></div></div></div>
 
         {filteredPosts.length === 0 && !searchQuery && !hasActiveFilters && <p className="page-subtitle">No posts available from backend.</p>}
         {filteredPosts.length === 0 && (searchQuery || hasActiveFilters) && <p className="page-subtitle">No posts matched your search or filters.</p>}
