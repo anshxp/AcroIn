@@ -44,11 +44,20 @@ router.post('/', verifyToken, async (req, res) => {
     const response = await axios.post(`${serviceUrl}/recommendations`, req.body, { timeout: 15000, headers: serviceApiKey ? { 'X-Recommendation-Api-Key': serviceApiKey } : undefined });
     return res.status(response.status).json(response.data);
   } catch (error) {
+    const requestId = req.requestId || null;
+    console.error(`[recommendations] service request failed (requestId=${requestId || 'unknown'}):`, error);
     try {
       return res.json(await fallbackRecommendations(req.body || {}));
     } catch (fallbackError) {
-      if (axios.isAxiosError(error) && error.response) return res.status(error.response.status).json({ success: false, message: error.response.data?.detail || error.response.data?.message || 'Recommendation service rejected the request' });
-      return res.status(503).json({ success: false, message: fallbackError?.message || 'Recommendation service and fallback are unavailable' });
+      console.error(`[recommendations] MongoDB fallback failed (requestId=${requestId || 'unknown'}):`, fallbackError);
+      const status = axios.isAxiosError(error) && error.response && error.response.status < 500
+        ? error.response.status
+        : 503;
+      return res.status(status).json({
+        success: false,
+        message: status < 500 ? 'Recommendation service rejected the request' : 'Recommendation service and fallback are unavailable',
+        requestId,
+      });
     }
   }
 });
