@@ -95,8 +95,9 @@ if (!__DEV__) {
   if (
     parsedApiUrl.protocol !== 'https:' ||
     localHostnames.includes(parsedApiUrl.hostname) ||
-    /^192\\.168\\./.test(parsedApiUrl.hostname) ||
-    /^10\\./.test(parsedApiUrl.hostname)
+    /^192\.168\./.test(parsedApiUrl.hostname) ||
+    /^10\./.test(parsedApiUrl.hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(parsedApiUrl.hostname)
   ) {
     throw new Error('Release builds require a public HTTPS EXPO_PUBLIC_API_URL; local network URLs are development-only.');
   }
