@@ -105,7 +105,20 @@ router.get('/', verifyToken, async (req, res) => {
       return res.json({ success: true, data: posts, page, limit, total, hasMore: skip + posts.length < total });
     }
     res.json(await query);
-  } catch (error) { res.status(500).json({ message: error.message }); }
+  } catch (error) {
+    // Keep the browser response generic, but log the server-side cause so a
+    // /posts 500 can be diagnosed from the backend terminal instead of guessed.
+    console.error('[posts] GET / failed', {
+      requestId: req.id || req.requestId,
+      userId: req.user?.id,
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    res.status(500).json({
+      message: 'Unable to load posts',
+      requestId: req.id || req.requestId || undefined,
+    });
+  }
 });
 
 router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => {
