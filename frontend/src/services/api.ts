@@ -29,7 +29,7 @@ const api = axios.create({
   },
 });
 
-const normalizeId = (value: unknown): string => {
+export const normalizeId = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'bigint') return String(value);
 
