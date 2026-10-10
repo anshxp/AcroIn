@@ -37,6 +37,19 @@ const canAccessNotification = (req, notification) => {
   return notification.user?.toString() === req.user?.id;
 };
 
+// Compatibility endpoint: return only the authenticated user's notifications.
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const authenticatedUserId = await resolveUserId(req.user?.id);
+    if (!authenticatedUserId) return res.status(401).json({ success: false, message: 'Authenticated user not found' });
+    const notifications = await Notification.find({ user: authenticatedUserId }).sort({ createdAt: -1 });
+    return res.json(notifications);
+  } catch (error) {
+    console.error('[notifications] GET /notifications failed:', error);
+    return res.status(500).json({ success: false, message: 'Unable to load notifications' });
+  }
+});
+
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
     const requestedUserId = await resolveUserId(req.params.userId);
