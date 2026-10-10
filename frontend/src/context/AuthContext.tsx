@@ -86,15 +86,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
-        // Migrate sessions created before authUserId was stored.
-        if (!parsedUser.authUserId) {
-          const authUserId = getAuthUserIdFromToken(token);
-          if (authUserId) {
-            parsedUser.authUserId = authUserId;
-            localStorage.setItem('user', JSON.stringify(parsedUser));
-          }
+
+        // Normalize persisted identifiers too: older sessions may have stored
+        // populated Mongo documents instead of scalar IDs.
+        const profileId = normalizeAuthId(parsedUser.id);
+        const tokenUserId = getAuthUserIdFromToken(token);
+        const authUserId = normalizeAuthId(parsedUser.authUserId) || tokenUserId || profileId;
+
+        // Invalid/stale identity data must not leak into URL paths as
+        // "[object Object]" or trigger string-only operations such as startsWith.
+        if (!profileId || !authUserId) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        } else {
+          const normalizedUser: User = {
+            ...parsedUser,
+            id: profileId,
+            authUserId,
+          };
+          localStorage.setItem('user', JSON.stringify(normalizedUser));
+          setUser(normalizedUser);
         }
-        setUser(parsedUser);
       } catch {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
