@@ -30,12 +30,6 @@ const api = axios.create({
   },
 });
 
-const idPath = (value: unknown, fieldName = 'identifier'): string => {
-  const normalized = normalizeId(value);
-  if (!normalized) throw new Error(`Invalid ${fieldName}`);
-  return encodeURIComponent(normalized);
-};
-
 export const normalizeId = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'bigint') return String(value);
@@ -57,6 +51,12 @@ export const normalizeId = (value: unknown): string => {
   }
 
   return '';
+};
+
+const idPath = (value: unknown, fieldName = 'identifier'): string => {
+  const normalized = normalizeId(value);
+  if (!normalized) throw new Error(`Invalid ${fieldName}`);
+  return encodeURIComponent(normalized);
 };
 
 const unwrapData = <T>(responseData: any): T => {
