@@ -103,8 +103,6 @@ if (!__DEV__) {
   }
 }
 
-const idPath = (value: unknown, fieldName = 'identifier'): string => encodeURIComponent(normalizeIdentifier(value, fieldName));
-
 export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
     const normalized = String(value).trim();
@@ -123,6 +121,8 @@ export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): s
 
   throw new Error(`Invalid ${fieldName}`);
 };
+
+const idPath = (value: unknown, fieldName = 'identifier'): string => encodeURIComponent(normalizeIdentifier(value, fieldName));
 
 const ENABLE_MOCK_FALLBACK =
   __DEV__ && String(process.env.EXPO_PUBLIC_ENABLE_MOCK_FALLBACK || '').toLowerCase() === 'true';
