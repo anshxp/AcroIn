@@ -54,7 +54,7 @@ Example: `demo.faculty.cse.2@acropolis.in` / `AcroIn@2026`
 ## Departmental administrator
 
 - Email: `demo.faculty.cse.1@acropolis.in`
-- Password: `AcroIn@2026`
+- Password: configured locally through `DEMO_SEED_PASSWORD`
 - Department: CSE
 - Database role: `faculty`, `dept_admin`
 
@@ -86,7 +86,7 @@ node scripts/seed-complete-demo.js
 
 The script prints the final counts so you can verify that MongoDB actually received the records.
 
-Optional development password override:
+Set a local demo password before running the seed:
 
 ```powershell
 $env:DEMO_SEED_PASSWORD='YourDevelopmentPassword123!'
