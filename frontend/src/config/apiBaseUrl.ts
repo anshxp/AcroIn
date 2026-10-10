@@ -10,7 +10,16 @@ const isValidApiUrl = (value: string | undefined): value is string => {
   }
 };
 
-if (import.meta.env.PROD && (!isValidApiUrl(configuredApiUrl) || new URL(configuredApiUrl).protocol !== 'https:')) {
+const isValidProductionApiUrl = (() => {
+  if (!isValidApiUrl(configuredApiUrl)) return false;
+  try {
+    return new URL(configuredApiUrl).protocol === 'https:';
+  } catch {
+    return false;
+  }
+})();
+
+if (import.meta.env.PROD && !isValidProductionApiUrl) {
   throw new Error('A valid absolute HTTPS VITE_API_URL must be configured for production builds.');
 }
 
