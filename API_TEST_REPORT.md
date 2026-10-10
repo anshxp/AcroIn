@@ -41,14 +41,7 @@ Live MongoDB validation shows the project is connected to the configured Atlas d
 - 0 admins in the default seeded dataset
 - several demo users and the expected demo faculty/student accounts
 
-The seeded credentials in the repo include:
-
-- `lavishjangid230719@acropolis.in` / `Lavish@262`
-- `lavishjnagid682@gmail.com` / `Lavish@262`
-- `sandeep.sharma@acropolis.in` / `Lavish@262`
-
-These were validated as valid hash comparisons against the database records.
-
+The historical audit found seeded demo accounts in the configured database. Specific emails and passwords are intentionally omitted here. Review the current database and rotate any credentials that may have been shared or committed.
 ## Endpoint Testing Results
 
 ### Public / non-authenticated endpoints
