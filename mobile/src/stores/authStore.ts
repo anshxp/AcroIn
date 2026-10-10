@@ -17,7 +17,8 @@ const normalizeIdentifier = (value: unknown): string => {
     if (nested !== undefined && nested !== value) return normalizeIdentifier(nested);
 
     // ObjectId-like values have a useful toString; plain objects do not.
-    if (candidate.constructor?.name === 'ObjectId' && typeof candidate.toString === 'function') {
+    const objectConstructor = (value as { constructor?: { name?: string } }).constructor;
+    if (objectConstructor?.name === 'ObjectId' && typeof candidate.toString === 'function') {
       const normalized = candidate.toString().trim();
       return normalized && normalized !== '[object Object]' ? normalized : '';
     }
