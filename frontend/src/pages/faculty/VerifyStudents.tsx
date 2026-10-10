@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle, Search, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { facultyAPI, studentAPI } from '../../services/api';
+import { facultyAPI, normalizeId, studentAPI } from '../../services/api';
 import { Button, Card, Input } from '../../components/ui';
 import type { Student } from '../../types';
 
@@ -97,8 +97,8 @@ export const VerifyStudents: React.FC = () => {
       {error && <p className="text-sm text-red-700">{error}</p>}
 
       <div className="space-y-4">
-        {pendingStudents.map((student) => (
-          <Card key={student._id}>
+        {pendingStudents.map((student, index) => (
+          <Card key={`${normalizeId(student._id) || 'student'}-${index}`}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-semibold text-gray-900">{student.name}</h3>
