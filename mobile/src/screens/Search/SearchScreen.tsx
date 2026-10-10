@@ -4,10 +4,12 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Input, Avatar, Badge, Button, EmptyState, LoadingSpinner, ErrorBanner } from '../../components/ui';
-import { studentAPI, type PaginatedResult } from '../../services/apiClient';
+import { studentAPI, normalizeIdentifier, type PaginatedResult } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Student } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function SearchScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
@@ -86,7 +88,7 @@ export default function SearchScreen({ navigation }: any) {
             subtitle={`No students found for "${query}"`}
           />
         ) : (
-          results.map((student) => (
+          results.map((student, index) => (
             <TouchableOpacity
               key={student._id}
               style={[s.resultCard, shadows.card]}
