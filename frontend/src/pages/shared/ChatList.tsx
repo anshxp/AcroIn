@@ -76,7 +76,7 @@ export const ChatList: React.FC = () => {
 
   const participantId = (participant: Participant) => normalizeId(typeof participant === 'string' ? participant : participant?._id);
   const participantName = (participant: Participant) => typeof participant === 'string' ? participant : (participant?.name || participant?.email || 'Unknown');
-  const getOtherParticipant = (chat: Chat) => ((chat.participants || []) as Participant[]).find((participant) => participantId(participant) !== authUserId) || 'Unknown';
+  const getOtherParticipant = (chat: Chat) => ((chat.participants || []) as Participant[]).find((participant) => participantId(participant) !== normalizeId(authUserId)) || 'Unknown';
   const getInitials = (participant: Participant) => {
     const name = participantName(participant).trim();
     const parts = name.split(/\s+/).filter(Boolean);
