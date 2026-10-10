@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import {
   Search,
   Plus,
@@ -60,7 +61,7 @@ interface FacultyCreateForm {
 
 export const ManageFaculty: React.FC = () => {
   const { user } = useAuth();
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [brokenImageMap, setBrokenImageMap] = useState<Record<string, boolean>>({});
 
