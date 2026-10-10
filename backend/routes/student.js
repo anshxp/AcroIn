@@ -398,7 +398,8 @@ router.get('/:id/skills', verifyToken, async (req, res) => {
 
     res.json({ skills: normalizedSkills });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(`[students] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete student request', requestId: req.requestId || null });
   }
 });
 
@@ -672,13 +673,18 @@ router.post(
         faceVerificationStatus: student.faceVerificationStatus,
       });
     } catch (err) {
+      console.error(`[face-enroll] failed (requestId=${req.requestId || 'unknown'}):`, err);
       if (student) {
-        student.faceVerificationStatus = 'partial';
-        student.profileCompleteness = calculateProfileCompleteness(student);
-        await student.save();
-        await syncStudentProfileFromDoc(student);
+        try {
+          student.faceVerificationStatus = 'partial';
+          student.profileCompleteness = calculateProfileCompleteness(student);
+          await student.save();
+          await syncStudentProfileFromDoc(student);
+        } catch (persistenceError) {
+          console.error(`[face-enroll] failed to persist partial status (requestId=${req.requestId || 'unknown'}):`, persistenceError);
+        }
       }
-      res.status(500).json({ success: false, message: err.message || 'Failed to enroll face data' });
+      return res.status(500).json({ success: false, message: 'Face enrollment failed', requestId: req.requestId || null });
     }
   }
 );
