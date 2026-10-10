@@ -24,6 +24,7 @@ Use long, randomly generated secrets. Do not commit `.env` files.
 - `MONGO_DB`
 - `MONGO_STUDENT_COLLECTION`
 - `RECOMMENDATION_API_KEY` (must match the backend)
+- `ALLOWED_ORIGINS` (comma-separated explicit HTTPS frontend origins; no wildcard in production)
 
 ## Frontend configuration
 
