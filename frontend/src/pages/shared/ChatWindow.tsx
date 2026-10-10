@@ -30,10 +30,11 @@ export const ChatWindow: React.FC = () => {
       if (showLoading) setIsLoading(true);
       setApiError('');
       const response = await chatAPI.getChats(authUserId);
-      const foundChat = response.find((c) => c._id === chatId);
+      const normalizedChatId = normalizeId(chatId);
+      const foundChat = response.find((c) => normalizeId(c._id) === normalizedChatId);
       if (foundChat) {
         setChat((current) => {
-          if (current?._id === foundChat._id && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
+          if (normalizeId(current?._id) === normalizeId(foundChat._id) && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
           return foundChat;
         });
       } else {
@@ -76,7 +77,7 @@ export const ChatWindow: React.FC = () => {
     if (!window.confirm('Delete this message?')) return;
     try {
       if (chatId) {
-        await chatAPI.deleteMessage(chatId, messageId);
+        await chatAPI.deleteMessage(chatId, normalizeId(messageId));
         await loadChat(false);
       }
     } catch (error: any) {
@@ -84,7 +85,7 @@ export const ChatWindow: React.FC = () => {
     }
   };
 
-  const getParticipantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const getParticipantId = (participant: Participant) => normalizeId(typeof participant === 'string' ? participant : participant?._id);
   const getParticipantName = (participant: Participant) => typeof participant === 'string' ? participant : participant?.name || participant?.email || 'Unknown';
   const getOtherParticipant = (): Participant | null => {
     if (!chat) return null;
@@ -96,7 +97,7 @@ export const ChatWindow: React.FC = () => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     return parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
   };
-  const isOwnMessage = (sender: any) => (typeof sender === 'string' ? sender : sender?._id) === authUserId;
+  const isOwnMessage = (sender: unknown) => normalizeId(sender) === normalizeId(authUserId);
 
   const openParticipantProfile = () => {
     const participant = getOtherParticipant() as any;
