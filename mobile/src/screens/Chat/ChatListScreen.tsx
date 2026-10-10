@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, EmptyState, LoadingSpinner, ErrorBanner, Button } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthUserId } from '../../utils/authIds';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { getOtherParticipantName } from '../../utils/chatHelpers';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useChats } from '../../hooks/useApi';
@@ -83,11 +84,11 @@ export default function ChatListScreen({ navigation }: any) {
             }
           />
         ) : (
-          chats.map((chat: any) => {
+          chats.map((chat: any, index: number) => {
             const name = getOtherParticipantName(chat, authUserId);
             return (
               <TouchableOpacity
-                key={chat._id}
+                key={`${normalizeIdentifier(chat._id, 'chat id')}-${index}`}
                 style={[s.chatItem, shadows.soft]}
                 onPress={() => openChat(chat)}
               >
