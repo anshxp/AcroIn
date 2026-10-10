@@ -19,7 +19,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { facultyAPI, postAPI, studentAPI, interestAPI, opportunityAPI } from '../../services/api';
+import { facultyAPI, normalizeId, postAPI, studentAPI, interestAPI, opportunityAPI } from '../../services/api';
 import type { Post, Comment, Interest } from '../../types';
 import './posts.css';
 
@@ -622,10 +622,11 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <p className="post-modal-empty">No students have clicked interest yet.</p>
               ) : (
                 <div className="post-interest-list">
-                  {interestedStudents.map((interest) => {
+                  {interestedStudents.map((interest, index) => {
                     const student = typeof interest.student === 'string' ? null : interest.student;
+                    const interestId = normalizeId(interest._id) || 'interest';
                     return (
-                      <div className="post-interest-item" key={interest._id}>
+                      <div className="post-interest-item" key={`${interestId}-${index}`}>
                         <strong>{student?.name || 'Unknown student'}</strong>
                         <span>{student?.roll || 'N/A'}</span>
                         <small>Interested on {new Date(interest.createdAt).toLocaleString()}</small>
@@ -687,8 +688,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
       {showComments && (
         <div className="post-comments">
-          {comments.map((comment) => (
-            <div key={comment._id} className="comment">
+          {comments.map((comment, index) => (
+            <div key={`${normalizeId(comment._id) || 'comment'}-${index}`} className="comment">
               {getCommentAvatarUrl(comment) ? (
                 <img
                   className="comment-avatar comment-avatar--image"
