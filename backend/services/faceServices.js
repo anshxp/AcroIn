@@ -8,7 +8,10 @@ import FormData from "form-data";
 const DEFAULT_FACE_API = 'http://127.0.0.1:8000';
 const FACE_API = process.env.FACE_REC_SERVICE_URL || DEFAULT_FACE_API;
 const FACE_API_KEY = process.env.FACE_API_KEY || '';
-const FACE_TIMEOUT_MS = Number(process.env.FACE_API_TIMEOUT_MS || 15000);
+const configuredFaceTimeout = Number(process.env.FACE_API_TIMEOUT_MS || 15000);
+const FACE_TIMEOUT_MS = Number.isFinite(configuredFaceTimeout) && configuredFaceTimeout > 0
+  ? Math.min(configuredFaceTimeout, 60000)
+  : 15000;
 
 const ensurePythonServiceConfigured = () => {
   if (!/^https?:\/\//i.test(FACE_API)) {
