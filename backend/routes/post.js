@@ -9,6 +9,17 @@ import { postUpload } from '../middleware/uploadMiddleware.js';
 import { parsePostsPagination } from '../utils/postsPagination.js';
 
 const router = express.Router();
+
+const handlePostRouteError = (req, res, error, operation) => {
+  const requestId = req.requestId || 'unknown';
+  console.error(`[posts] ${operation} failed (requestId=${requestId}):`, error);
+  const isClientError = error?.name === 'ValidationError' || error?.name === 'CastError';
+  return res.status(isClientError ? 400 : 500).json({
+    success: false,
+    message: isClientError ? 'Invalid post request data' : 'Unable to complete post request',
+    requestId: req.requestId || null,
+  });
+};
 const FACULTY_ADMIN_ROLES = new Set(['dept_admin']);
 const ALLOWED_POST_CREATORS = new Set(['student', 'faculty', 'admin']);
 
@@ -83,7 +94,7 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (Array.isArray(images)) post.images = images;
     await post.save();
     res.json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'update post'); }
 });
 
 router.get('/', verifyToken, async (req, res) => {
@@ -140,7 +151,7 @@ router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => 
     await post.save();
     await post.populate('linkedOpportunity');
     res.status(201).json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'create post'); }
 });
 
 router.post('/:id/like', verifyToken, async (req, res) => {
@@ -150,7 +161,7 @@ router.post('/:id/like', verifyToken, async (req, res) => {
     if (!post.likes.some((id) => id.toString() === req.user.id)) post.likes.push(req.user.id);
     await post.save();
     res.json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'like post'); }
 });
 
 router.post('/:id/unlike', verifyToken, async (req, res) => {
@@ -160,7 +171,7 @@ router.post('/:id/unlike', verifyToken, async (req, res) => {
     post.likes = post.likes.filter((id) => id.toString() !== req.user.id);
     await post.save();
     res.json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'unlike post'); }
 });
 
 const addCommentHandler = async (req, res) => {
@@ -174,7 +185,7 @@ const addCommentHandler = async (req, res) => {
     post.comments.push({ author, content: String(content).trim() });
     await post.save();
     res.json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'add comment'); }
 };
 router.post('/:id/comment', verifyToken, addCommentHandler);
 router.post('/:id/comments', verifyToken, addCommentHandler);
@@ -195,7 +206,7 @@ const deleteCommentHandler = async (req, res) => {
     post.comments = post.comments.filter((comment) => comment._id.toString() !== req.params.commentId);
     await post.save();
     res.json(post);
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'delete comment'); }
 };
 router.delete('/:id/comment/:commentId', verifyToken, deleteCommentHandler);
 router.delete('/:id/comments/:commentId', verifyToken, deleteCommentHandler);
@@ -211,7 +222,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     if (!isOwner && !isAdminUser && !canModerate) return res.status(403).json({ message: 'Not authorized to delete this post' });
     await Post.deleteOne({ _id: req.params.id });
     res.json({ message: 'Post deleted' });
-  } catch (error) { res.status(400).json({ message: error.message }); }
+  } catch (error) { return handlePostRouteError(req, res, error, 'delete post'); }
 });
 
 export default router;
