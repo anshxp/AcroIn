@@ -105,7 +105,10 @@ router.get('/', verifyToken, async (req, res) => {
       return res.json({ success: true, data: posts, page, limit, total, hasMore: skip + posts.length < total });
     }
     res.json(await query);
-  } catch (error) { res.status(500).json({ message: error.message }); }
+  } catch (error) {
+    console.error(`[posts] GET /posts failed (requestId=${req.requestId || 'unknown'}):`, error);
+    res.status(500).json({ success: false, message: 'Unable to load posts', requestId: req.requestId || null });
+  }
 });
 
 router.post('/', verifyToken, postUpload.array('files', 4), async (req, res) => {
