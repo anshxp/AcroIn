@@ -40,7 +40,7 @@ export const verifyToken = (req, res, next) => {
     // that may contain an ObjectId-like object before downstream Mongoose calls.
     const normalizedId = normalizeAuthId(decoded.id);
 
-    if (!normalizedId || normalizedId === '[object Object]') {
+    if (!normalizedId || normalizedId === '[object Object]' || !mongoose.Types.ObjectId.isValid(normalizedId)) {
       return res.status(401).json({ success: false, message: 'Invalid user id in authentication token' });
     }
 
