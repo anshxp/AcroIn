@@ -6,6 +6,8 @@ const normalizeAuthIdentifier = (value: unknown): string => {
     return normalized && normalized !== '[object Object]' ? normalized : '';
   }
 
+  if (Array.isArray(value)) return '';
+
   if (value && typeof value === 'object') {
     const candidate = value as Record<string, unknown>;
     const nested = candidate._id ?? candidate.id ?? candidate.$oid;
