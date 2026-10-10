@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MoreVertical, Trash2, Flag, UserRound, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { chatAPI } from '../../services/api';
+import { chatAPI, normalizeId } from '../../services/api';
 import type { Chat } from '../../types';
 import './chat.css';
 import './chat-layout.css';
@@ -143,7 +143,7 @@ export const ChatWindow: React.FC = () => {
 
       <div className="chat-messages">
         {!chat.messages?.length ? <div className="chat-messages-empty"><p>No messages yet. Start the conversation!</p></div> : <>
-          {chat.messages.map((message) => <div key={message._id} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}>
+          {chat.messages.map((message, index) => <div key={`${normalizeId(message._id) || 'message'}-${index}`} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}>
             <div className="message-bubble">
               {message.tag && message.tag !== 'GENERAL' && <span className="message-tag">{message.tag}</span>}
               <p className="message-text">{message.content}</p>
