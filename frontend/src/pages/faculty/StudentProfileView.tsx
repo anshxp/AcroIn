@@ -82,7 +82,7 @@ export const StudentProfileView: React.FC = () => {
       const result = await facultyAPI.verifyStudentSkill(student._id, skillId);
       refreshStudentAfterVerification(student, {
         verificationStatus: result?.verificationStatus || student.verificationStatus,
-        skills: studentSkills.map((skill, index) => (
+        skills: studentSkills.map((skill) => (
           skill._id === skillId ? { ...skill, verified: true } : skill
         )),
       });
@@ -444,9 +444,9 @@ export const StudentProfileView: React.FC = () => {
             </div>
             <div className="card-body" style={{ display: 'grid', gap: '12px' }}>
               {studentSkills.length > 0 ? (
-                studentSkills.map((skill) => (
+                studentSkills.map((skill, index) => (
                   <div
-                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`}
+                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`
                     style={{
                       padding: '14px',
                       background: '#f8fafc',
