@@ -58,7 +58,7 @@ export const ChatList: React.FC = () => {
       setShowNewChatModal(false);
       setSearchQuery('');
       await loadChats(false);
-      navigate(`/chat/${chat._id}`);
+      navigate(`/chat/${encodeURIComponent(chatId)}`);
     } catch (error: any) {
       setApiError(error?.response?.data?.message || 'Failed to create chat');
     }
