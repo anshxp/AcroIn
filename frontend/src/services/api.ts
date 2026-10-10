@@ -30,6 +30,12 @@ const api = axios.create({
   },
 });
 
+const idPath = (value: unknown, fieldName = 'identifier'): string => {
+  const normalized = normalizeId(value);
+  if (!normalized) throw new Error(`Invalid ${fieldName}`);
+  return encodeURIComponent(normalized);
+};
+
 export const normalizeId = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'bigint') return String(value);
@@ -194,12 +200,12 @@ export const authAPI = {
 // Student APIs
 export const studentAPI = {
   getProfile: async (identifier: string): Promise<Student> => {
-    const response = await api.get(`/students/${identifier}`);
+    const response = await api.get(`/students/${idPath(identifier, 'student identifier')}`);
     return response.data;
   },
 
   updateProfile: async (identifier: string, data: Partial<Student>): Promise<Student> => {
-    const response = await api.put(`/students/${identifier}`, data);
+    const response = await api.put(`/students/${idPath(identifier, 'student identifier')}`, data);
     return response.data;
   },
 
@@ -214,12 +220,12 @@ export const studentAPI = {
   },
 
   getStudentById: async (id: string): Promise<Student> => {
-    const response = await api.get(`/students/${id}`);
+    const response = await api.get(`/students/${idPath(id, 'student id')}`);
     return response.data;
   },
 
   deleteStudent: async (id: string): Promise<void> => {
-    await api.delete(`/students/${id}`);
+    await api.delete(`/students/${idPath(id, 'student id')}`);
   },
 
   getSkills: async (id: string | Record<string, unknown>): Promise<StudentSkill[]> => {
@@ -254,7 +260,7 @@ export const studentAPI = {
   uploadProfileImage: async (identifier: string, file: File): Promise<{ profile_image: string }> => {
     const formData = new FormData();
     formData.append('profileImage', file);
-    const response = await api.post(`/students/${identifier}/upload-profile-image`, formData, {
+    const response = await api.post(`/students/${idPath(identifier, 'student identifier')}/upload-profile-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
@@ -263,7 +269,7 @@ export const studentAPI = {
   uploadCoverImage: async (identifier: string, file: File): Promise<{ cover_image: string }> => {
     const formData = new FormData();
     formData.append('coverImage', file);
-    const response = await api.post(`/students/${identifier}/upload-cover-image`, formData, {
+    const response = await api.post(`/students/${idPath(identifier, 'student identifier')}/upload-cover-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
@@ -278,7 +284,7 @@ export const studentAPI = {
     formData.append('left', files.left);
     formData.append('right', files.right);
 
-    const response = await api.post(`/students/${identifier}/face/enroll`, formData, {
+    const response = await api.post(`/students/${idPath(identifier, 'student identifier')}/face/enroll`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
@@ -311,17 +317,17 @@ export const facultyAPI = {
   },
 
   getFacultyById: async (id: string): Promise<Faculty> => {
-    const response = await api.get(`/faculty/${id}`);
+    const response = await api.get(`/faculty/${idPath(id, 'faculty id')}`);
     return response.data;
   },
 
   updateFaculty: async (id: string, data: Partial<Faculty>): Promise<Faculty> => {
-    const response = await api.put(`/faculty/${id}`, data);
+    const response = await api.put(`/faculty/${idPath(id, 'faculty id')}`, data);
     return response.data;
   },
 
   deleteFaculty: async (id: string): Promise<void> => {
-    await api.delete(`/faculty/${id}`);
+    await api.delete(`/faculty/${idPath(id, 'faculty id')}`);
   },
 
   faceSearch: async (file: File): Promise<any> => {
@@ -334,27 +340,27 @@ export const facultyAPI = {
   },
 
   verifyStudent: async (identifier: string): Promise<any> => {
-    const response = await api.post(`/faculty/verify-student/${identifier}`);
+    const response = await api.post(`/faculty/verify-student/${idPath(identifier, 'student identifier')}`);
     return response.data;
   },
 
   verifyStudentSkill: async (studentId: string, skillId: string): Promise<any> => {
-    const response = await api.post(`/faculty/verify-student/${studentId}/skills/${skillId}/verify`);
+    const response = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/skills/${idPath(skillId, 'skill id')}/verify`);
     return response.data;
   },
 
   verifyAllStudentSkills: async (studentId: string): Promise<any> => {
-    const response = await api.post(`/faculty/verify-student/${studentId}/skills/verify-all`);
+    const response = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/skills/verify-all`);
     return response.data;
   },
 
   verifyStudentCertificate: async (studentId: string, certificateId: string): Promise<any> => {
-    const response = await api.post(`/faculty/verify-student/${studentId}/certificates/${certificateId}/verify`);
+    const response = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/certificates/${idPath(certificateId, 'certificate id')}/verify`);
     return response.data;
   },
 
   verifyAllStudentCertificates: async (studentId: string): Promise<any> => {
-    const response = await api.post(`/faculty/verify-student/${studentId}/certificates/verify-all`);
+    const response = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/certificates/verify-all`);
     return response.data;
   },
 
@@ -383,7 +389,7 @@ export const internshipAPI = {
   },
 
   getByStudent: async (studentId: string): Promise<Internship[]> => {
-    const response = await api.get(`/internships/student/${studentId}`);
+    const response = await api.get(`/internships/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Internship[]>(response.data);
   },
 
@@ -393,12 +399,12 @@ export const internshipAPI = {
   },
 
   update: async (id: string, data: Partial<Internship>): Promise<Internship> => {
-    const response = await api.put(`/internships/${id}`, data);
+    const response = await api.put(`/internships/${idPath(id, 'internship id')}`, data);
     return unwrapData<Internship>(response.data);
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/internships/${id}`);
+    await api.delete(`/internships/${idPath(id, 'internship id')}`);
   },
 };
 
@@ -410,7 +416,7 @@ export const competitionAPI = {
   },
 
   getByStudent: async (studentId: string): Promise<Competition[]> => {
-    const response = await api.get(`/competitions/student/${studentId}`);
+    const response = await api.get(`/competitions/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Competition[]>(response.data);
   },
 
@@ -420,12 +426,12 @@ export const competitionAPI = {
   },
 
   update: async (id: string, data: Partial<Competition>): Promise<Competition> => {
-    const response = await api.put(`/competitions/${id}`, data);
+    const response = await api.put(`/competitions/${idPath(id, 'competition id')}`, data);
     return unwrapData<Competition>(response.data);
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/competitions/${id}`);
+    await api.delete(`/competitions/${idPath(id, 'competition id')}`);
   },
 };
 
@@ -437,7 +443,7 @@ export const certificateAPI = {
   },
 
   getByStudent: async (studentId: string): Promise<Certificate[]> => {
-    const response = await api.get(`/certificates/student/${studentId}`);
+    const response = await api.get(`/certificates/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Certificate[]>(response.data);
   },
 
@@ -447,12 +453,12 @@ export const certificateAPI = {
   },
 
   update: async (id: string, data: Partial<Certificate>): Promise<Certificate> => {
-    const response = await api.put(`/certificates/${id}`, data);
+    const response = await api.put(`/certificates/${idPath(id, 'certificate id')}`, data);
     return unwrapData<Certificate>(response.data);
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/certificates/${id}`);
+    await api.delete(`/certificates/${idPath(id, 'certificate id')}`);
   },
 };
 
@@ -481,7 +487,7 @@ export const projectAPI = {
   },
 
   getByStudent: async (studentId: string): Promise<Project[]> => {
-    const response = await api.get(`/projects/student/${studentId}`);
+    const response = await api.get(`/projects/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Project[]>(response.data);
   },
 
@@ -491,12 +497,12 @@ export const projectAPI = {
   },
 
   update: async (id: string, data: Partial<Project>): Promise<Project> => {
-    const response = await api.put(`/projects/${id}`, data);
+    const response = await api.put(`/projects/${idPath(id, 'project id')}`, data);
     return unwrapData<Project>(response.data);
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/projects/${id}`);
+    await api.delete(`/projects/${idPath(id, 'project id')}`);
   },
 };
 
@@ -508,7 +514,7 @@ export const postAPI = {
   },
 
   getById: async (id: string): Promise<Post> => {
-    const response = await api.get(`/posts/${id}`);
+    const response = await api.get(`/posts/${idPath(id, 'post id')}`);
     return response.data;
   },
 
@@ -538,31 +544,31 @@ export const postAPI = {
   },
 
   update: async (id: string, data: Partial<CreatePostData>): Promise<Post> => {
-    const response = await api.put(`/posts/${id}`, data);
+    const response = await api.put(`/posts/${idPath(id, 'post id')}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/posts/${id}`);
+    await api.delete(`/posts/${idPath(id, 'post id')}`);
   },
 
   like: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/like`);
+    const response = await api.post(`/posts/${idPath(id, 'post id')}/like`);
     return unwrapData<Post>(response.data);
   },
 
   unlike: async (id: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/unlike`);
+    const response = await api.post(`/posts/${idPath(id, 'post id')}/unlike`);
     return unwrapData<Post>(response.data);
   },
 
   addComment: async (id: string, content: string): Promise<Post> => {
-    const response = await api.post(`/posts/${id}/comments`, { content });
+    const response = await api.post(`/posts/${idPath(id, 'post id')}/comments`, { content });
     return unwrapData<Post>(response.data);
   },
 
   deleteComment: async (postId: string, commentId: string): Promise<Post> => {
-    const response = await api.delete(`/posts/${postId}/comments/${commentId}`);
+    const response = await api.delete(`/posts/${idPath(postId, 'post id')}/comments/${idPath(commentId, 'comment id')}`);
     return unwrapData<Post>(response.data);
   },
 };
@@ -574,7 +580,7 @@ export const opportunityAPI = {
   },
 
   getById: async (id: string): Promise<Opportunity> => {
-    const response = await api.get(`/opportunities/${id}`);
+    const response = await api.get(`/opportunities/${idPath(id, 'opportunity id')}`);
     return unwrapData<Opportunity>(response.data);
   },
 
@@ -614,21 +620,21 @@ export const opportunityAPI = {
   },
 
   update: async (id: string, data: Partial<Opportunity>): Promise<Opportunity> => {
-    const response = await api.put(`/opportunities/${id}`, data);
+    const response = await api.put(`/opportunities/${idPath(id, 'opportunity id')}`, data);
     return unwrapData<Opportunity>(response.data);
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/opportunities/${id}`);
+    await api.delete(`/opportunities/${idPath(id, 'opportunity id')}`);
   },
 
   approve: async (id: string): Promise<Opportunity> => {
-    const response = await api.patch(`/opportunities/${id}/approve`);
+    const response = await api.patch(`/opportunities/${idPath(id, 'opportunity id')}/approve`);
     return unwrapData<Opportunity>(response.data?.opportunity || response.data);
   },
 
   reject: async (id: string, reason?: string): Promise<Opportunity> => {
-    const response = await api.patch(`/opportunities/${id}/reject`, { reason });
+    const response = await api.patch(`/opportunities/${idPath(id, 'opportunity id')}/reject`, { reason });
     return unwrapData<Opportunity>(response.data?.opportunity || response.data);
   },
 
