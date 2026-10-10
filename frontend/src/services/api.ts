@@ -461,7 +461,7 @@ export const notificationAPI = {
   getByUser: async (userId: string | Record<string, unknown>): Promise<NotificationItem[]> => {
     const normalizedUserId = normalizeId(userId);
     if (!normalizedUserId) return [];
-    const response = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
+    const response = await api.get('/notifications');
     return response.data;
   },
 
@@ -673,7 +673,7 @@ export const chatAPI = {
   getChats: async (userId: string | Record<string, unknown>): Promise<Chat[]> => {
     const normalizedUserId = normalizeId(userId);
     if (!normalizedUserId) return [];
-    const response = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
+    const response = await api.get('/chats');
     return Array.isArray(response.data?.chats) ? response.data.chats : [];
   },
 
