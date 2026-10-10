@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthUserId } from '../../utils/authIds';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { useChats, useSendMessage } from '../../hooks/useApi';
 import { colors, spacing, radii, typography } from '../../theme';
 
@@ -18,7 +19,7 @@ export default function ChatWindowScreen({ route, navigation }: any) {
   const [message, setMessage] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
-  const chat = chats?.find((c: any) => c._id === chatId);
+  const chat = chats?.find((c: any) => normalizeIdentifier(c._id, 'chat id') === normalizeIdentifier(chatId, 'chat id'));
   const messages = chat?.messages || [];
 
   useEffect(() => {
@@ -51,9 +52,9 @@ export default function ChatWindowScreen({ route, navigation }: any) {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView ref={scrollRef} contentContainerStyle={s.messagesContainer} showsVerticalScrollIndicator={false}>
           {messages.map((msg: any) => {
-            const isMine = msg.sender === authUserId;
+            const isMine = normalizeIdentifier(msg.sender, 'sender id') === normalizeIdentifier(authUserId, 'user id');
             return (
-              <View key={msg._id} style={[s.messageBubble, isMine ? s.myMessage : s.theirMessage]}>
+              <View key={`${normalizeIdentifier(msg._id, 'message id')}-${messages.indexOf(msg)}`} style={[s.messageBubble, isMine ? s.myMessage : s.theirMessage]}>
                 {msg.tag && <Text style={s.messageTag}>{msg.tag}</Text>}
                 <Text style={[s.messageText, isMine && s.myMessageText]}>{msg.content}</Text>
                 <Text style={[s.messageTime, isMine && s.myMessageTime]}>{formatTime(msg.createdAt)}</Text>
