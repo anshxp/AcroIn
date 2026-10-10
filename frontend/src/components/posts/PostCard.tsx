@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import { 
   ThumbsUp, 
   MessageCircle, 
@@ -22,7 +23,7 @@ import { facultyAPI, postAPI, studentAPI, interestAPI, opportunityAPI } from '..
 import type { Post, Comment, Interest } from '../../types';
 import './posts.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 interface PostCardProps {
   post: Post;
