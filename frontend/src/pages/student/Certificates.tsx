@@ -191,8 +191,8 @@ export const StudentCertificates: React.FC = () => {
         </div>
       ) : filteredCertificates.length > 0 ? (
         <div className="cards-grid">
-          {filteredCertificates.map((certificate) => (
-            <div key={certificate._id} className="certificate-card">
+          {filteredCertificates.map((certificate, index) => (
+            <div key={`${normalizeId(certificate._id) || "certificate"}-${index}`} className="certificate-card">
               <div className={`certificate-card-icon ${getIconClass(certificate.organization)}`}>
                 <Award size={28} />
               </div>
