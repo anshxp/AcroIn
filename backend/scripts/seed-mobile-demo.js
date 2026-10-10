@@ -5,6 +5,7 @@
  * Usage: node scripts/seed-mobile-demo.js
  */
 import bcrypt from 'bcryptjs';
+import { assertDemoSeedAllowed } from './guard-demo-seed.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
@@ -19,6 +20,8 @@ const mongoUri =
   process.env.MONGO_URI ||
   process.env.MONGODB_URI ||
   'mongodb://localhost:27017/AcroIn';
+
+assertDemoSeedAllowed(mongoUri);
 
 const DEMO_PASSWORD = 'Lavish@262';
 
