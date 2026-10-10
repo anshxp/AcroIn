@@ -95,7 +95,8 @@ router.get('/', verifyToken, async (req, res) => {
     const filters = [{ scope: 'campus' }];
     if (userDepartment) filters.push({ scope: 'department', visibleToDepartments: userDepartment });
     const baseFilter = req.user?.userType === 'admin' ? {} : { $or: filters };
-    const page = Math.max(1, parseInt(req.query.page, 10) || 0);
+    const requestedPage = Number.parseInt(String(req.query.page ?? ''), 10);
+    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
     const query = Post.find(baseFilter).populate('linkedOpportunity').sort({ createdAt: -1 });
 
