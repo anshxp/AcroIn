@@ -58,7 +58,9 @@ export const ChatList: React.FC = () => {
       setShowNewChatModal(false);
       setSearchQuery('');
       await loadChats(false);
-      navigate(`/chat/${encodeURIComponent(chatId)}`);
+      const createdChatId = normalizeId(chat._id);
+      if (!createdChatId) throw new Error('The server returned an invalid chat identifier');
+      navigate(`/chat/${encodeURIComponent(createdChatId)}`);
     } catch (error: any) {
       setApiError(error?.response?.data?.message || 'Failed to create chat');
     }
@@ -68,7 +70,7 @@ export const ChatList: React.FC = () => {
     if (!window.confirm('Are you sure you want to delete this chat?')) return;
     try {
       await chatAPI.deleteChat(chatId);
-      setChats((current) => current.filter((chat) => chat._id !== chatId));
+      setChats((current) => current.filter((chat) => normalizeId(chat._id) !== normalizeId(chatId)));
     } catch (error: any) { setApiError(error?.response?.data?.message || 'Failed to delete chat'); }
   };
 
