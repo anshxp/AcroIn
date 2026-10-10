@@ -83,6 +83,25 @@ const resolveBaseUrl = (): string => {
 
 const API_BASE_URL = resolveBaseUrl();
 
+if (!__DEV__) {
+  let parsedApiUrl: URL;
+  try {
+    parsedApiUrl = new URL(API_BASE_URL);
+  } catch {
+    throw new Error('Release builds require EXPO_PUBLIC_API_URL to be an absolute HTTPS URL.');
+  }
+
+  const localHostnames = ['localhost', '127.0.0.1', '::1', '10.0.2.2'];
+  if (
+    parsedApiUrl.protocol !== 'https:' ||
+    localHostnames.includes(parsedApiUrl.hostname) ||
+    /^192\\.168\\./.test(parsedApiUrl.hostname) ||
+    /^10\\./.test(parsedApiUrl.hostname)
+  ) {
+    throw new Error('Release builds require a public HTTPS EXPO_PUBLIC_API_URL; local network URLs are development-only.');
+  }
+}
+
 export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
     const normalized = String(value).trim();
