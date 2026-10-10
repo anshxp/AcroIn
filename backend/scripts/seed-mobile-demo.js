@@ -23,7 +23,10 @@ const mongoUri =
 
 assertDemoSeedAllowed(mongoUri);
 
-const DEMO_PASSWORD = 'Lavish@262';
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD?.trim();
+if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 12) {
+  throw new Error('Set DEMO_SEED_PASSWORD to a unique password of at least 12 characters before seeding.');
+}
 
 const upsertUser = async ({ email, name, userType, passwordHash, extras = {} }) => {
   const existing = await User.findOne({ email });
