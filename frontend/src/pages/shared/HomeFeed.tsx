@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Info, Image, Video, Calendar, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { postAPI } from '../../services/api';
+import { normalizeId, postAPI } from '../../services/api';
 import type { Post } from '../../types';
 import { CreatePostModal } from '../../components/posts/CreatePostModal';
 import { PostCard } from '../../components/posts/PostCard';
@@ -83,7 +83,7 @@ export const HomeFeed: React.FC = () => {
 
         {filteredPosts.length === 0 && !searchQuery && !hasActiveFilters && <p className="page-subtitle">No posts available from backend.</p>}
         {filteredPosts.length === 0 && (searchQuery || hasActiveFilters) && <p className="page-subtitle">No posts matched your search or filters.</p>}
-        {filteredPosts.map((post) => <div key={post._id} id={`post-${post._id}`} onClick={(event) => handlePostAuthorClick(event, post)} style={focusPostId === post._id ? { outline: '2px solid #2563eb', borderRadius: '14px', transition: 'outline 0.2s ease' } : undefined}><PostCard post={post} onPostDeleted={(postId) => setPosts((prev) => prev.filter((item) => item._id !== postId))} onPostUpdated={(updatedPost) => setPosts((prev) => prev.map((item) => item._id === updatedPost._id ? updatedPost : item))} /></div>)}
+        {filteredPosts.map((post, index) => { const postId = normalizeId(post._id); if (!postId) return null; return <div key={`${postId}-${index}`} id={`post-${postId}`} onClick={(event) => handlePostAuthorClick(event, post)} style={focusPostId === postId ? { outline: '2px solid #2563eb', borderRadius: '14px', transition: 'outline 0.2s ease' } : undefined}><PostCard post={post} onPostDeleted={(deletedId) => setPosts((prev) => prev.filter((item) => normalizeId(item._id) !== normalizeId(deletedId)))} onPostUpdated={(updatedPost) => setPosts((prev) => prev.map((item) => normalizeId(item._id) === normalizeId(updatedPost._id) ? updatedPost : item))} /></div>; })}
       </div>
 
       <CreatePostModal isOpen={showCreateModal && canPost} onClose={() => setShowCreateModal(false)} onPostCreated={(post) => setPosts((prev) => [post, ...prev])} />
