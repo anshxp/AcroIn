@@ -13,7 +13,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { facultyAPI, studentAPI } from '../../services/api';
+import { facultyAPI, normalizeId, studentAPI } from '../../services/api';
 import type { Student } from '../../types';
 import '../../styles/pages.css';
 
@@ -82,7 +82,7 @@ export const StudentProfileView: React.FC = () => {
       const result = await facultyAPI.verifyStudentSkill(student._id, skillId);
       refreshStudentAfterVerification(student, {
         verificationStatus: result?.verificationStatus || student.verificationStatus,
-        skills: studentSkills.map((skill) => (
+        skills: studentSkills.map((skill, index) => (
           skill._id === skillId ? { ...skill, verified: true } : skill
         )),
       });
@@ -446,7 +446,7 @@ export const StudentProfileView: React.FC = () => {
               {studentSkills.length > 0 ? (
                 studentSkills.map((skill) => (
                   <div
-                    key={skill._id || skill.name}
+                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`}
                     style={{
                       padding: '14px',
                       background: '#f8fafc',
