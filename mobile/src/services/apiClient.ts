@@ -82,6 +82,26 @@ const resolveBaseUrl = (): string => {
 };
 
 const API_BASE_URL = resolveBaseUrl();
+
+const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
+    const normalized = String(value).trim();
+    if (normalized && normalized !== '[object Object]') return normalized;
+  } else if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    const nested = candidate._id ?? candidate.id ?? candidate.$oid;
+    if (nested !== undefined && nested !== value) {
+      return normalizeIdentifier(nested, fieldName);
+    }
+    if (typeof candidate.toString === 'function') {
+      const normalized = candidate.toString();
+      if (normalized && normalized !== '[object Object]') return normalized;
+    }
+  }
+
+  throw new Error(`Invalid ${fieldName}`);
+};
+
 const ENABLE_MOCK_FALLBACK =
   __DEV__ && String(process.env.EXPO_PUBLIC_ENABLE_MOCK_FALLBACK || '').toLowerCase() === 'true';
 const DEFAULT_PAGE_SIZE = 20;
@@ -887,12 +907,14 @@ export const opportunityAPI = {
 // ─── Chat APIs ───────────────────────────────────────────────────────
 
 export const chatAPI = {
-  getChats: async (userId: string): Promise<Chat[]> => {
-    const { data } = await api.get(`/chats/${userId}`);
+  getChats: async (userId: unknown): Promise<Chat[]> => {
+    const normalizedUserId = normalizeIdentifier(userId, 'user id');
+    const { data } = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
     return Array.isArray(data?.chats) ? data.chats : [];
   },
-  createChat: async (facultyId: string): Promise<Chat> => {
-    const { data } = await api.post('/chats', { facultyId });
+  createChat: async (facultyId: unknown): Promise<Chat> => {
+    const normalizedFacultyId = normalizeIdentifier(facultyId, 'faculty id');
+    const { data } = await api.post('/chats', { facultyId: normalizedFacultyId });
     return unwrapData<Chat>(data?.chat || data);
   },
   sendMessage: async (chatId: string, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
@@ -911,12 +933,14 @@ export const chatAPI = {
 // ─── Notification APIs ───────────────────────────────────────────────
 
 export const notificationAPI = {
-  getByUser: async (userId: string): Promise<NotificationItem[]> => {
-    const { data } = await api.get(`/notifications/${userId}`);
-    return data;
+  getByUser: async (userId: unknown): Promise<NotificationItem[]> => {
+    const normalizedUserId = normalizeIdentifier(userId, 'user id');
+    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
+    return Array.isArray(data) ? data : [];
   },
-  markAsRead: async (notificationId: string): Promise<NotificationItem> => {
-    const { data } = await api.patch(`/notifications/${notificationId}/read`);
+  markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
+    const normalizedNotificationId = normalizeIdentifier(notificationId, 'notification id');
+    const { data } = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return data;
   },
 };
