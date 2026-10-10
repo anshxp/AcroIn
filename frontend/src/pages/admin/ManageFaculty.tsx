@@ -23,7 +23,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, facultyAPI } from '../../services/api';
+import { adminAPI, facultyAPI, normalizeId } from '../../services/api';
 import '../../styles/pages.css';
 
 interface Faculty {
