@@ -31,13 +31,13 @@ const normalizeUser = (value: unknown): User | null => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
 
   const candidate = value as Record<string, unknown>;
-  const id = normalizeIdentifier(candidate.id ?? candidate._id ?? candidate.authUserId);
+  const id = normalizeIdentifier(candidate.id) || normalizeIdentifier(candidate._id) || normalizeIdentifier(candidate.authUserId);
   const email = typeof candidate.email === 'string' ? candidate.email.trim() : '';
   const userType = candidate.userType;
 
   if (!id || !email || !['student', 'faculty', 'admin'].includes(String(userType))) return null;
 
-  const authUserId = normalizeIdentifier(candidate.authUserId ?? candidate.id ?? candidate._id);
+  const authUserId = normalizeIdentifier(candidate.authUserId) || normalizeIdentifier(candidate.id) || normalizeIdentifier(candidate._id);
   const profileId = normalizeIdentifier(candidate.profileId);
   return {
     ...(candidate as unknown as User),
