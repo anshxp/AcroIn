@@ -40,6 +40,8 @@ export const normalizeId = (value: unknown): string => {
   if (typeof value === 'string') return value.trim();
   if (typeof value === 'number' || typeof value === 'bigint') return String(value);
 
+  if (Array.isArray(value)) return '';
+
   if (value && typeof value === 'object') {
     const candidate = value as Record<string, unknown>;
     const nested = candidate._id ?? candidate.id ?? candidate.$oid;
@@ -49,7 +51,7 @@ export const normalizeId = (value: unknown): string => {
     }
 
     if (typeof candidate.toString === 'function') {
-      const stringValue = candidate.toString();
+      const stringValue = candidate.toString().trim();
       if (stringValue && stringValue !== '[object Object]') return stringValue;
     }
   }
