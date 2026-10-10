@@ -244,7 +244,8 @@ router.post('/face-search', verifyToken, isAdminOrFaculty, faceSearchUpload.sing
       student: safeStudent,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || 'Face search failed' });
+    console.error(`[face-search] failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Face search failed', requestId: req.requestId || null });
   }
 });
 
@@ -293,7 +294,8 @@ router.post('/verify-student/:id', verifyToken, async (req, res) => {
       verifiedAt: student.verifiedAt,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error(`[faculty] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete faculty request', requestId: req.requestId || null });
   }
 });
 
@@ -583,7 +585,8 @@ router.post('/profile/upload-profile-image', verifyToken, upload.single('profile
 
     return res.json({ message: 'Profile image uploaded successfully', profilepic: imageUrl });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return console.error(`[faculty] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete faculty request', requestId: req.requestId || null });
   }
 });
 
