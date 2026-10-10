@@ -1,7 +1,5 @@
 import axios from "axios";
 import FormData from "form-data";
-import fs from "fs";
-import path from "path";
 
 // IMPORTANT:
 // This module is an HTTP proxy only.
@@ -34,8 +32,6 @@ const mapFaceServiceError = (error, actionLabel) => {
   return new Error(`Python face_rec_service ${actionLabel} failed.`);
 };
 
-const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || ''));
-
 const appendImageToForm = async (form, fieldName, imageSource) => {
   if (!imageSource) {
     throw new Error(`Missing image source for field: ${fieldName}`);
@@ -57,17 +53,7 @@ const appendImageToForm = async (form, fieldName, imageSource) => {
     return;
   }
 
-  if (isHttpUrl(imageSource)) {
-    const response = await axios.get(imageSource, { responseType: 'arraybuffer' });
-    const ext = path.extname(new URL(imageSource).pathname) || '.jpg';
-    form.append(fieldName, Buffer.from(response.data), {
-      filename: `${fieldName}${ext}`,
-      contentType: response.headers['content-type'] || 'image/jpeg',
-    });
-    return;
-  }
-
-  form.append(fieldName, fs.createReadStream(imageSource));
+  throw new Error(`Unsupported image source for field: ${fieldName}. Expected an uploaded image buffer.`);
 };
 
 // 🔥 ENROLL
