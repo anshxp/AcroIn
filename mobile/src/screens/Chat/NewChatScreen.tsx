@@ -64,7 +64,7 @@ export default function NewChatScreen({ navigation }: any) {
         ) : faculty.length === 0 ? (
           <Text style={s.empty}>No faculty available to message.</Text>
         ) : (
-          faculty.map((member) => {
+          faculty.map((member, index) => {
             const name = `${member.firstname || ''} ${member.lastName || ''}`.trim() || member.email;
             return (
               <TouchableOpacity
