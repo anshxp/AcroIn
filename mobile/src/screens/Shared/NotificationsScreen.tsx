@@ -19,6 +19,8 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   certificate: 'ribbon-outline',
 };
 
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
+
 export default function NotificationsScreen() {
   const { user } = useAuthStore();
   const authUserId = getAuthUserId(user);
@@ -56,9 +58,9 @@ export default function NotificationsScreen() {
           <EmptyState icon="notifications-off-outline" title="No notifications" subtitle="You're all caught up!" />
         ) : notifications.map((notif: any, index: number) => (
           <TouchableOpacity
-            key={`${normalizeIdentifier(notif._id, 'notification id')}-${index}`}
+            key={`${safeId(notif._id) || 'notification'}-${index}`}
             style={[s.notifItem, !notif.read && s.notifUnread, shadows.soft]}
-            onPress={() => !notif.read && markAsReadMut.mutate(normalizeIdentifier(notif._id, 'notification id'))}
+            onPress={() => { const notificationId = safeId(notif._id); if (!notif.read && notificationId) markAsReadMut.mutate(notificationId); }}
           >
             <View style={[s.notifIcon, !notif.read && s.notifIconUnread]}>
               <Ionicons name={ICONS[notif.type] || 'notifications-outline'} size={20} color={!notif.read ? colors.accent : colors.gray[400]} />
