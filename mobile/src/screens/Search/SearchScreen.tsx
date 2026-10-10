@@ -90,7 +90,7 @@ export default function SearchScreen({ navigation }: any) {
         ) : (
           results.map((student, index) => (
             <TouchableOpacity
-              key={student._id}
+              key={`${safeId(student._id) || 'student'}-${index}`}
               style={[s.resultCard, shadows.card]}
               onPress={() => navigation.navigate('StudentProfileView', { id: student._id })}
             >
