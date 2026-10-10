@@ -7,10 +7,9 @@ The browser/mobile clients communicate with the authenticated Node/Express API. 
 ## Required backend configuration
 
 - `NODE_ENV=production`
-- `MONGO_URI`
+- `MONGO_URI` (or the supported legacy alias `MONGODB_URI`)
 - `JWT_SECRET`
-- `FRONTEND_URL` (required startup variable)
-- `FRONTEND_URLS` (comma-separated allowed frontend origins; must include the deployed frontend)
+- Either `FRONTEND_URL` (one frontend origin) or `FRONTEND_URLS` (comma-separated allowed frontend origins; if both are set, `FRONTEND_URLS` takes precedence)
 - `FACE_REC_SERVICE_URL`
 - `FACE_API_KEY`
 - `RECOMMENDATION_SERVICE_URL`
