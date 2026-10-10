@@ -881,7 +881,7 @@ export const opportunityAPI = {
 export const chatAPI = {
   getChats: async (userId: unknown): Promise<Chat[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
-    const { data } = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
+    const { data } = await api.get('/chats');
     return Array.isArray(data?.chats) ? data.chats : [];
   },
   createChat: async (facultyId: unknown): Promise<Chat> => {
@@ -890,15 +890,19 @@ export const chatAPI = {
     return unwrapData<Chat>(data?.chat || data);
   },
   sendMessage: async (chatId: string, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
-    const { data } = await api.post(`/chats/${chatId}/message`, { content, tag });
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    const { data } = await api.post(`/chats/${encodeURIComponent(normalizedChatId)}/message`, { content, tag });
     return unwrapData<Chat>(data?.chat || data);
   },
   deleteMessage: async (chatId: string, messageId: string): Promise<Chat> => {
-    const { data } = await api.delete(`/chats/${chatId}/message/${messageId}`);
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    const normalizedMessageId = normalizeIdentifier(messageId, 'message id');
+    const { data } = await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}/message/${encodeURIComponent(normalizedMessageId)}`);
     return unwrapData<Chat>(data?.chat || data);
   },
   deleteChat: async (chatId: string): Promise<void> => {
-    await api.delete(`/chats/${chatId}`);
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}`);
   },
 };
 
@@ -907,7 +911,7 @@ export const chatAPI = {
 export const notificationAPI = {
   getByUser: async (userId: unknown): Promise<NotificationItem[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
-    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
+    const { data } = await api.get('/notifications');
     return Array.isArray(data) ? data : [];
   },
   markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
