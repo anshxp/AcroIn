@@ -106,7 +106,7 @@ From the route declarations in the backend, the following route groups exist:
 
 The codebase contains a broad API surface, but the historical audit could not validate protected workflows because the auth/config pipeline was broken at that time.
 
-## Final Verdict
+The current `backend/server.js` also validates the face-recognition service configuration (`FACE_REC_SERVICE_URL` and `FACE_API_KEY`). Verify the exact required variable list in that file before deployment; the list above records the older audit snapshot.\n\n## Final Verdict
 
 The project did not pass a full functional API audit in the 2026-09-06 snapshot. The current state is unknown until the audit is rerun.
 
@@ -122,10 +122,10 @@ The project did not pass a full functional API audit in the 2026-09-06 snapshot.
 - admin/faculty/student authenticated workflows
 
 ### Root cause
-The backend enforces a minimum 32-character `JWT_SECRET` in production and it is currently configured with a too-short value. This prevents the API from fully booting and issuing valid tokens. The app also requires other production env values that are not present unless set for the local runtime.
+At the time of the 2026-09-06 snapshot, the backend's production checks rejected the configured `JWT_SECRET` as too short and required additional production environment variables. This historical observation is not evidence of the current deployment configuration.
 
 ## Recommended Next Step
 
-Set a valid 32+ character JWT secret and the required production env values, then restart the backend and rerun the auth tests before continuing with the full route-by-route validation.
+For a fresh audit, verify a unique 32+ character JWT secret and all required production environment variables in the deployment secret manager, restart the backend if configuration changed, and rerun the auth tests before route-by-route validation.
 
 Generate a unique JWT secret with a cryptographically secure random generator and configure all required values in the deployment's secret manager. Do not copy example secrets or service keys from documentation. After configuration is verified, re-run login and route-by-route tests with tokens issued by the running backend.
