@@ -669,28 +669,39 @@ export const interestAPI = {
 
 // Chat APIs
 export const chatAPI = {
-  getChats: async (userId: string): Promise<Chat[]> => {
-    const response = await api.get(`/chats/${userId}`);
+  getChats: async (userId: string | Record<string, unknown>): Promise<Chat[]> => {
+    const normalizedUserId = normalizeId(userId);
+    if (!normalizedUserId) return [];
+    const response = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
     return Array.isArray(response.data?.chats) ? response.data.chats : [];
   },
 
-  createChat: async (facultyId: string): Promise<Chat> => {
-    const response = await api.post('/chats', { facultyId });
+  createChat: async (facultyId: string | Record<string, unknown>): Promise<Chat> => {
+    const normalizedFacultyId = normalizeId(facultyId);
+    if (!normalizedFacultyId) throw new Error('Invalid faculty identifier');
+    const response = await api.post('/chats', { facultyId: normalizedFacultyId });
     return unwrapData<Chat>(response.data?.chat || response.data);
   },
 
-  sendMessage: async (chatId: string, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
-    const response = await api.post(`/chats/${chatId}/message`, { content, tag });
+  sendMessage: async (chatId: string | Record<string, unknown>, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
+    const normalizedChatId = normalizeId(chatId);
+    if (!normalizedChatId) throw new Error('Invalid chat identifier');
+    const response = await api.post(`/chats/${encodeURIComponent(normalizedChatId)}/message`, { content, tag });
     return unwrapData<Chat>(response.data?.chat || response.data);
   },
 
-  deleteMessage: async (chatId: string, messageId: string): Promise<Chat> => {
-    const response = await api.delete(`/chats/${chatId}/message/${messageId}`);
+  deleteMessage: async (chatId: string | Record<string, unknown>, messageId: string | Record<string, unknown>): Promise<Chat> => {
+    const normalizedChatId = normalizeId(chatId);
+    const normalizedMessageId = normalizeId(messageId);
+    if (!normalizedChatId || !normalizedMessageId) throw new Error('Invalid chat or message identifier');
+    const response = await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}/message/${encodeURIComponent(normalizedMessageId)}`);
     return unwrapData<Chat>(response.data?.chat || response.data);
   },
 
-  deleteChat: async (chatId: string): Promise<void> => {
-    await api.delete(`/chats/${chatId}`);
+  deleteChat: async (chatId: string | Record<string, unknown>): Promise<void> => {
+    const normalizedChatId = normalizeId(chatId);
+    if (!normalizedChatId) throw new Error('Invalid chat identifier');
+    await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}`);
   },
 };
 
