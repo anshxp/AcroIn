@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { assertDemoSeedAllowed } from './guard-demo-seed.js';
 import mongoose from 'mongoose';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
@@ -6,6 +7,7 @@ import Faculty from '../models/Faculty.js';
 
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) throw new Error('MONGO_URI is required');
+assertDemoSeedAllowed(MONGO_URI);
 const topics = ['Research collaboration opportunity', 'Department seminar update', 'Project showcase', 'Academic workshop announcement', 'Student achievement', 'Faculty guidance session', 'Hackathon preparation', 'Technical discussion session', 'Open source contribution drive', 'Innovation club update'];
 const buildContent = (index) => `[DEMO POST ${String(index + 1).padStart(3, '0')}] ${topics[index % topics.length]}. This is seeded demonstration content for the AcroIn home feed. Students can open the post owner profile from the author name.`;
 
