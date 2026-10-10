@@ -6,6 +6,7 @@ import Faculty from '../models/Faculty.js';
 import User from '../models/User.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { postUpload } from '../middleware/uploadMiddleware.js';
+import { parsePostsPagination } from '../utils/postsPagination.js';
 
 const router = express.Router();
 const FACULTY_ADMIN_ROLES = new Set(['dept_admin']);
@@ -95,9 +96,7 @@ router.get('/', verifyToken, async (req, res) => {
     const filters = [{ scope: 'campus' }];
     if (userDepartment) filters.push({ scope: 'department', visibleToDepartments: userDepartment });
     const baseFilter = req.user?.userType === 'admin' ? {} : { $or: filters };
-    const requestedPage = Number.parseInt(String(req.query.page ?? ''), 10);
-    const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 20));
+    const { page, limit } = parsePostsPagination(req.query);
     const query = Post.find(baseFilter).populate('linkedOpportunity').sort({ createdAt: -1 });
 
     if (page > 0) {
