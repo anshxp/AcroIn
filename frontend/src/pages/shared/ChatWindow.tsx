@@ -89,7 +89,7 @@ export const ChatWindow: React.FC = () => {
   const getParticipantName = (participant: Participant) => typeof participant === 'string' ? participant : participant?.name || participant?.email || 'Unknown';
   const getOtherParticipant = (): Participant | null => {
     if (!chat) return null;
-    return (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== authUserId) || null;
+    return (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== normalizeId(authUserId)) || null;
   };
   const getOtherParticipantName = () => { const other = getOtherParticipant(); return other ? getParticipantName(other) : 'Unknown'; };
   const getParticipantInitials = (participant: Participant | null) => {
