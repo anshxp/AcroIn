@@ -365,7 +365,7 @@ export const facultyAPI = {
   },
 
   exportInterestedStudents: async (opportunityId: string, format: 'csv' | 'excel' | 'pdf' = 'csv'): Promise<Blob> => {
-    const response = await api.get(`/faculty/export/interested/${opportunityId}?format=${format}`, {
+    const response = await api.get(`/faculty/export/interested/${idPath(opportunityId, 'opportunity id')}?format=${encodeURIComponent(format)}`, {
       responseType: 'blob',
     });
     return response.data;
