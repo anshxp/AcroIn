@@ -18,7 +18,7 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { certificateAPI, internshipAPI, projectAPI, studentAPI } from '../../services/api';
+import { certificateAPI, internshipAPI, normalizeId, projectAPI, studentAPI } from '../../services/api';
 import type { StudentExperience, StudentSkill } from '../../types';
 import { SKILL_CATALOG, SKILL_CATEGORIES } from '../../constants/skillCatalog';
 import '../../styles/profile.css';
@@ -50,7 +50,7 @@ interface ProfileForm {
 }
 
 const isDemoStudentAccount = (userId?: unknown, email?: unknown) => {
-  const normalizedUserId = typeof userId === 'string' ? userId : String(userId ?? '');
+  const normalizedUserId = normalizeId(userId);
   const normalizedEmail = typeof email === 'string' ? email : String(email ?? '');
 
   return Boolean(
