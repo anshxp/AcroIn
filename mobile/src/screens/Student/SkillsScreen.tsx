@@ -7,8 +7,11 @@ import { Input, Button, Badge, EmptyState, LoadingSpinner } from '../../componen
 import { useAuthStore } from '../../stores/authStore';
 import { getProfileId } from '../../utils/authIds';
 import { useSkills, useAddSkill, useUpdateSkill } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { StudentSkill } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced'] as const;
 const CATEGORIES = ['Programming', 'Framework', 'Database', 'DevOps', 'Design', 'Soft Skills', 'Other'] as const;
@@ -59,7 +62,7 @@ export default function SkillsScreen({ navigation }: any) {
         {isLoading ? <LoadingSpinner /> : !skills?.length ? (
           <EmptyState icon="sparkles-outline" title="No skills yet" subtitle="Add skills to showcase your expertise" action={<Button title="Add Skill" onPress={() => { resetForm(); setShowModal(true); }} variant="secondary" />} />
         ) : skills.map((skill, idx) => (
-          <TouchableOpacity key={skill._id || idx} style={[s.card, shadows.card]} onPress={() => openEdit(skill)}>
+          <TouchableOpacity key={`${safeId(skill._id) || 'skill'}-${idx}`} style={[s.card, shadows.card]} onPress={() => openEdit(skill)}>
             <View style={s.cardHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{skill.name}</Text>
