@@ -34,7 +34,7 @@ export const ChatWindow: React.FC = () => {
       const foundChat = response.find((c) => normalizeId(c._id) === normalizedChatId);
       if (foundChat) {
         setChat((current) => {
-          if (normalizeId(current?._id) === normalizeId(foundChat._id) && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
+          if (current && normalizeId(current._id) === normalizeId(foundChat._id) && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
           return foundChat;
         });
       } else {
