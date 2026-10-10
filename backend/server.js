@@ -80,7 +80,8 @@ if (isProduction) {
 
 if (isProduction) app.set('trust proxy', 1);
 
-const envOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '')
+const configuredFrontendOrigins = process.env.FRONTEND_URLS?.trim() || process.env.FRONTEND_URL?.trim() || '';
+const envOrigins = configuredFrontendOrigins
   .split(',')
   .map((origin) => origin.trim().replace(/\/$/, ''))
   .filter(Boolean);
