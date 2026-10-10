@@ -182,7 +182,7 @@ export const StudentProjects: React.FC = () => {
       ) : filteredProjects.length > 0 ? (
         <div className="cards-grid">
           {filteredProjects.map((project, index) => (
-            <div key={project._id} className="project-card">
+            <div key={`${normalizeId(project._id) || "project"}-${index}`} className="project-card">
               <div className="project-card-header">
                 <h3>{project.title}</h3>
                 <div className="project-card-actions">
