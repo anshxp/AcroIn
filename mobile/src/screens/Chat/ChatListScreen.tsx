@@ -12,6 +12,8 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { useChats } from '../../hooks/useApi';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
+
 export default function ChatListScreen({ navigation }: any) {
   const { user } = useAuthStore();
   const authUserId = getAuthUserId(user);
@@ -88,7 +90,7 @@ export default function ChatListScreen({ navigation }: any) {
             const name = getOtherParticipantName(chat, authUserId);
             return (
               <TouchableOpacity
-                key={`${normalizeIdentifier(chat._id, 'chat id')}-${index}`}
+                key={`${safeId(chat._id) || 'chat'}-${index}`}
                 style={[s.chatItem, shadows.soft]}
                 onPress={() => openChat(chat)}
               >
