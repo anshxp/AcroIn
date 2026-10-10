@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import axios from 'axios';
 import { X, Image, Send, Loader2, Globe, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -12,7 +13,7 @@ interface CreatePostModalProps {
   onPostCreated: (post: Post) => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 const createPostWithFiles = async ({
   content,
