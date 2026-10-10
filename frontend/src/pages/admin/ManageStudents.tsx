@@ -19,7 +19,7 @@ import {
   Mail,
   Building2,
 } from 'lucide-react';
-import { studentAPI, adminAPI } from '../../services/api';
+import { normalizeId, studentAPI, adminAPI } from '../../services/api';
 import AddStudentModal from '../../components/admin/AddStudentModal';
 import '../../styles/pages.css';
 
@@ -412,8 +412,8 @@ export const ManageStudents: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedStudents.map((student) => (
-              <tr key={student._id}>
+            {paginatedStudents.map((student, index) => (
+              <tr key={`${normalizeId(student._id) || 'student'}-${index}`}>
                 <td>
                   {(() => {
                     const imageKey = `student-table-${student._id}`;
