@@ -107,6 +107,8 @@ export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): s
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
     const normalized = String(value).trim();
     if (normalized && normalized !== '[object Object]') return normalized;
+  } else if (Array.isArray(value)) {
+    // Arrays are not valid route identifiers.
   } else if (value && typeof value === 'object') {
     const candidate = value as Record<string, unknown>;
     const nested = candidate._id ?? candidate.id ?? candidate.$oid;
@@ -114,7 +116,7 @@ export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): s
       return normalizeIdentifier(nested, fieldName);
     }
     if (typeof candidate.toString === 'function') {
-      const normalized = candidate.toString();
+      const normalized = candidate.toString().trim();
       if (normalized && normalized !== '[object Object]') return normalized;
     }
   }
