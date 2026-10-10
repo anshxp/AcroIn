@@ -10,8 +10,8 @@ const isValidApiUrl = (value: string | undefined): value is string => {
   }
 };
 
-if (import.meta.env.PROD && !isValidApiUrl(configuredApiUrl)) {
-  throw new Error('A valid absolute HTTP(S) VITE_API_URL must be configured for production builds.');
+if (import.meta.env.PROD && (!isValidApiUrl(configuredApiUrl) || new URL(configuredApiUrl).protocol !== 'https:')) {
+  throw new Error('A valid absolute HTTPS VITE_API_URL must be configured for production builds.');
 }
 
 export const API_BASE_URL = (isValidApiUrl(configuredApiUrl) ? configuredApiUrl : 'http://localhost:5000').replace(/\/+$/, '');
