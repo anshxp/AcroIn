@@ -611,8 +611,8 @@ export const ManageFaculty: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedFaculty.map((f) => (
-              <tr key={f._id}>
+            {paginatedFaculty.map((f, index) => (
+              <tr key={`${normalizeId(f._id) || 'faculty'}-${index}`}>
                 <td>
                   {(() => {
                     const imageKey = `faculty-table-${f._id}`;
