@@ -75,3 +75,23 @@ jobs:
       - name: Run tests
         working-directory: ${{ matrix.service }}
         run: python -m pytest -q
+
+  dependency-audit:
+    name: Node dependency security audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [backend, frontend, mobile]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked dependencies
+        working-directory: ${{ matrix.project }}
+        run: npm ci --ignore-scripts --legacy-peer-deps
+      - name: Fail on high or critical npm advisories
+        working-directory: ${{ matrix.project }}
+        run: npm audit --audit-level=high
