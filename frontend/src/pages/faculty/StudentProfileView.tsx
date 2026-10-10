@@ -446,7 +446,7 @@ export const StudentProfileView: React.FC = () => {
               {studentSkills.length > 0 ? (
                 studentSkills.map((skill, index) => (
                   <div
-                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`
+                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`}
                     style={{
                       padding: '14px',
                       background: '#f8fafc',
