@@ -904,7 +904,7 @@ export const chatAPI = {
   getChats: async (userId: unknown): Promise<Chat[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
     if (!normalizedUserId) return [];
-    const { data } = await api.get('/chats');
+    const { data } = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
     return Array.isArray(data?.chats) ? data.chats : [];
   },
   createChat: async (facultyId: unknown): Promise<Chat> => {
@@ -935,7 +935,7 @@ export const notificationAPI = {
   getByUser: async (userId: unknown): Promise<NotificationItem[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
     if (!normalizedUserId) return [];
-    const { data } = await api.get('/notifications');
+    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
     return Array.isArray(data) ? data : [];
   },
   markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
