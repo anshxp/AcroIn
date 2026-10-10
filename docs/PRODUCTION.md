@@ -9,7 +9,8 @@ The browser/mobile clients communicate with the authenticated Node/Express API. 
 - `NODE_ENV=production`
 - `MONGO_URI`
 - `JWT_SECRET`
-- `FRONTEND_URLS`
+- `FRONTEND_URL` (required startup variable)
+- `FRONTEND_URLS` (comma-separated allowed frontend origins; must include the deployed frontend)
 - `FACE_REC_SERVICE_URL`
 - `FACE_API_KEY`
 - `RECOMMENDATION_SERVICE_URL`
