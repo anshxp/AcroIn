@@ -146,48 +146,20 @@ const handleMockFallback = (config: any): any => {
     const email = (credentials.email || 'student@acropolis.in').trim().toLowerCase();
     const password = credentials.password || '';
 
-    // Enforce correct password for Lavish's specific acropolis address
-    if (email === 'lavishjangid230719@acropolis.in') {
-      if (password !== 'Lavish@262') {
-        return {
-          status: 401,
-          statusText: 'Unauthorized',
-          headers: { 'content-type': 'application/json' },
-          config,
-          data: {
-            success: false,
-            message: 'Invalid credentials. Please verify your password.',
-          }
-        };
+    const isFaculty = email.includes('faculty') || email.includes('prof');
+    mockData = {
+      success: true,
+      token: 'demo-session-token',
+      user: {
+        _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
+        email,
+        name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
+        userType: isFaculty ? 'faculty' : 'student',
+        role: isFaculty ? 'faculty' : 'student',
+        department: 'CSE',
+        designation: isFaculty ? 'Professor & HOD' : undefined,
       }
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: 'student-demo-id',
-          email: 'lavishjangid230719@acropolis.in',
-          name: 'Lavish Jangid',
-          userType: 'student',
-          role: 'student',
-          department: 'CSE',
-        }
-      };
-    } else {
-      const isFaculty = email.includes('faculty') || email.includes('prof');
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
-          email: email,
-          name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
-          userType: isFaculty ? 'faculty' : 'student',
-          role: isFaculty ? 'faculty' : 'student',
-          department: 'CSE',
-          designation: isFaculty ? 'Professor & HOD' : undefined,
-        }
-      };
-    }
+    };
   } else if (url.includes('/auth/student/register')) {
     let payload = { email: 'student@acropolis.in', name: 'Lavish Jangid', roll: '0812CS221045', department: 'CSE' };
     try { payload = JSON.parse(config.data || '{}'); } catch {}
