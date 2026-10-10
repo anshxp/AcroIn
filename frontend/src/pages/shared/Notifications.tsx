@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Filter, Mail, Eye, ShieldAlert, Award } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { notificationAPI } from '../../services/api';
+import { normalizeId, notificationAPI } from '../../services/api';
 import type { NotificationItem } from '../../types';
 
 type FilterMode = 'all' | 'unread' | 'read';
@@ -93,9 +93,9 @@ export const Notifications: React.FC = () => {
       </div></div></div>
       {loading && <p className="page-subtitle">Loading notifications...</p>}
       {!loading && filteredNotifications.length === 0 && <p className="page-subtitle">No notifications matched your filters.</p>}
-      <div className="student-list">{filteredNotifications.map((notification) => {
+      <div className="student-list">{filteredNotifications.map((notification, index) => {
         const meta = notificationMeta[notification.type];
-        return <div key={notification._id} className="notification-card">
+        return <div key={`${normalizeId(notification._id) || "notification"}-${index}`} className="notification-card">
           <div className={`notification-avatar ${notification.read ? 'read' : 'unread'}`}>{notification.read ? <CheckCheck size={18} /> : <Bell size={18} />}</div>
           <div className="notification-content"><div className="notification-title-row"><h3 className="notification-title">{meta.label}</h3>{!notification.read && <span className="notification-new">New</span>}</div><div className="notification-message">{notification.message}</div><div className="notification-time">{meta.icon}<span>{new Date(notification.createdAt).toLocaleString()}</span></div></div>
           <div className="notification-actions"><button className="notification-action-btn" onClick={() => handleOpenNotification(notification)} type="button">Open</button>{!notification.read && <button className="notification-action-btn" onClick={() => markRead(notification._id)} type="button">Mark read</button>}</div>
