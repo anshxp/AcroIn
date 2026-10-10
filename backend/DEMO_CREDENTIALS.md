@@ -34,7 +34,7 @@ Departments:
 - IT: `.01`–`.10`
 - IL: `.01`–`.10`
 
-Example: `demo.student.cse.01@acropolis.in` / `AcroIn@2026`
+Example: `demo.student.cse.01@acropolis.in` (password is configured locally via `DEMO_SEED_PASSWORD`)
 
 ## Faculty accounts
 
@@ -44,7 +44,7 @@ Pattern:
 
 Every department has `.1` through `.5`.
 
-Example: `demo.faculty.cse.2@acropolis.in` / `AcroIn@2026`
+Example: `demo.faculty.cse.2@acropolis.in` (password is configured locally via `DEMO_SEED_PASSWORD`)
 
 ## Departmental administrator
 
