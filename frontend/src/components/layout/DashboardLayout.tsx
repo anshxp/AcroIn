@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Camera, Star, Briefcase, TrendingUp, Users, ChevronLeft, Menu, X, Bell, Settings, Home, GraduationCap, FolderOpen, Trophy, Award, FileCheck, LogOut, Plus, MessageSquare, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -6,7 +7,7 @@ import { CreatePostModal } from '../posts';
 import { facultyAPI, notificationAPI, studentAPI, uiAPI } from '../../services/api';
 import '../../styles/dashboard.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 interface NavItem { path: string; label: string; icon: React.ReactNode; badge?: string | number; badgeType?: 'default' | 'new'; }
 interface SidebarStat { label: string; value: string; color: 'default' | 'blue' | 'orange'; }
 
