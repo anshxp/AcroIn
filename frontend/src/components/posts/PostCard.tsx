@@ -54,11 +54,12 @@ export const PostCard: React.FC<PostCardProps> = ({
 }) => {
   const { user } = useAuth();
   const authUserId = normalizeId(user?.authUserId) || normalizeId(user?.id);
-  const [isLiked, setIsLiked] = useState(post.likes.some((like) => normalizeId(like) === authUserId && Boolean(authUserId)));
-  const [likesCount, setLikesCount] = useState(post.likes.length);
+  const initialLikes = Array.isArray(post.likes) ? post.likes : [];
+  const [isLiked, setIsLiked] = useState(Boolean(authUserId && initialLikes.some((like) => normalizeId(like) === authUserId)));
+  const [likesCount, setLikesCount] = useState(initialLikes.length);
   const [likeError, setLikeError] = useState('');
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(post.comments);
+  const [comments, setComments] = useState<Comment[]>(Array.isArray(post.comments) ? post.comments : []);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState('');
