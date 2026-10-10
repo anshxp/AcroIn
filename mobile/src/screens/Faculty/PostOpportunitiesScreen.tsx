@@ -5,9 +5,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Input, Button, Card, EmptyState, LoadingSpinner, ErrorBanner } from '../../components/ui';
 import { useOpportunities, useCreateOpportunity } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import { Modal } from 'react-native';
 import type { Opportunity } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 const TYPE_OPTIONS = ['internship', 'job', 'competition', 'workshop', 'certification'] as const;
 
@@ -62,8 +65,8 @@ export default function PostOpportunitiesScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} />}>
         {isLoading ? <LoadingSpinner /> : !opportunities?.length ? (
           <EmptyState icon="megaphone-outline" title="No opportunities" subtitle="Post opportunities for students" action={<Button title="Post Opportunity" onPress={() => setShowModal(true)} variant="secondary" />} />
-        ) : opportunities.map((opp: Opportunity) => (
-          <View key={opp._id} style={[s.card, shadows.card]}>
+        ) : opportunities.map((opp: Opportunity, index: number) => (
+          <View key={`${safeId(opp._id) || 'opportunity'}-${index}`} style={[s.card, shadows.card]}>
             <View style={s.cardTop}>
               <View style={[s.typeBadge, { backgroundColor: getTypeColor(opp.type) + '20' }]}>
                 <Text style={[s.typeBadgeText, { color: getTypeColor(opp.type) }]}>{opp.type.toUpperCase()}</Text>
