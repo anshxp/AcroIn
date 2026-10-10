@@ -1,5 +1,25 @@
 import type { AuthResponse, User } from '../types';
 
+const normalizeAuthIdentifier = (value: unknown): string => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
+    const normalized = String(value).trim();
+    return normalized && normalized !== '[object Object]' ? normalized : '';
+  }
+
+  if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    const nested = candidate._id ?? candidate.id ?? candidate.$oid;
+    if (nested !== undefined && nested !== value) return normalizeAuthIdentifier(nested);
+
+    if (typeof candidate.toString === 'function' && candidate.toString !== Object.prototype.toString) {
+      const normalized = candidate.toString().trim();
+      return normalized && normalized !== '[object Object]' ? normalized : '';
+    }
+  }
+
+  return '';
+};
+
 /** Decode JWT payload to read the User._id without verifying (client-side ID only). */
 export function extractAuthUserIdFromToken(token: string): string | undefined {
   try {
@@ -32,8 +52,8 @@ export function extractAuthUserIdFromToken(token: string): string | undefined {
     };
 
     const json = decodeBase64(padded);
-    const payload = JSON.parse(json) as { id?: string };
-    return payload.id;
+    const payload = JSON.parse(json) as { id?: unknown };
+    return normalizeAuthIdentifier(payload.id) || undefined;
   } catch {
     return undefined;
   }
@@ -41,21 +61,22 @@ export function extractAuthUserIdFromToken(token: string): string | undefined {
 
 /** User._id from JWT — chats, notifications, post likes. */
 export function getAuthUserId(user: User | null | undefined): string {
-  return user?.authUserId || user?.id || user?._id || '';
+  return normalizeAuthIdentifier(user?.authUserId) || normalizeAuthIdentifier(user?.id) || normalizeAuthIdentifier(user?._id);
 }
 
 /** Student/Faculty document _id — profile, projects, skills. */
 export function getProfileId(user: User | null | undefined): string {
-  return user?.profileId || user?._id || user?.id || '';
+  return normalizeAuthIdentifier(user?.profileId) || normalizeAuthIdentifier(user?._id) || normalizeAuthIdentifier(user?.id);
 }
 
 export function buildUserFromAuthResponse(response: AuthResponse): User | null {
   if (!response.token || !response.user) return null;
 
-  const profileId = String(response.user._id || '');
+  const profileId = normalizeAuthIdentifier(response.user.profileId) || normalizeAuthIdentifier(response.user._id);
   const authUserId =
-    String(response.user.authUserId || '') ||
+    normalizeAuthIdentifier(response.user.authUserId) ||
     extractAuthUserIdFromToken(response.token) ||
+    normalizeAuthIdentifier(response.user.id) ||
     profileId;
 
   const resolvedName =
