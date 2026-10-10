@@ -86,15 +86,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     if (storedUser && token) {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
-        // Migrate sessions created before authUserId was stored.
-        if (!parsedUser.authUserId) {
-          const authUserId = getAuthUserIdFromToken(token);
-          if (authUserId) {
-            parsedUser.authUserId = authUserId;
-            localStorage.setItem('user', JSON.stringify(parsedUser));
-          }
+        const profileId = normalizeAuthId(parsedUser.id);
+        const authUserId =
+          normalizeAuthId(parsedUser.authUserId) ||
+          getAuthUserIdFromToken(token) ||
+          profileId;
+
+        // Normalize stale sessions before they reach components or URL builders.
+        if (!profileId || !authUserId) {
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+        } else {
+          const normalizedUser: User = {
+            ...parsedUser,
+            id: profileId,
+            authUserId,
+          };
+          localStorage.setItem('user', JSON.stringify(normalizedUser));
+          setUser(normalizedUser);
         }
-        setUser(parsedUser);
       } catch {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
