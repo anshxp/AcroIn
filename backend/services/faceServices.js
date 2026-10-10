@@ -57,7 +57,7 @@ const appendImageToForm = async (form, fieldName, imageSource) => {
 };
 
 // 🔥 ENROLL
-export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
+export const enrollFace = async (studentId, frontImage, leftImage, rightImage) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();
@@ -65,9 +65,9 @@ export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
   form.append("student_id", studentId);
 
   try {
-    await appendImageToForm(form, 'front', frontPath);
-    await appendImageToForm(form, 'left', leftPath);
-    await appendImageToForm(form, 'right', rightPath);
+    await appendImageToForm(form, 'front', frontImage);
+    await appendImageToForm(form, 'left', leftImage);
+    await appendImageToForm(form, 'right', rightImage);
   } catch (error) {
     throw mapFaceServiceError(error, 'enroll');
   }
@@ -92,13 +92,13 @@ export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
 };
 
 // 🔥 SEARCH
-export const searchFace = async (imagePath) => {
+export const searchFace = async (imageFile) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();
 
   try {
-    await appendImageToForm(form, 'file', imagePath);
+    await appendImageToForm(form, 'file', imageFile);
   } catch (error) {
     throw mapFaceServiceError(error, 'search');
   }
@@ -122,7 +122,7 @@ export const searchFace = async (imagePath) => {
   }
 };
 
-export const extractFaceEmbedding = async (imagePath) => {
+export const extractFaceEmbedding = async (imageFile) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();
