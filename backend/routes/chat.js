@@ -65,6 +65,22 @@ const enrichChatParticipants = async (chats) => Promise.all(chats.map(async (cha
   return { ...data, participants };
 }));
 
+// Compatibility endpoint: return only the authenticated user's chats.
+router.get('/', verifyToken, async (req, res) => {
+  try {
+    const authenticatedUser = await resolveParticipantUser(req.user?.id);
+    if (!authenticatedUser) return res.status(401).json({ success: false, message: 'Authenticated user not found' });
+
+    const chats = await Chat.find({ participants: authenticatedUser._id })
+      .populate('participants', 'name email userType')
+      .sort({ updatedAt: -1 });
+    return res.json({ success: true, chats: await enrichChatParticipants(chats) });
+  } catch (err) {
+    console.error('[chats] GET /chats failed:', err);
+    return res.status(500).json({ success: false, message: 'Unable to load chats' });
+  }
+});
+
 router.get('/:userId', verifyToken, async (req, res) => {
   try {
     const authenticatedUser = await resolveParticipantUser(req.user?.id);
