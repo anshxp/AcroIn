@@ -38,15 +38,7 @@ export const verifyToken = (req, res, next) => {
 
     // JWT payloads should contain a scalar user id. Normalize legacy tokens
     // that may contain an ObjectId-like object before downstream Mongoose calls.
-    const rawId = decoded.id;
-    const normalizedId =
-      typeof rawId === 'string'
-        ? rawId.trim()
-        : typeof rawId === 'number' || typeof rawId === 'bigint'
-          ? String(rawId)
-          : rawId && typeof rawId === 'object'
-            ? String(rawId._id || rawId.id || rawId.$oid || '')
-            : '';
+    const normalizedId = normalizeAuthId(decoded.id);
 
     if (!normalizedId || normalizedId === '[object Object]') {
       return res.status(401).json({ success: false, message: 'Invalid user id in authentication token' });
