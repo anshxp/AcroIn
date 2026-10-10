@@ -83,7 +83,7 @@ const resolveBaseUrl = (): string => {
 
 const API_BASE_URL = resolveBaseUrl();
 
-const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
+export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
     const normalized = String(value).trim();
     if (normalized && normalized !== '[object Object]') return normalized;
@@ -881,6 +881,7 @@ export const opportunityAPI = {
 export const chatAPI = {
   getChats: async (userId: unknown): Promise<Chat[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
+    if (!normalizedUserId) return [];
     const { data } = await api.get('/chats');
     return Array.isArray(data?.chats) ? data.chats : [];
   },
@@ -911,6 +912,7 @@ export const chatAPI = {
 export const notificationAPI = {
   getByUser: async (userId: unknown): Promise<NotificationItem[]> => {
     const normalizedUserId = normalizeIdentifier(userId, 'user id');
+    if (!normalizedUserId) return [];
     const { data } = await api.get('/notifications');
     return Array.isArray(data) ? data : [];
   },
