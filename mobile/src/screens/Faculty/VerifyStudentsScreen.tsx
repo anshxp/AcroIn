@@ -4,9 +4,11 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Badge, Button, EmptyState, LoadingSpinner } from '../../components/ui';
-import { studentAPI, facultyAPI, type PaginatedResult } from '../../services/apiClient';
+import { studentAPI, facultyAPI, normalizeIdentifier, type PaginatedResult } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Student } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 const toStudentList = (response: Student[] | PaginatedResult<Student>): Student[] =>
   Array.isArray(response) ? response : response.items;
@@ -58,8 +60,8 @@ export default function VerifyStudentsScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.accent]} />}>
         {isLoading ? <LoadingSpinner /> : students.length === 0 ? (
           <EmptyState icon="checkmark-circle-outline" title="All caught up!" subtitle="No students pending verification" />
-        ) : students.map((student) => (
-          <View key={student._id} style={[s.card, shadows.card]}>
+        ) : students.map((student, index) => (
+          <View key={`${safeId(student._id) || 'student'}-${index}`} style={[s.card, shadows.card]}>
             <View style={s.cardRow}>
               <Avatar name={student.name} imageUrl={student.profile_image} size={48} />
               <View style={{ flex: 1 }}>
