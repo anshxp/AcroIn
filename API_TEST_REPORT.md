@@ -6,15 +6,15 @@ Historical snapshot date: 2026-09-06
 
 ## Executive Summary
 
-The backend is running and MongoDB connectivity is healthy, but the application is not fully operational in the current environment because the production auth configuration is invalid. The backend refuses to start in production mode unless required environment variables are supplied and the JWT secret is at least 32 characters long. As a result, live authentication and all JWT-protected routes are blocked until the runtime configuration is corrected.
+In the 2026-09-06 snapshot, health checks responded and MongoDB was connected, but the production auth configuration observed then prevented authentication from starting. The backend's production checks require its configured environment variables and a JWT secret of at least 32 characters. This is historical evidence only; the current deployment status is unverified.
 
 The core evidence is from live requests to the running API and direct inspection of the backend configuration in [backend/server.js](backend/server.js) and [backend/routes/auth.js](backend/routes/auth.js):
 
 - `/health` returns `200` with `{"success":true,"status":"healthy","database":"connected"}`.
 - `/ready` returns `200`.
 - Public landing endpoints return `200`.
-- Login attempts return `500` when the server runs without a valid JWT secret, and the app exits in production mode if the secret is too short.
-- Auth-protected endpoints return `401 No token provided` when no token exists, which is expected; however, the app cannot issue valid tokens in the current production configuration.
+- At snapshot time, login attempts returned `500` when the server ran without a valid JWT secret, and the app exited in production mode when the secret was too short.
+- Auth-protected endpoints returned `401 No token provided` when no token existed, which is expected. Authentication was blocked by the configuration observed at that time.
 
 ## Environment and Runtime Findings
 
@@ -30,11 +30,11 @@ Observed runtime startup output:
 - `Missing required production environment variables: FRONTEND_URL, RECOMMENDATION_SERVICE_URL, RECOMMENDATION_API_KEY`
 - `JWT_SECRET must be at least 32 characters in production.`
 
-This is a real blocker, not a test artifact.
+The historical audit treated these as confirmed blockers at snapshot time; the current status requires a fresh runtime check.
 
 ### Database status
 
-Live MongoDB validation shows the project is connected to the configured Atlas database and contains seed/demo data. Verified counts included:
+The historical live database validation reported a connection to the configured Atlas database and seed/demo data. Counts recorded at that time included:
 
 - 7 students
 - 1 faculty
@@ -104,11 +104,11 @@ From the route declarations in the backend, the following route groups exist:
 - Projects: [backend/routes/project.js](backend/routes/project.js)
 - UI: [backend/routes/ui.js](backend/routes/ui.js)
 
-The codebase clearly contains a broad API surface, but the live audit shows the application is not currently in a fully working state because the auth/config pipeline is broken.
+The codebase contains a broad API surface, but the historical audit could not validate protected workflows because the auth/config pipeline was broken at that time.
 
 ## Final Verdict
 
-This project does not currently pass a full functional API audit.
+The project did not pass a full functional API audit in the 2026-09-06 snapshot. The current state is unknown until the audit is rerun.
 
 ### Verified working
 - health/readiness checks
