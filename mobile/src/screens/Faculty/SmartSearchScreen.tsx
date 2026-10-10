@@ -90,9 +90,9 @@ export default function SmartSearchScreen({ navigation }: any) {
         ) : (
           <>
             <Text style={s.resultCount}>{results.length} student{results.length !== 1 ? 's' : ''} found</Text>
-            {results.map((student) => (
+            {results.map((student, index) => (
               <TouchableOpacity
-                key={student._id}
+                key={`${safeId(student._id) || 'student'}-${index}`}
                 style={[s.card, shadows.card]}
                 onPress={() => navigation.navigate('StudentProfileView', { id: student._id })}
               >
