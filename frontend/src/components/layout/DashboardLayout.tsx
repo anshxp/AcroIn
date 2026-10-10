@@ -4,7 +4,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Search, Camera, Star, Briefcase, TrendingUp, Users, ChevronLeft, Menu, X, Bell, Settings, Home, GraduationCap, FolderOpen, Trophy, Award, FileCheck, LogOut, Plus, MessageSquare, ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { CreatePostModal } from '../posts';
-import { facultyAPI, notificationAPI, studentAPI, uiAPI } from '../../services/api';
+import { facultyAPI, normalizeId, notificationAPI, studentAPI, uiAPI } from '../../services/api';
 import '../../styles/dashboard.css';
 
 
@@ -31,14 +31,8 @@ export const DashboardLayout: React.FC = () => {
 
   useEffect(() => {
     const loadUnreadNotifications = async () => {
-      const authUserId = user?.authUserId || user?.id;
-      const normalizedAuthUserId =
-        typeof authUserId === 'string'
-          ? authUserId.trim()
-          : authUserId && typeof authUserId === 'object'
-            ? String((authUserId as any)._id || (authUserId as any).id || (authUserId as any).$oid || '')
-            : String(authUserId ?? '');
-      if (!normalizedAuthUserId || normalizedAuthUserId === '[object Object]') { setUnreadCount(0); return; }
+      const normalizedAuthUserId = normalizeId(user?.authUserId || user?.id);
+      if (!normalizedAuthUserId) { setUnreadCount(0); return; }
       try { const notifications = await notificationAPI.getByUser(normalizedAuthUserId); setUnreadCount(notifications.filter((notification) => !notification.read).length); }
       catch { setUnreadCount(0); }
     };
