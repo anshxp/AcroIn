@@ -74,7 +74,7 @@ export const ChatList: React.FC = () => {
     } catch (error: any) { setApiError(error?.response?.data?.message || 'Failed to delete chat'); }
   };
 
-  const participantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const participantId = (participant: Participant) => normalizeId(typeof participant === 'string' ? participant : participant?._id);
   const participantName = (participant: Participant) => typeof participant === 'string' ? participant : (participant?.name || participant?.email || 'Unknown');
   const getOtherParticipant = (chat: Chat) => ((chat.participants || []) as Participant[]).find((participant) => participantId(participant) !== authUserId) || 'Unknown';
   const getInitials = (participant: Participant) => {
