@@ -53,8 +53,10 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPostDeleted 
 }) => {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(post.likes.includes(user?.id || ''));
+  const authUserId = normalizeId(user?.authUserId) || normalizeId(user?.id);
+  const [isLiked, setIsLiked] = useState(post.likes.some((like) => normalizeId(like) === authUserId && Boolean(authUserId)));
   const [likesCount, setLikesCount] = useState(post.likes.length);
+  const [likeError, setLikeError] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>(post.comments);
   const [newComment, setNewComment] = useState('');
@@ -225,21 +227,24 @@ export const PostCard: React.FC<PostCardProps> = ({
     return date.toLocaleDateString();
   };
 
+  useEffect(() => {
+    const likes = Array.isArray(post.likes) ? post.likes : [];
+    setLikesCount(likes.length);
+    setIsLiked(Boolean(authUserId && likes.some((like) => normalizeId(like) === authUserId)));
+  }, [post._id, post.likes, authUserId]);
+
   const handleLike = async () => {
+    setLikeError('');
     try {
-      if (isLiked) {
-        const updatedPost = await postAPI.unlike(post._id);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev - 1);
-      } else {
-        const updatedPost = await postAPI.like(post._id);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev + 1);
-      }
-      setIsLiked(!isLiked);
-    } catch (error) {
-      setIsLiked(!isLiked);
-      setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      const updatedPost = isLiked
+        ? await postAPI.unlike(post._id)
+        : await postAPI.like(post._id);
+      onPostUpdated?.(updatedPost);
+      const updatedLikes = Array.isArray(updatedPost.likes) ? updatedPost.likes : [];
+      setLikesCount(updatedLikes.length);
+      setIsLiked(Boolean(authUserId && updatedLikes.some((like) => normalizeId(like) === authUserId)));
+    } catch {
+      setLikeError('Unable to update like. Please try again.');
     }
   };
 
@@ -321,7 +326,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => window.clearTimeout(timer);
   }, [shareFeedback]);
 
-  const isAuthor = user?.id === post.author._id;
+  const isAuthor = Boolean(authUserId && normalizeId(post.author._id) === authUserId);
 
   const resolveImageUrl = (url: string) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -365,7 +370,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
     // Backward compatibility: older comments may not have avatar saved.
     // If the comment belongs to the logged-in user, reuse current profile avatar.
-    if (comment.author?._id && user?.id && String(comment.author._id) === String(user.id)) {
+    if (comment.author?._id && authUserId && normalizeId(comment.author._id) === authUserId) {
       return getCurrentUserAvatar();
     }
 
@@ -657,7 +662,8 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
       </div>
 
-      <div className="post-actions">
+      {likeError && <p className="post-like-error" role="alert">{likeError}</p>}
+        <div className="post-actions">
         <button 
           className={`post-action ${isLiked ? 'liked' : ''}`}
           onClick={handleLike}
