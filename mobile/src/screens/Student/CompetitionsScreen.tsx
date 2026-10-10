@@ -7,8 +7,11 @@ import { Input, Button, EmptyState, LoadingSpinner } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getProfileId } from '../../utils/authIds';
 import { useCompetitions, useCreateCompetition, useUpdateCompetition, useDeleteCompetition } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Competition } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function CompetitionsScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -43,8 +46,8 @@ export default function CompetitionsScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refetch(); setRefreshing(false); }} colors={[colors.accent]} />}>
         {isLoading ? <LoadingSpinner /> : !competitions?.length ? (
           <EmptyState icon="trophy-outline" title="No competitions" subtitle="Add competitions you've participated in" action={<Button title="Add Competition" onPress={() => { resetForm(); setShowModal(true); }} variant="secondary" />} />
-        ) : competitions.map((c) => (
-          <View key={c._id} style={[s.card, shadows.card]}>
+        ) : competitions.map((c, index) => (
+          <View key={`${safeId(c._id) || 'competition'}-${index}`} style={[s.card, shadows.card]}>
             <View style={s.cardHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{c.name}</Text>
