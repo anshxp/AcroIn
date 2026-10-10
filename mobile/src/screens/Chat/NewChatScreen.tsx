@@ -4,10 +4,12 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, LoadingSpinner, ErrorBanner, Button } from '../../components/ui';
-import { facultyAPI, chatAPI } from '../../services/apiClient';
+import { facultyAPI, chatAPI, normalizeIdentifier } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Faculty } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function NewChatScreen({ navigation }: any) {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
@@ -66,7 +68,7 @@ export default function NewChatScreen({ navigation }: any) {
             const name = `${member.firstname || ''} ${member.lastName || ''}`.trim() || member.email;
             return (
               <TouchableOpacity
-                key={member._id}
+                key={`${safeId(member._id) || 'faculty'}-${index}`}
                 style={[s.row, shadows.soft]}
                 onPress={() => startChat(member)}
                 disabled={creatingId === member._id}
