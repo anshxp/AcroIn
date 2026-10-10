@@ -36,19 +36,30 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
 const requiredProductionEnv = [
-  'MONGO_URI',
   'JWT_SECRET',
-  'FRONTEND_URL',
   'RECOMMENDATION_SERVICE_URL',
   'RECOMMENDATION_API_KEY',
   'FACE_REC_SERVICE_URL',
   'FACE_API_KEY',
 ];
 
-const hasUsableHttpUrl = (value) => /^https:\/\/[^\s/]+/i.test(String(value || '').trim());
+const hasUsableHttpUrl = (value) => {
+  try {
+    const parsed = new URL(String(value || '').trim());
+    return parsed.protocol === 'https:' && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+};
 
 if (isProduction) {
   const missing = requiredProductionEnv.filter((name) => !process.env[name]?.trim());
+  if (!process.env.MONGO_URI?.trim() && !process.env.MONGODB_URI?.trim()) {
+    missing.push('MONGO_URI or MONGODB_URI');
+  }
+  if (!process.env.FRONTEND_URL?.trim() && !process.env.FRONTEND_URLS?.trim()) {
+    missing.push('FRONTEND_URL or FRONTEND_URLS');
+  }
   if (missing.length) {
     console.error(`[backend] Missing required production environment variables: ${missing.join(', ')}`);
     process.exit(1);
