@@ -101,7 +101,13 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
+    const body = req.body || {};
+    const allowedFields = ['name', 'organizer', 'date', 'application_link', 'location', 'student'];
+    const payload = normalizeApplicationLinkPayload(Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    ));
 
     if (isAdminOrFacultyUser && !payload.application_link) {
       return res.status(400).json({
