@@ -66,48 +66,83 @@ const loginUser = async (req, res, expectedUserType = null) => {
 };
 
 const registerBootstrapAdmin = async (req, res) => {
-  let createdUser = null;
-  let createdAdmin = null;
-
+  let session;
   try {
-    if (String(process.env.ADMIN_BOOTSTRAP_ENABLED || '').toLowerCase() !== 'true') return res.status(404).json({ success: false, message: 'Bootstrap disabled' });
+    if (String(process.env.ADMIN_BOOTSTRAP_ENABLED || '').toLowerCase() !== 'true') {
+      return res.status(404).json({ success: false, message: 'Bootstrap disabled' });
+    }
     const bootstrapKey = String(req.headers['x-bootstrap-key'] || '').trim();
     const expectedKey = String(process.env.ADMIN_BOOTSTRAP_KEY || '').trim();
-    if (!expectedKey || bootstrapKey !== expectedKey) return res.status(403).json({ success: false, message: 'Invalid bootstrap key' });
+    if (!expectedKey || bootstrapKey !== expectedKey) {
+      return res.status(403).json({ success: false, message: 'Invalid bootstrap key' });
+    }
 
     const { name, email, password } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedName = String(name || '').trim();
     const normalizedPassword = String(password || '');
-    if (!normalizedName || !normalizedEmail || !normalizedPassword) return res.status(400).json({ success: false, message: 'name, email, and password are required' });
-    if (!isCollegeEmail(normalizedEmail)) return res.status(400).json({ success: false, message: 'Please use a valid college email address' });
-    if (!isStrongPassword(normalizedPassword)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
-
-    const maxAdmins = 2;
-    if (await User.countDocuments({ userType: 'admin' }) >= maxAdmins) return res.status(409).json({ success: false, message: `Admin limit reached (${maxAdmins})` });
-    if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    if (!normalizedName || !normalizedEmail || !normalizedPassword) {
+      return res.status(400).json({ success: false, message: 'name, email, and password are required' });
+    }
+    if (!isCollegeEmail(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Please use a valid college email address' });
+    }
+    if (!isStrongPassword(normalizedPassword)) {
+      return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
+    }
+    if (await User.countDocuments({ userType: 'admin' }) >= 2) {
+      return res.status(409).json({ success: false, message: 'Admin limit reached (2)' });
+    }
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    }
 
     const hashedPassword = await bcrypt.hash(normalizedPassword, 12);
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'admin', role: ['admin'] });
-    createdUser = user;
-    const admin = await Admin.create({ user: user._id, permissions: ['all'] });
-    createdAdmin = admin;
-    await Profile.findOneAndUpdate({ user: user._id }, { $set: { userType: 'admin', displayName: normalizedName, email: normalizedEmail, department: 'Administration', designation: 'System Administrator', skills: [], tags: ['admin'], profileCompleteness: 100, verificationStatus: 'verified', isActive: true } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    session = await User.startSession();
+    let user;
+    await session.withTransaction(async () => {
+      [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: normalizedName,
+        userType: 'admin',
+        role: ['admin'],
+      }], { session });
+      await Admin.create([{ user: user._id, permissions: ['all'] }], { session });
+      await Profile.findOneAndUpdate(
+        { user: user._id },
+        { $set: {
+          userType: 'admin',
+          displayName: normalizedName,
+          email: normalizedEmail,
+          department: 'Administration',
+          designation: 'System Administrator',
+          skills: [],
+          tags: ['admin'],
+          profileCompleteness: 100,
+          verificationStatus: 'verified',
+          isActive: true,
+        } },
+        { new: true, upsert: true, setDefaultsOnInsert: true, session }
+      );
+    });
 
     const token = signAccessToken(user);
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    const { password: _password, ...userWithoutPassword } = user.toObject();
     return res.status(201).json({ success: true, message: 'Admin account created', token, user: userWithoutPassword });
-  } catch (_err) {
-    const cleanup = [];
-    if (createdUser?._id) {
-      cleanup.push(Profile.deleteOne({ user: createdUser._id }));
-      cleanup.push(User.deleteOne({ _id: createdUser._id, userType: 'admin' }));
+  } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
     }
-    if (createdAdmin?._id) {
-      cleanup.push(Admin.deleteOne({ _id: createdAdmin._id }));
-    }
-    await Promise.allSettled(cleanup);
-    return res.status(500).json({ success: false, message: 'Admin bootstrap failed; cleanup was attempted' });
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic admin bootstrap requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Admin bootstrap failed; database transaction was aborted.',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 
