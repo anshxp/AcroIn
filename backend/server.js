@@ -38,7 +38,6 @@ const isProduction = process.env.NODE_ENV === 'production';
 const requiredProductionEnv = [
   'MONGO_URI',
   'JWT_SECRET',
-  'FRONTEND_URL',
   'RECOMMENDATION_SERVICE_URL',
   'RECOMMENDATION_API_KEY',
   'FACE_REC_SERVICE_URL',
@@ -48,6 +47,13 @@ const requiredProductionEnv = [
 const hasUsableHttpUrl = (value) => /^https:\/\/[^\s/]+/i.test(String(value || '').trim());
 
 if (isProduction) {
+  // Either variable is supported; FRONTEND_URLS allows multiple comma-separated origins.
+  const configuredFrontendOrigins = String(process.env.FRONTEND_URLS || process.env.FRONTEND_URL || '').trim();
+  if (!configuredFrontendOrigins) {
+    console.error('[backend] Set FRONTEND_URL or FRONTEND_URLS in production.');
+    process.exit(1);
+  }
+
   const missing = requiredProductionEnv.filter((name) => !process.env[name]?.trim());
   if (missing.length) {
     console.error(`[backend] Missing required production environment variables: ${missing.join(', ')}`);
