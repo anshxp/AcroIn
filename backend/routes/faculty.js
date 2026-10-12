@@ -664,6 +664,16 @@ router.put('/:id', verifyToken, async (req, res) => {
       runValidators: true,
     }).select('-password');
 
+    // Keep the canonical User role/department/name aligned with the Faculty record.
+    const linkedUser = await User.findOne({ email: targetFaculty.email });
+    if (linkedUser) {
+      if (updatedData.role) linkedUser.role = [...updatedData.role];
+      if (updatedData.department !== undefined) linkedUser.department = faculty.department;
+      if (updatedData.firstname !== undefined || updatedData.lastName !== undefined) {
+        linkedUser.name = `${faculty.firstname || ''} ${faculty.lastName || ''}`.trim();
+      }
+      await linkedUser.save();
+    }
     await syncFacultyProfileFromDoc(faculty);
 
     res.json(faculty);
