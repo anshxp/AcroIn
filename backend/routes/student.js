@@ -540,6 +540,55 @@ router.put('/:id', verifyToken, async (req, res) => {
         .map((field) => [field, body[field]])
     );
 
+    if (Object.prototype.hasOwnProperty.call(body, 'skills')) {
+      if (!Array.isArray(body.skills)) return res.status(400).json({ message: 'Skills must be an array' });
+      updates.skills = body.skills.map((candidate) => {
+        if (!candidate || typeof candidate !== 'object' || !String(candidate.name || '').trim()) {
+          throw new Error('Each skill must have a name');
+        }
+        const name = String(candidate.name).trim();
+        const existing = candidate._id ? student.skills.id(candidate._id) : student.skills.find((item) => item.name === name);
+        const unchangedName = existing && String(existing.name).trim() === name;
+        const level = ['Beginner', 'Intermediate', 'Advanced'].includes(candidate.level) ? candidate.level : 'Beginner';
+        const progressValue = Number(candidate.progress);
+        return {
+          ...(existing ? { _id: existing._id } : {}),
+          category: String(candidate.category || 'General').trim(),
+          name,
+          level,
+          verified: unchangedName ? Boolean(existing.verified) : false,
+          endorsements: unchangedName ? Math.max(0, Number(existing.endorsements) || 0) : 0,
+          progress: Number.isFinite(progressValue) ? Math.min(100, Math.max(0, progressValue)) : 10,
+        };
+      });
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'experiences')) {
+      if (!Array.isArray(body.experiences)) return res.status(400).json({ message: 'Experiences must be an array' });
+      updates.experiences = body.experiences.map((candidate) => {
+        if (!candidate || typeof candidate !== 'object') throw new Error('Each experience must be an object');
+        const title = String(candidate.title || '').trim();
+        const company = String(candidate.company || '').trim();
+        const duration = String(candidate.duration || '').trim();
+        const type = String(candidate.type || '').trim();
+        if (!title || !company || !duration || !type) throw new Error('Experience title, company, duration, and type are required');
+        const existing = candidate._id ? student.experiences.id(candidate._id) : null;
+        const unchanged = existing &&
+          existing.title === title &&
+          existing.company === company &&
+          existing.duration === duration &&
+          existing.type === type;
+        return {
+          ...(existing ? { _id: existing._id } : {}),
+          title,
+          company,
+          duration,
+          type,
+          verified: Boolean(unchanged && existing.verified),
+        };
+      });
+    }
+
     if (body.parentInfo !== undefined) {
       if (!body.parentInfo || typeof body.parentInfo !== 'object' || Array.isArray(body.parentInfo)) {
         return res.status(400).json({ message: 'Parent information must be an object' });
