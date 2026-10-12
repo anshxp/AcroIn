@@ -24,7 +24,7 @@ const deriveYearFromSemester = (semester) => {
   return `${Math.ceil(semesterNumber / 2)} Year`;
 };
 
-const upsertProfile = async ({ user, payload }) => {
+const upsertProfile = async ({ user, payload, session }) => {
   if (!user?._id) return null;
 
   return Profile.findOneAndUpdate(
@@ -46,11 +46,11 @@ const upsertProfile = async ({ user, payload }) => {
         isActive: payload.isActive,
       },
     },
-    { new: true, upsert: true, setDefaultsOnInsert: true }
+    { new: true, upsert: true, setDefaultsOnInsert: true, ...(session ? { session } : {}) }
   );
 };
 
-export const syncStudentProfile = async ({ user, student }) => {
+export const syncStudentProfile = async ({ user, student, session }) => {
   if (!user?._id || !student) return null;
 
   const displayName = normalizeString(student.name) || normalizeString(user.name) || 'Student';
@@ -73,6 +73,7 @@ export const syncStudentProfile = async ({ user, student }) => {
 
   return upsertProfile({
     user,
+    session,
     payload: {
       displayName,
       email: normalizeString(student.email) || normalizeString(user.email),
@@ -90,7 +91,7 @@ export const syncStudentProfile = async ({ user, student }) => {
   });
 };
 
-export const syncFacultyProfile = async ({ user, faculty }) => {
+export const syncFacultyProfile = async ({ user, faculty, session }) => {
   if (!user?._id || !faculty) return null;
 
   const displayName = `${normalizeString(faculty.firstname)} ${normalizeString(faculty.lastName)}`.trim()
