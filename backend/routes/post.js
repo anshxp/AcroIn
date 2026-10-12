@@ -20,7 +20,7 @@ const handlePostRouteError = (req, res, error, operation) => {
     requestId: req.requestId || null,
   });
 };
-const FACULTY_ADMIN_ROLES = new Set(['dept_admin', 'super_admin']);
+const FACULTY_ADMIN_ROLES = new Set(['dept_admin']);
 const ALLOWED_POST_CREATORS = new Set(['student', 'faculty', 'admin']);
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
