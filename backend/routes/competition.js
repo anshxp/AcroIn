@@ -73,7 +73,7 @@ router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
     const competitions = await Competition.find();
     res.json(competitions.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 
@@ -93,7 +93,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
     const competitions = await Competition.find({ student: studentId });
     res.json(competitions.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 
@@ -158,7 +158,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -189,7 +189,7 @@ router.post('/:id/apply', verifyToken, async (req, res) => {
     await competition.save();
     res.json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -231,7 +231,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 
     res.json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -253,7 +253,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await Competition.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Competition deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 
