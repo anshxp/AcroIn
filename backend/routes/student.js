@@ -474,10 +474,12 @@ router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
     const previousName = String(skill.name || '').trim();
     const nextName = String(name).trim();
 
+    const skillIdentityUnchanged = previousName.toLowerCase() === nextName.toLowerCase();
     skill.category = String(category || 'General').trim();
     skill.name = nextName;
     skill.level = ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner';
-    skill.verified = Boolean(skill.verified);
+    skill.verified = skillIdentityUnchanged && Boolean(skill.verified);
+    if (!skillIdentityUnchanged) skill.endorsements = 0;
     skill.progress = Math.min(100, Math.max(0, Number(progress) || 10));
 
     const techStack = new Set((student.tech_stack || []).map((item) => String(item).trim()).filter(Boolean));
