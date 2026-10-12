@@ -169,31 +169,14 @@ const promoteToStronglyVerifiedIfEligible = (student, facultyId) => {
   }
 };
 
-// Create faculty
-router.post('/', verifyToken, isAdmin, async (req, res) => {
-  try {
-    const { password, ...rest } = req.body;
-
-    if (!password) {
-      return res.status(400).json({ message: 'Password is required' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const faculty = new Faculty({
-      ...rest,
-      password: hashedPassword,
-    });
-
-    await faculty.save();
-    await syncFacultyProfileFromDoc(faculty);
-
-    const { password: _, ...facultyData } = faculty._doc;
-
-    res.status(201).json(facultyData);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+// Faculty account creation must create both the Faculty profile and its
+// corresponding User login record. Keep this legacy endpoint disabled so it
+// cannot create profile-only faculty records; use POST /admin/faculty/create.
+router.post('/', verifyToken, isAdmin, async (_req, res) => {
+  return res.status(410).json({
+    success: false,
+    message: 'This faculty creation endpoint is retired. Use POST /admin/faculty/create to create a complete faculty account.',
+  });
 });
 
 // Get all faculty
