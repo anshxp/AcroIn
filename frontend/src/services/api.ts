@@ -165,8 +165,13 @@ export const authAPI = {
   },
 
   facultyLogin: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/auth/faculty/login', credentials);
-    return response.data;
+    // The backend exposes a shared /auth/login route, not /auth/faculty/login.
+    const response = await api.post('/auth/login', credentials);
+    const authResponse = response.data as AuthResponse;
+    if (authResponse?.user?.userType !== 'faculty') {
+      throw new Error('Please log in with a faculty account');
+    }
+    return authResponse;
   },
 
   studentRegister: async (data: StudentRegisterData): Promise<AuthResponse> => {
