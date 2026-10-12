@@ -14,6 +14,15 @@ const router = express.Router();
 const DEPARTMENT_ADMIN_ROLES = new Set(['dept_admin']);
 const normalizeDepartment = (value) => String(value || '').trim().toLowerCase();
 
+const handleOpportunityError = (res, error, operation) => {
+  console.error(`[opportunities] ${operation} failed:`, error);
+  const isClientError = error?.name === 'ValidationError' || error?.name === 'CastError';
+  return res.status(isClientError ? 400 : 500).json({
+    success: false,
+    message: isClientError ? 'Invalid opportunity request data' : 'Unable to process opportunity request',
+  });
+};
+
 const toAbsoluteUploadUrl = (req, filePath) => {
   if (!filePath) return '';
   if (/^https?:\/\//i.test(filePath)) return filePath;
@@ -123,7 +132,7 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
     }
 
     return res.status(201).json({ ...opportunity.toObject(), message: 'Opportunity submitted for department-admin approval', status: 'PENDING' });
-  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
+  } catch (err) { return handleOpportunityError(res, err, 'mutation'); }
 });
 
 router.put('/:id', verifyToken, async (req, res) => {
@@ -207,7 +216,7 @@ router.get('/stats/pending', verifyToken, async (req, res) => {
       Opportunity.countDocuments({ status: 'APPROVED' }), Opportunity.countDocuments({ status: 'REJECTED' }),
     ]);
     res.json({ pending, approved, rejected });
-  } catch (err) { console.error('[opportunities] stats request failed:', err); res.status(500).json({ success: false, message: 'Unable to load opportunity statistics' }); }
+  } catch (err) { console.error('[opportunities] statistics request failed:', err); res.status(500).json({ success: false, message: 'Unable to load opportunity statistics' }); }
 });
 
 export default router;
