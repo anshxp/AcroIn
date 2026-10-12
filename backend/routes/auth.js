@@ -112,20 +112,21 @@ const registerBootstrapAdmin = async (req, res) => {
 };
 
 const registerStudent = async (req, res) => {
-  let createdStudent = null;
-  let createdUser = null;
+  const { name, roll, email, password, department } = req.body || {};
+  const normalizedName = String(name || '').trim();
+  const normalizedRoll = String(roll || '').trim();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedDepartment = String(department || '').trim();
 
+  if (!normalizedName || !normalizedRoll || !normalizedDepartment || !isCollegeEmail(normalizedEmail)) {
+    return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
+  }
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
+  }
+
+  let session;
   try {
-    const { name, roll, email, password, department } = req.body || {};
-    const normalizedName = String(name || '').trim();
-    const normalizedRoll = String(roll || '').trim();
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    const normalizedDepartment = String(department || '').trim();
-    if (!normalizedName || !normalizedRoll || !normalizedDepartment || !isCollegeEmail(normalizedEmail)) {
-      return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
-    }
-    if (!isStrongPassword(password)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
-
     const existingStudent = await Student.findOne({ $or: [{ roll: normalizedRoll }, { email: normalizedEmail }] });
     if (existingStudent) {
       return res.status(409).json({
@@ -135,28 +136,58 @@ const registerStudent = async (req, res) => {
           : 'A student with this email already exists.',
       });
     }
-    if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const student = await Student.create({ name: normalizedName, roll: normalizedRoll, email: normalizedEmail, password: hashedPassword, department: normalizedDepartment });
-    createdStudent = student;
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'student' });
-    createdUser = user;
-    await syncStudentProfile({ user, student });
-    const token = signAccessToken(user);
-    const { password: _, ...studentWithoutPassword } = student.toObject();
-    return res.status(201).json({ success: true, message: 'Student registered', token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: 'student' } });
-  } catch (_err) {
-    const cleanup = [];
-    if (createdUser?._id) {
-      cleanup.push(Profile.deleteOne({ user: createdUser._id }));
-      cleanup.push(User.deleteOne({ _id: createdUser._id, userType: 'student' }));
+    session = await Student.startSession();
+    let responseUser;
+    let responseStudent;
+    await session.withTransaction(async () => {
+      // All three records commit together or none of them do. MongoDB must run as
+      // a replica set or sharded cluster for multi-document transactions.
+      const [student] = await Student.create([{
+        name: normalizedName,
+        roll: normalizedRoll,
+        email: normalizedEmail,
+        password: hashedPassword,
+        department: normalizedDepartment,
+      }], { session });
+      const [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: normalizedName,
+        userType: 'student',
+      }], { session });
+      await syncStudentProfile({ user, student, session });
+      responseUser = user;
+      responseStudent = student;
+    });
+
+    const token = signAccessToken(responseUser);
+    const { password: _password, ...studentWithoutPassword } = responseStudent.toObject();
+    return res.status(201).json({
+      success: true,
+      message: 'Student registered',
+      token,
+      user: { ...studentWithoutPassword, authUserId: responseUser._id.toString(), userType: 'student' },
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      const duplicateField = Object.keys(err.keyPattern || err.keyValue || {})[0];
+      const fieldLabel = duplicateField === 'roll' ? 'roll number' : 'email';
+      return res.status(409).json({ success: false, message: `A student with this ${fieldLabel} already exists.` });
     }
-    if (createdStudent?._id) {
-      cleanup.push(Student.deleteOne({ _id: createdStudent._id }));
-    }
-    await Promise.allSettled(cleanup);
-    return res.status(500).json({ success: false, message: 'Registration failed; cleanup was attempted' });
+    const transactionUnsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(transactionUnsupported ? 503 : 500).json({
+      success: false,
+      message: transactionUnsupported
+        ? 'Atomic account creation requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Registration failed. The database transaction was aborted.',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 
