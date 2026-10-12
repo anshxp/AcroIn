@@ -1,7 +1,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import jwt from 'jsonwebtoken';
-import { verifyToken } from '../middleware/authMiddleware.js';
+import { optionalVerifyToken, verifyToken } from '../middleware/authMiddleware.js';
 
 const originalJwtSecret = process.env.JWT_SECRET;
 const testJwtSecret = 'test-only-secret-that-is-long-enough-for-unit-tests';
@@ -49,4 +49,33 @@ test('normalizes ObjectId-shaped legacy claims before validation', () => {
   assert.equal(res.statusCode, 200);
   assert.equal(nextCalled, true);
   assert.equal(req.user.id, id);
+});
+
+test('optional authentication permits anonymous catalogue requests', () => {
+  const req = { headers: {} };
+  const res = {
+    statusCode: 200,
+    body: undefined,
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; },
+  };
+  let nextCalled = false;
+  optionalVerifyToken(req, res, () => { nextCalled = true; });
+  assert.equal(nextCalled, true);
+  assert.deepEqual(req.user, {});
+  assert.equal(res.statusCode, 200);
+});
+
+test('optional authentication rejects invalid supplied credentials', () => {
+  const req = { headers: { authorization: 'Bearer invalid-token' } };
+  const res = {
+    statusCode: 200,
+    body: undefined,
+    status(code) { this.statusCode = code; return this; },
+    json(body) { this.body = body; return this; },
+  };
+  let nextCalled = false;
+  optionalVerifyToken(req, res, () => { nextCalled = true; });
+  assert.equal(nextCalled, false);
+  assert.equal(res.statusCode, 401);
 });
