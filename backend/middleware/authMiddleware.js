@@ -97,7 +97,7 @@ export const isDepartmentAdmin = async (req, res, next) => {
     if (!user?.email) return res.status(403).json({ success: false, message: 'User email not found' });
     const faculty = await Faculty.findOne({ email: user.email });
     if (!faculty) return res.status(403).json({ success: false, message: 'Faculty profile not found' });
-    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some(r => r === 'dept_admin');
+    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some((role) => role === 'dept_admin' || role === 'super_admin');
     if (!isDeptAdmin) return res.status(403).json({ success: false, message: 'Department admin access required' });
     req.faculty = faculty;
     next();
