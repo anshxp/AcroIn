@@ -249,10 +249,20 @@ router.post('/remove-role', async (req, res) => {
       return res.status(403).json({ message: 'Super admin access required' });
     }
 
-    const { userId, role } = req.body;
+    const { userId } = req.body || {};
+    const role = String(req.body?.role || '').trim();
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
+    }
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
+    }
+    if (REGISTER_ONLY_ROLES.has(role)) {
+      return res.status(403).json({ message: `${role} role cannot be removed from this endpoint` });
+    }
+    if (!ASSIGNABLE_FACULTY_ROLES.has(role)) {
+      return res.status(400).json({ message: 'Unsupported role' });
     }
 
     const user = await User.findById(userId);
@@ -260,15 +270,19 @@ router.post('/remove-role', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (REGISTER_ONLY_ROLES.has(String(role || '').trim())) {
-      return res.status(403).json({ message: `${role} role cannot be removed from this endpoint` });
-    }
-
-    user.role = (user.role || []).filter(r => r !== role);
-
+    user.role = (user.role || []).filter((existingRole) => existingRole !== role);
     await user.save();
 
-    res.json(user);
+    if (FACULTY_ADMIN_ROLES.has(role) && user.userType === 'faculty') {
+      const faculty = await Faculty.findOne({ email: user.email });
+      if (faculty) {
+        faculty.role = (faculty.role || []).filter((existingRole) => existingRole !== role);
+        await faculty.save();
+        await syncFacultyProfile({ user, faculty });
+      }
+    }
+
+    res.json({ success: true, user });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
