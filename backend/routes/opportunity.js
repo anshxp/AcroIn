@@ -68,7 +68,13 @@ router.get('/', optionalVerifyToken, async (req, res) => {
   try {
     const query = { isActive: true };
     // Pending/rejected opportunities are visible only to authenticated staff.
-    if (!['admin', 'faculty'].includes(req.user?.userType)) query.status = 'APPROVED';
+    if (!['admin', 'faculty'].includes(req.user?.userType)) {
+      query.$or = [
+        { status: 'APPROVED' },
+        { status: { $exists: false } },
+        { status: null },
+      ];
+    }
     res.json(await Opportunity.find(query).sort({ createdAt: -1 }));
   } catch (err) {
     console.error('[opportunities] GET /opportunities failed:', err);
