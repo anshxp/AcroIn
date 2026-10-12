@@ -216,12 +216,11 @@ router.put('/:id', verifyToken, async (req, res) => {
         .filter((field) => Object.prototype.hasOwnProperty.call(normalizedBody, field))
         .map((field) => [field, normalizedBody[field]])
     );
-    if (req.user?.userType === 'admin' && Object.prototype.hasOwnProperty.call(body, 'student')) {
+    if (Object.prototype.hasOwnProperty.call(body, 'student')) {
       const studentId = await resolveStudentId(body.student);
-      if (!studentId) return res.status(400).json({ success: false, message: 'Invalid student for internship assignment' });
-      payload.student = studentId;
-    } else if (req.user?.userType !== 'admin' && Object.prototype.hasOwnProperty.call(body, 'student')) {
-      return res.status(403).json({ success: false, message: 'Only administrators can reassign an internship to a student' });
+      if (!studentId || studentId.toString() !== internship.student?.toString()) {
+        return res.status(400).json({ success: false, message: 'Internship reassignment is not supported; create a new internship instead' });
+      }
     }
     if (!Object.keys(payload).length) return res.status(400).json({ success: false, message: 'No editable internship fields supplied' });
 
