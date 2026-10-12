@@ -523,22 +523,16 @@ router.put('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Faculty profile not found' });
     }
 
-    const disallowedFields = new Set(['_id', 'password', 'role', 'createdAt', 'updatedAt']);
-    const requestedEmail = String(req.body?.email || '').trim();
-    if (requestedEmail) {
-      const existingUser = await User.findOne({ email: requestedEmail, _id: { $ne: req.user.id } });
-      const existingFaculty = await Faculty.findOne({ email: requestedEmail, _id: { $ne: faculty._id } });
-      if (existingUser || existingFaculty) {
-        return res.status(409).json({ success: false, message: 'Email is already in use' });
-      }
-    }
-
-    const updates = Object.entries(req.body || {}).reduce((acc, [key, value]) => {
-      if (!disallowedFields.has(key)) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
+    // Faculty may edit contact/profile details, but not their department,
+    // designation, role, verification state, or account credentials.
+    const editableFields = new Set([
+      'firstname', 'lastName', 'phone', 'bio', 'linkedin', 'github',
+      'portfolio', 'qualification', 'experience', 'subjects', 'skills',
+      'techstacks', 'headof', 'profilepic',
+    ]);
+    const updates = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => editableFields.has(key))
+    );
 
     Object.assign(faculty, updates);
     await faculty.save();
@@ -640,11 +634,21 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this faculty profile' });
     }
 
-    const updatedData = { ...req.body };
-
-    if (updatedData.password) {
-      updatedData.password = await bcrypt.hash(updatedData.password, 10);
-    }
+    // Self-service updates must never change authorization or identity fields.
+    // Administrators can maintain faculty profile details, but role assignment
+    // remains in the dedicated admin role-management workflow.
+    const selfEditableFields = new Set([
+      'firstname', 'lastName', 'phone', 'bio', 'linkedin', 'github',
+      'portfolio', 'qualification', 'experience', 'subjects', 'skills',
+      'techstacks', 'headof', 'profilepic',
+    ]);
+    const adminEditableFields = new Set([
+      ...selfEditableFields, 'department', 'designation',
+    ]);
+    const allowedFields = isAdminUser ? adminEditableFields : selfEditableFields;
+    const updatedData = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
+    );
 
     const faculty = await Faculty.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
