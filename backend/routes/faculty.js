@@ -1,5 +1,4 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
