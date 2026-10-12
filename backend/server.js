@@ -54,7 +54,7 @@ if (isProduction) {
   }
 
   const missing = requiredProductionEnv.filter((name) => !process.env[name]?.trim());
-  if (!(process.env.MONGO_URI || process.env.MONGODB_URI)?.trim()) {
+  if (!String(process.env.MONGO_URI || process.env.MONGODB_URI || '').trim()) {
     missing.push('MONGO_URI or MONGODB_URI');
   }
   if (missing.length) {
