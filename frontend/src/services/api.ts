@@ -168,7 +168,8 @@ export const authAPI = {
     // The backend exposes a shared /auth/login route, not /auth/faculty/login.
     const response = await api.post('/auth/login', credentials);
     const authResponse = response.data as AuthResponse;
-    if (authResponse?.user?.userType !== 'faculty') {
+    const responseUserType = (authResponse?.user as { userType?: string } | undefined)?.userType;
+    if (responseUserType !== 'faculty') {
       throw new Error('Please log in with a faculty account');
     }
     return authResponse;
