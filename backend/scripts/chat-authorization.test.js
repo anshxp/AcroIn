@@ -30,3 +30,11 @@ test('blocks a participant from deleting another users message', () => {
 test('allows an administrator to delete messages', () => {
   assert.equal(canDeleteChatMessage({ id: otherParticipant, userType: 'admin' }, chat, message), true);
 });
+
+test('allows a participant or admin to delete a chat but blocks outsiders', () => {
+  const chat = { participants: [studentId, facultyId] };
+  assert.equal(canDeleteChat({ id: studentId, userType: 'student' }, chat), true);
+  assert.equal(canDeleteChat({ id: facultyId, userType: 'faculty' }, chat), true);
+  assert.equal(canDeleteChat({ id: outsiderId, userType: 'faculty' }, chat), false);
+  assert.equal(canDeleteChat({ id: outsiderId, userType: 'admin' }, chat), true);
+});
