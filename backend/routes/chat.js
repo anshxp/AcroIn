@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Chat from '../models/Chat.js';
 import User from '../models/User.js';
+import { canDeleteChatMessage } from '../utils/chatAuthorization.js';
 import Faculty from '../models/Faculty.js';
 import Student from '../models/Student.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
@@ -173,7 +174,7 @@ router.delete('/:chatId/message/:messageId', verifyToken, async (req, res) => {
     if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
     const message = chat.messages.id(req.params.messageId);
     if (!message) return res.status(404).json({ success: false, message: 'Message not found' });
-    if (req.user?.userType !== 'admin' && message.sender.toString() !== req.user?.id) return res.status(403).json({ success: false, message: 'Not authorized to delete this message' });
+    if (!canDeleteChatMessage(req.user, chat, message)) return res.status(403).json({ success: false, message: 'Not authorized to delete this message' });
     chat.messages = chat.messages.filter((m) => m._id.toString() !== req.params.messageId);
     await chat.save();
     res.json({ success: true, message: 'Message deleted', chat });
