@@ -573,30 +573,39 @@ router.put('/:id', verifyToken, async (req, res) => {
 
 // Delete a student account and its login/search-profile records together.
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
+  let session;
   try {
     const student = await resolveStudent(req.params.id);
     if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
-
     const normalizedEmail = String(student.email || '').trim().toLowerCase();
     const user = normalizedEmail
       ? await User.findOne({ email: normalizedEmail, userType: 'student' }).select('_id email userType')
       : null;
-
     if (!user) {
-      return res.status(409).json({
-        success: false,
-        message: 'Matching student login account is missing; repair account consistency before deletion',
-      });
+      return res.status(409).json({ success: false, message: 'Matching student login account is missing; repair account consistency before deletion' });
     }
 
-    await User.deleteOne({ _id: user._id, userType: 'student' });
-    await Student.deleteOne({ _id: student._id });
     const Profile = mongoose.model('Profile');
-    await Profile.deleteOne({ user: user._id });
-
-    return res.json({ success: true, message: 'Student account deleted' });
-  } catch (_err) {
-    return res.status(500).json({ success: false, message: 'Unable to delete student account' });
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const userResult = await User.deleteOne({ _id: user._id, userType: 'student' }, { session });
+      const studentResult = await Student.deleteOne({ _id: student._id }, { session });
+      await Profile.deleteOne({ user: user._id }, { session });
+      if (userResult.deletedCount !== 1 || studentResult.deletedCount !== 1) {
+        throw new Error('Account records changed during deletion; transaction aborted');
+      }
+    });
+    return res.json({ success: true, message: 'Student account deleted atomically' });
+  } catch (err) {
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic account deletion requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to delete student account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
