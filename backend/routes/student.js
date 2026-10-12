@@ -537,7 +537,25 @@ router.put('/:id', verifyToken, async (req, res) => {
     });
   }
 
-  Object.assign(student, req.body);
+  // Students can edit profile content, but academic identity, verification
+  // state, and linked record IDs are maintained by trusted workflows/admins.
+  const selfEditableFields = new Set([
+    'name', 'firstname', 'firstName', 'lastName', 'lastname',
+    'phone', 'birthday', 'address', 'location', 'bio', 'linkedin',
+    'github', 'portfolio', 'resume', 'tech_stack', 'skills',
+    'experiences', 'parentInfo',
+  ]);
+  const adminEditableFields = new Set([
+    ...selfEditableFields, 'roll', 'rollNo', 'department', 'year',
+    'semester', 'cgpa', 'projects', 'certificates', 'internships',
+    'competitions',
+  ]);
+  const allowedFields = isAdminUser ? adminEditableFields : selfEditableFields;
+  const updates = Object.fromEntries(
+    Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
+  );
+
+  Object.assign(student, updates);
   student.profileCompleteness = calculateProfileCompleteness(student);
   await student.save();
   await syncStudentProfileFromDoc(student);
