@@ -122,15 +122,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const register = async (data: StudentRegisterData | FacultyRegisterData, userType: 'student' | 'faculty') => {
     setIsLoading(true);
     try {
-      const response = userType === 'student'
-        ? await authAPI.studentRegister(data as StudentRegisterData)
-        : await authAPI.facultyRegister(data as FacultyRegisterData);
+      if (userType !== 'student') {
+        throw new Error('Faculty accounts are provisioned by an administrator. Please contact your department administrator.');
+      }
 
+      const response = await authAPI.studentRegister(data as StudentRegisterData);
       if (!response.success || !response.token || !response.user) {
         throw new Error(response.message || 'Registration failed');
       }
 
-      const userData = buildUserData(response.user, userType);
+      const userData = buildUserData(response.user, 'student');
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
