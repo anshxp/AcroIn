@@ -39,7 +39,13 @@ const canMutateCertificate = async (req, certificate) => {
 // Create certificate - students add their own, admin/faculty add for others
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const payload = { ...(req.body || {}) };
+    const body = req.body || {};
+    const allowedFields = ['title', 'organization', 'issue_date', 'certificate_link', 'student'];
+    const payload = Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
 
     if (payload.student) {
