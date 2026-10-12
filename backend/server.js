@@ -36,7 +36,6 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 
 const requiredProductionEnv = [
-  'MONGO_URI',
   'JWT_SECRET',
   'RECOMMENDATION_SERVICE_URL',
   'RECOMMENDATION_API_KEY',
@@ -55,6 +54,9 @@ if (isProduction) {
   }
 
   const missing = requiredProductionEnv.filter((name) => !process.env[name]?.trim());
+  if (!(process.env.MONGO_URI || process.env.MONGODB_URI)?.trim()) {
+    missing.push('MONGO_URI or MONGODB_URI');
+  }
   if (missing.length) {
     console.error(`[backend] Missing required production environment variables: ${missing.join(', ')}`);
     process.exit(1);
