@@ -130,7 +130,7 @@ export const syncStudentProfileByEmail = async (email) => {
   if (!normalizedEmail) return null;
 
   const [user, student] = await Promise.all([
-    User.findOne({ email: normalizedEmail }).select('_id email name userType'),
+    User.findOne({ email: normalizedEmail, userType: 'student' }).select('_id email name userType'),
     Student.findOne({ email: normalizedEmail }),
   ]);
 
@@ -143,7 +143,7 @@ export const syncFacultyProfileByEmail = async (email) => {
   if (!normalizedEmail) return null;
 
   const [user, faculty] = await Promise.all([
-    User.findOne({ email: normalizedEmail }).select('_id email name userType'),
+    User.findOne({ email: normalizedEmail, userType: 'faculty' }).select('_id email name userType'),
     Faculty.findOne({ email: normalizedEmail }),
   ]);
 
