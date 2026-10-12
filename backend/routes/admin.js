@@ -76,8 +76,11 @@ router.post('/create', async (req, res) => {
 });
 
 
-// ✅ Create faculty or faculty admin
+// Create faculty account, compensating for partial writes if any later step fails.
 router.post('/faculty/create', async (req, res) => {
+  let createdFaculty = null;
+  let createdUser = null;
+
   try {
     const requester = await getRequesterAccess(req);
     const {
@@ -155,6 +158,7 @@ router.post('/faculty/create', async (req, res) => {
       headof: Array.isArray(headof) ? headof : [],
       role: normalizedRoles,
     });
+    createdFaculty = faculty;
 
     const user = await User.create({
       email: normalizedEmail,
@@ -165,6 +169,7 @@ router.post('/faculty/create', async (req, res) => {
       department: normalizedDepartment,
       designation: String(designation || '').trim(),
     });
+    createdUser = user;
 
     await syncFacultyProfile({ user, faculty });
 
@@ -177,8 +182,24 @@ router.post('/faculty/create', async (req, res) => {
       user: userWithoutPassword,
       faculty: facultyWithoutPassword,
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (_err) {
+    // These references are only set after this request creates the record, so
+    // compensation cannot remove a pre-existing account.
+    const cleanup = [];
+    if (createdUser?._id) {
+      cleanup.push(
+        (async () => {
+          await mongoose.model('Profile').deleteOne({ user: createdUser._id });
+          await User.deleteOne({ _id: createdUser._id });
+        })()
+      );
+    }
+    if (createdFaculty?._id) {
+      cleanup.push(Faculty.deleteOne({ _id: createdFaculty._id }));
+    }
+    await Promise.allSettled(cleanup);
+
+    return res.status(500).json({ message: 'Unable to create faculty account' });
   }
 });
 
