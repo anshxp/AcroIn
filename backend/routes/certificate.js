@@ -113,7 +113,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(certificate);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[certificates] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -123,7 +123,7 @@ router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
     const certificates = await Certificate.find();
     res.json(certificates);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -143,7 +143,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
     const certificates = await Certificate.find({ student: studentId });
     res.json(certificates);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -166,7 +166,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     res.json(certificate);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -208,7 +208,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 
     res.json(certificate);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[certificates] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -230,7 +230,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await Certificate.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Certificate deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
