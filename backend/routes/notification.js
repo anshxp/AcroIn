@@ -106,8 +106,13 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (!notification) return res.status(404).json({ success: false, message: 'Notification not found' });
     if (!canAccessNotification(req, notification)) return res.status(403).json({ success: false, message: 'Not authorized to update this notification' });
     const body = req.body || {};
+    if (req.user?.userType !== 'admin' && typeof body.message === 'string') {
+      return res.status(403).json({ success: false, message: 'Only administrators can edit notification content' });
+    }
     if (typeof body.read === 'boolean') notification.read = body.read;
-    if (typeof body.message === 'string' && body.message.trim()) notification.message = body.message.trim();
+    if (req.user?.userType === 'admin' && typeof body.message === 'string' && body.message.trim()) {
+      notification.message = body.message.trim();
+    }
     await notification.save();
     res.json(notification);
   } catch (_err) {
