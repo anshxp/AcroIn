@@ -9,8 +9,11 @@ import { Input, Button, Card, EmptyState, LoadingSpinner, ErrorBanner } from '..
 import { useAuthStore } from '../../stores/authStore';
 import { getProfileId } from '../../utils/authIds';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Project } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function ProjectsScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -99,8 +102,8 @@ export default function ProjectsScreen({ navigation }: any) {
           !projects || projects.length === 0 ? (
             <EmptyState icon="folder-outline" title="No projects yet" subtitle="Add your first project to showcase your work" action={<Button title="Add Project" onPress={openAdd} variant="secondary" />} />
           ) : (
-            projects.map((p) => (
-              <View key={p._id} style={[styles.card, shadows.card]}>
+            projects.map((p, index) => (
+              <View key={`${safeId(p._id) || 'project'}-${index}`} style={[styles.card, shadows.card]}>
                 <View style={styles.cardHeader}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardTitle}>{p.title}</Text>

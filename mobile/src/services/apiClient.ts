@@ -82,6 +82,50 @@ const resolveBaseUrl = (): string => {
 };
 
 const API_BASE_URL = resolveBaseUrl();
+
+if (!__DEV__) {
+  let parsedApiUrl: URL;
+  try {
+    parsedApiUrl = new URL(API_BASE_URL);
+  } catch {
+    throw new Error('Release builds require EXPO_PUBLIC_API_URL to be an absolute HTTPS URL.');
+  }
+
+  const localHostnames = ['localhost', '127.0.0.1', '::1', '10.0.2.2'];
+  if (
+    parsedApiUrl.protocol !== 'https:' ||
+    localHostnames.includes(parsedApiUrl.hostname) ||
+    /^192\.168\./.test(parsedApiUrl.hostname) ||
+    /^10\./.test(parsedApiUrl.hostname) ||
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(parsedApiUrl.hostname)
+  ) {
+    throw new Error('Release builds require a public HTTPS EXPO_PUBLIC_API_URL; local network URLs are development-only.');
+  }
+}
+
+export const normalizeIdentifier = (value: unknown, fieldName = 'identifier'): string => {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'bigint') {
+    const normalized = String(value).trim();
+    if (normalized && normalized !== '[object Object]') return normalized;
+  } else if (Array.isArray(value)) {
+    // Arrays are not valid route identifiers.
+  } else if (value && typeof value === 'object') {
+    const candidate = value as Record<string, unknown>;
+    const nested = candidate._id ?? candidate.id ?? candidate.$oid;
+    if (nested !== undefined && nested !== value) {
+      return normalizeIdentifier(nested, fieldName);
+    }
+    if (typeof candidate.toString === 'function') {
+      const normalized = candidate.toString().trim();
+      if (normalized && normalized !== '[object Object]') return normalized;
+    }
+  }
+
+  throw new Error(`Invalid ${fieldName}`);
+};
+
+const idPath = (value: unknown, fieldName = 'identifier'): string => encodeURIComponent(normalizeIdentifier(value, fieldName));
+
 const ENABLE_MOCK_FALLBACK =
   __DEV__ && String(process.env.EXPO_PUBLIC_ENABLE_MOCK_FALLBACK || '').toLowerCase() === 'true';
 const DEFAULT_PAGE_SIZE = 20;
@@ -126,48 +170,20 @@ const handleMockFallback = (config: any): any => {
     const email = (credentials.email || 'student@acropolis.in').trim().toLowerCase();
     const password = credentials.password || '';
 
-    // Enforce correct password for Lavish's specific acropolis address
-    if (email === 'lavishjangid230719@acropolis.in') {
-      if (password !== 'Lavish@262') {
-        return {
-          status: 401,
-          statusText: 'Unauthorized',
-          headers: { 'content-type': 'application/json' },
-          config,
-          data: {
-            success: false,
-            message: 'Invalid credentials. Please verify your password.',
-          }
-        };
+    const isFaculty = email.includes('faculty') || email.includes('prof');
+    mockData = {
+      success: true,
+      token: 'demo-session-token',
+      user: {
+        _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
+        email,
+        name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
+        userType: isFaculty ? 'faculty' : 'student',
+        role: isFaculty ? 'faculty' : 'student',
+        department: 'CSE',
+        designation: isFaculty ? 'Professor & HOD' : undefined,
       }
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: 'student-demo-id',
-          email: 'lavishjangid230719@acropolis.in',
-          name: 'Lavish Jangid',
-          userType: 'student',
-          role: 'student',
-          department: 'CSE',
-        }
-      };
-    } else {
-      const isFaculty = email.includes('faculty') || email.includes('prof');
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
-          email: email,
-          name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
-          userType: isFaculty ? 'faculty' : 'student',
-          role: isFaculty ? 'faculty' : 'student',
-          department: 'CSE',
-          designation: isFaculty ? 'Professor & HOD' : undefined,
-        }
-      };
-    }
+    };
   } else if (url.includes('/auth/student/register')) {
     let payload = { email: 'student@acropolis.in', name: 'Lavish Jangid', roll: '0812CS221045', department: 'CSE' };
     try { payload = JSON.parse(config.data || '{}'); } catch {}
@@ -647,11 +663,11 @@ export const authAPI = {
 
 export const studentAPI = {
   getProfile: async (identifier: string): Promise<Student> => {
-    const { data } = await api.get(`/students/${identifier}`);
+    const { data } = await api.get(`/students/${idPath(identifier, 'student identifier')}`);
     return data;
   },
   updateProfile: async (identifier: string, payload: Partial<Student>): Promise<Student> => {
-    const { data } = await api.put(`/students/${identifier}`, payload);
+    const { data } = await api.put(`/students/${idPath(identifier, 'student identifier')}`, payload);
     return data;
   },
   getAllStudents: async (params?: { page?: number; limit?: number; search?: string }): Promise<Student[] | PaginatedResult<Student>> => {
@@ -666,31 +682,31 @@ export const studentAPI = {
     return Array.isArray(data) ? data : normalizePaginated<Student>(data, 1, limit).items;
   },
   getSkills: async (id: string): Promise<StudentSkill[]> => {
-    const { data } = await api.get(`/students/${id}/skills`);
+    const { data } = await api.get(`/students/${idPath(id, 'student id')}/skills`);
     return data.skills || [];
   },
   addSkill: async (id: string, skill: Omit<StudentSkill, '_id'>): Promise<{ skill: StudentSkill; skills: StudentSkill[] }> => {
-    const { data } = await api.post(`/students/${id}/skills`, skill);
+    const { data } = await api.post(`/students/${idPath(id, 'student id')}/skills`, skill);
     return data;
   },
   updateSkill: async (id: string, skillId: string, skill: Omit<StudentSkill, '_id'>): Promise<{ skill: StudentSkill; skills: StudentSkill[] }> => {
-    const { data } = await api.put(`/students/${id}/skills/${skillId}`, skill);
+    const { data } = await api.put(`/students/${idPath(id, 'student id')}/skills/${idPath(skillId, 'skill id')}`, skill);
     return data;
   },
   uploadProfileImage: async (identifier: string, formData: FormData): Promise<{ profile_image: string }> => {
-    const { data } = await api.post(`/students/${identifier}/upload-profile-image`, formData, {
+    const { data } = await api.post(`/students/${idPath(identifier, 'student identifier')}/upload-profile-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
   },
   uploadCoverImage: async (identifier: string, formData: FormData): Promise<{ cover_image: string }> => {
-    const { data } = await api.post(`/students/${identifier}/upload-cover-image`, formData, {
+    const { data } = await api.post(`/students/${idPath(identifier, 'student identifier')}/upload-cover-image`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
   },
   enrollFace: async (identifier: string, formData: FormData): Promise<{ success: boolean; message: string; faceVerificationStatus: 'none' | 'partial' | 'complete' }> => {
-    const { data } = await api.post(`/students/${identifier}/face/enroll`, formData, {
+    const { data } = await api.post(`/students/${idPath(identifier, 'student identifier')}/face/enroll`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return data;
@@ -713,19 +729,19 @@ export const facultyAPI = {
     return data;
   },
   verifyStudent: async (identifier: string): Promise<any> => {
-    const { data } = await api.post(`/faculty/verify-student/${identifier}`);
+    const { data } = await api.post(`/faculty/verify-student/${idPath(identifier, 'student identifier')}`);
     return data;
   },
   verifyStudentSkill: async (studentId: string, skillId: string): Promise<any> => {
-    const { data } = await api.post(`/faculty/verify-student/${studentId}/skills/${skillId}/verify`);
+    const { data } = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/skills/${idPath(skillId, 'skill id')}/verify`);
     return data;
   },
   verifyAllStudentSkills: async (studentId: string): Promise<any> => {
-    const { data } = await api.post(`/faculty/verify-student/${studentId}/skills/verify-all`);
+    const { data } = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/skills/verify-all`);
     return data;
   },
   verifyStudentCertificate: async (studentId: string, certId: string): Promise<any> => {
-    const { data } = await api.post(`/faculty/verify-student/${studentId}/certificates/${certId}/verify`);
+    const { data } = await api.post(`/faculty/verify-student/${idPath(studentId, 'student id')}/certificates/${idPath(certId, 'certificate id')}/verify`);
     return data;
   },
   uploadProfileImage: async (formData: FormData): Promise<{ profilepic: string }> => {
@@ -740,7 +756,7 @@ export const facultyAPI = {
 
 export const projectAPI = {
   getByStudent: async (studentId: string): Promise<Project[]> => {
-    const { data } = await api.get(`/projects/student/${studentId}`);
+    const { data } = await api.get(`/projects/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Project[]>(data);
   },
   create: async (payload: Omit<Project, '_id' | 'createdAt' | 'updatedAt'>): Promise<Project> => {
@@ -748,11 +764,11 @@ export const projectAPI = {
     return unwrapData<Project>(data);
   },
   update: async (id: string, payload: Partial<Project>): Promise<Project> => {
-    const { data } = await api.put(`/projects/${id}`, payload);
+    const { data } = await api.put(`/projects/${idPath(id, 'project id')}`, payload);
     return unwrapData<Project>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/projects/${id}`);
+    await api.delete(`/projects/${idPath(id, 'project id')}`);
   },
 };
 
@@ -760,7 +776,7 @@ export const projectAPI = {
 
 export const internshipAPI = {
   getByStudent: async (studentId: string): Promise<Internship[]> => {
-    const { data } = await api.get(`/internships/student/${studentId}`);
+    const { data } = await api.get(`/internships/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Internship[]>(data);
   },
   create: async (payload: Omit<Internship, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Internship> => {
@@ -768,11 +784,11 @@ export const internshipAPI = {
     return unwrapData<Internship>(data);
   },
   update: async (id: string, payload: Partial<Internship>): Promise<Internship> => {
-    const { data } = await api.put(`/internships/${id}`, payload);
+    const { data } = await api.put(`/internships/${idPath(id, 'internship id')}`, payload);
     return unwrapData<Internship>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/internships/${id}`);
+    await api.delete(`/internships/${idPath(id, 'internship id')}`);
   },
 };
 
@@ -780,7 +796,7 @@ export const internshipAPI = {
 
 export const competitionAPI = {
   getByStudent: async (studentId: string): Promise<Competition[]> => {
-    const { data } = await api.get(`/competitions/student/${studentId}`);
+    const { data } = await api.get(`/competitions/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Competition[]>(data);
   },
   create: async (payload: Omit<Competition, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Competition> => {
@@ -788,11 +804,11 @@ export const competitionAPI = {
     return unwrapData<Competition>(data);
   },
   update: async (id: string, payload: Partial<Competition>): Promise<Competition> => {
-    const { data } = await api.put(`/competitions/${id}`, payload);
+    const { data } = await api.put(`/competitions/${idPath(id, 'competition id')}`, payload);
     return unwrapData<Competition>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/competitions/${id}`);
+    await api.delete(`/competitions/${idPath(id, 'competition id')}`);
   },
 };
 
@@ -800,7 +816,7 @@ export const competitionAPI = {
 
 export const certificateAPI = {
   getByStudent: async (studentId: string): Promise<Certificate[]> => {
-    const { data } = await api.get(`/certificates/student/${studentId}`);
+    const { data } = await api.get(`/certificates/student/${idPath(studentId, 'student id')}`);
     return unwrapData<Certificate[]>(data);
   },
   create: async (payload: Omit<Certificate, '_id' | 'createdAt' | 'updatedAt' | 'student'> & { student?: string }): Promise<Certificate> => {
@@ -808,11 +824,11 @@ export const certificateAPI = {
     return unwrapData<Certificate>(data);
   },
   update: async (id: string, payload: Partial<Certificate>): Promise<Certificate> => {
-    const { data } = await api.put(`/certificates/${id}`, payload);
+    const { data } = await api.put(`/certificates/${idPath(id, 'certificate id')}`, payload);
     return unwrapData<Certificate>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/certificates/${id}`);
+    await api.delete(`/certificates/${idPath(id, 'certificate id')}`);
   },
 };
 
@@ -832,23 +848,23 @@ export const postAPI = {
     return unwrapData<Post>(data);
   },
   like: async (id: string): Promise<Post> => {
-    const { data } = await api.post(`/posts/${id}/like`);
+    const { data } = await api.post(`/posts/${idPath(id, 'post id')}/like`);
     return unwrapData<Post>(data);
   },
   unlike: async (id: string): Promise<Post> => {
-    const { data } = await api.post(`/posts/${id}/unlike`);
+    const { data } = await api.post(`/posts/${idPath(id, 'post id')}/unlike`);
     return unwrapData<Post>(data);
   },
   addComment: async (id: string, content: string): Promise<Post> => {
-    const { data } = await api.post(`/posts/${id}/comments`, { content });
+    const { data } = await api.post(`/posts/${idPath(id, 'post id')}/comments`, { content });
     return unwrapData<Post>(data);
   },
   deleteComment: async (postId: string, commentId: string): Promise<Post> => {
-    const { data } = await api.delete(`/posts/${postId}/comments/${commentId}`);
+    const { data } = await api.delete(`/posts/${idPath(postId, 'post id')}/comments/${idPath(commentId, 'comment id')}`);
     return unwrapData<Post>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/posts/${id}`);
+    await api.delete(`/posts/${idPath(id, 'post id')}`);
   },
 };
 
@@ -860,7 +876,7 @@ export const opportunityAPI = {
     return Array.isArray(data) ? data : [];
   },
   getById: async (id: string): Promise<Opportunity> => {
-    const { data } = await api.get(`/opportunities/${id}`);
+    const { data } = await api.get(`/opportunities/${idPath(id, 'opportunity id')}`);
     return unwrapData<Opportunity>(data);
   },
   create: async (payload: any): Promise<Opportunity> => {
@@ -868,18 +884,18 @@ export const opportunityAPI = {
     return unwrapData<Opportunity>(data);
   },
   update: async (id: string, payload: Partial<Opportunity>): Promise<Opportunity> => {
-    const { data } = await api.put(`/opportunities/${id}`, payload);
+    const { data } = await api.put(`/opportunities/${idPath(id, 'opportunity id')}`, payload);
     return unwrapData<Opportunity>(data);
   },
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/opportunities/${id}`);
+    await api.delete(`/opportunities/${idPath(id, 'opportunity id')}`);
   },
   approve: async (id: string): Promise<Opportunity> => {
-    const { data } = await api.patch(`/opportunities/${id}/approve`);
+    const { data } = await api.patch(`/opportunities/${idPath(id, 'opportunity id')}/approve`);
     return unwrapData<Opportunity>(data?.opportunity || data);
   },
   reject: async (id: string, reason?: string): Promise<Opportunity> => {
-    const { data } = await api.patch(`/opportunities/${id}/reject`, { reason });
+    const { data } = await api.patch(`/opportunities/${idPath(id, 'opportunity id')}/reject`, { reason });
     return unwrapData<Opportunity>(data?.opportunity || data);
   },
 };
@@ -887,36 +903,46 @@ export const opportunityAPI = {
 // ─── Chat APIs ───────────────────────────────────────────────────────
 
 export const chatAPI = {
-  getChats: async (userId: string): Promise<Chat[]> => {
-    const { data } = await api.get(`/chats/${userId}`);
+  getChats: async (_userId?: unknown): Promise<Chat[]> => {
+    // The backend derives the participant from the verified token.
+    const { data } = await api.get('/chats');
     return Array.isArray(data?.chats) ? data.chats : [];
   },
-  createChat: async (facultyId: string): Promise<Chat> => {
-    const { data } = await api.post('/chats', { facultyId });
+  createChat: async (facultyId: unknown): Promise<Chat> => {
+    const normalizedFacultyId = normalizeIdentifier(facultyId, 'faculty id');
+    if (!normalizedFacultyId) throw new Error('Invalid faculty identifier');
+    const { data } = await api.post('/chats', { facultyId: normalizedFacultyId });
     return unwrapData<Chat>(data?.chat || data);
   },
   sendMessage: async (chatId: string, content: string, tag?: 'DOUBT' | 'GENERAL'): Promise<Chat> => {
-    const { data } = await api.post(`/chats/${chatId}/message`, { content, tag });
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    const { data } = await api.post(`/chats/${encodeURIComponent(normalizedChatId)}/message`, { content, tag });
     return unwrapData<Chat>(data?.chat || data);
   },
   deleteMessage: async (chatId: string, messageId: string): Promise<Chat> => {
-    const { data } = await api.delete(`/chats/${chatId}/message/${messageId}`);
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    const normalizedMessageId = normalizeIdentifier(messageId, 'message id');
+    const { data } = await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}/message/${encodeURIComponent(normalizedMessageId)}`);
     return unwrapData<Chat>(data?.chat || data);
   },
   deleteChat: async (chatId: string): Promise<void> => {
-    await api.delete(`/chats/${chatId}`);
+    const normalizedChatId = normalizeIdentifier(chatId, 'chat id');
+    await api.delete(`/chats/${encodeURIComponent(normalizedChatId)}`);
   },
 };
 
 // ─── Notification APIs ───────────────────────────────────────────────
 
 export const notificationAPI = {
-  getByUser: async (userId: string): Promise<NotificationItem[]> => {
-    const { data } = await api.get(`/notifications/${userId}`);
-    return data;
+  getByUser: async (_userId?: unknown): Promise<NotificationItem[]> => {
+    // The backend derives the recipient from the verified token.
+    const { data } = await api.get('/notifications');
+    return Array.isArray(data) ? data : [];
   },
-  markAsRead: async (notificationId: string): Promise<NotificationItem> => {
-    const { data } = await api.patch(`/notifications/${notificationId}/read`);
+  markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
+    const normalizedNotificationId = normalizeIdentifier(notificationId, 'notification id');
+    if (!normalizedNotificationId) throw new Error('Invalid notification identifier');
+    const { data } = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return data;
   },
 };
@@ -925,18 +951,18 @@ export const notificationAPI = {
 
 export const interestAPI = {
   markInterest: async (opportunityId: string): Promise<Interest> => {
-    const { data } = await api.post(`/interests/${opportunityId}/mark`);
+    const { data } = await api.post(`/interests/${idPath(opportunityId, 'opportunity id')}/mark`);
     return unwrapData<Interest>(data?.interest || data);
   },
   unmarkInterest: async (opportunityId: string): Promise<void> => {
-    await api.delete(`/interests/${opportunityId}/unmark`);
+    await api.delete(`/interests/${idPath(opportunityId, 'opportunity id')}/unmark`);
   },
   getInterestedStudents: async (opportunityId: string): Promise<Interest[]> => {
-    const { data } = await api.get(`/interests/${opportunityId}/interested`);
+    const { data } = await api.get(`/interests/${idPath(opportunityId, 'opportunity id')}/interested`);
     return Array.isArray(data?.interests) ? data.interests : [];
   },
   hasInterest: async (opportunityId: string): Promise<boolean> => {
-    const { data } = await api.get(`/interests/${opportunityId}/has-interest`);
+    const { data } = await api.get(`/interests/${idPath(opportunityId, 'opportunity id')}/has-interest`);
     return data?.hasInterest || false;
   },
 };
@@ -945,15 +971,15 @@ export const interestAPI = {
 
 export const skillAPI = {
   getByStudent: async (studentId: string): Promise<StudentSkill[]> => {
-    const { data } = await api.get(`/students/${studentId}/skills`);
+    const { data } = await api.get(`/students/${idPath(studentId, 'student id')}/skills`);
     return data?.skills || [];
   },
   addSkill: async (studentId: string, skill: Omit<StudentSkill, '_id'>): Promise<any> => {
-    const { data } = await api.post(`/students/${studentId}/skills`, skill);
+    const { data } = await api.post(`/students/${idPath(studentId, 'student id')}/skills`, skill);
     return data;
   },
   updateSkill: async (studentId: string, skillId: string, skill: Omit<StudentSkill, '_id'>): Promise<any> => {
-    const { data } = await api.put(`/students/${studentId}/skills/${skillId}`, skill);
+    const { data } = await api.put(`/students/${idPath(studentId, 'student id')}/skills/${idPath(skillId, 'skill id')}`, skill);
     return data;
   },
 };

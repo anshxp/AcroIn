@@ -13,7 +13,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { facultyAPI, studentAPI } from '../../services/api';
+import { facultyAPI, normalizeId, studentAPI } from '../../services/api';
 import type { Student } from '../../types';
 import '../../styles/pages.css';
 
@@ -444,9 +444,9 @@ export const StudentProfileView: React.FC = () => {
             </div>
             <div className="card-body" style={{ display: 'grid', gap: '12px' }}>
               {studentSkills.length > 0 ? (
-                studentSkills.map((skill) => (
+                studentSkills.map((skill, index) => (
                   <div
-                    key={skill._id || skill.name}
+                    key={`${normalizeId(skill._id) || skill.name || 'skill'}-${index}`}
                     style={{
                       padding: '14px',
                       background: '#f8fafc',

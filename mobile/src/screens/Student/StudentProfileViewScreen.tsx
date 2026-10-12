@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Badge, LoadingSpinner, ErrorBanner, Button } from '../../components/ui';
 import { useStudentProfile } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function StudentProfileViewScreen({ route, navigation }: any) {
   const { id } = route.params;
@@ -75,7 +78,7 @@ export default function StudentProfileViewScreen({ route, navigation }: any) {
             <View style={s.chipRow}>
               {profile.skills.map((skill, i) => (
                 <Badge
-                  key={skill._id || i}
+                  key={`${safeId(skill._id) || skill.name || 'skill'}-${i}`}
                   label={`${skill.name} · ${skill.level}`}
                   variant={skill.verified ? 'success' : 'info'}
                   size="sm"

@@ -17,4 +17,35 @@ class Settings:
     )
 
 
+def validate_production_configuration(
+    config: Settings,
+    configured_origins: str,
+) -> None:
+    if config.environment not in {"production", "prod"}:
+        return
+
+    missing = [
+        name
+        for name, value in {
+            "MONGO_URI": config.mongo_uri,
+            "RECOMMENDATION_API_KEY": config.internal_api_key,
+            "ALLOWED_ORIGINS": configured_origins.strip(),
+        }.items()
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(
+            "Missing required production recommendation-service configuration: "
+            + ", ".join(missing)
+        )
+
+    if not config.allowed_origins or any(
+        origin == "*" or not origin.lower().startswith("https://")
+        for origin in config.allowed_origins
+    ):
+        raise RuntimeError(
+            "ALLOWED_ORIGINS must contain explicit HTTPS origins in production"
+        )
+
+
 settings = Settings()

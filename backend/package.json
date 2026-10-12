@@ -4,16 +4,19 @@
   "private": true,
   "main": "server.js",
   "type": "module",
-  "engines": { "node": ">=24 <25" },
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon --config nodemon.json --exec node scripts/run-with-freeport.cjs",
-    "check": "node --check server.js && node --check middleware/authMiddleware.js && node --check middleware/studentUpdateGuard.js && node --check middleware/facultyUpdateGuard.js && node --check middleware/projectUpdateGuard.js && node --check middleware/opportunityUpdateGuard.js && node --check routes/auth.js && node --check routes/student.js && node --check routes/faculty.js && node --check routes/recommendation.js && node --check routes/opportunity.js && node --check routes/chat.js && node --check scripts/seed-complete-demo.js && node --check scripts/seed-100-posts.js",
+    "dev": "node scripts/run-with-freeport.cjs",
+    "check": "node scripts/check-syntax.js",
     "seed:demo": "node scripts/seed-complete-demo.js",
     "seed:posts": "node scripts/seed-100-posts.js",
     "sync:profiles": "node sync-profiles.js",
     "migrate:face-embeddings": "node migrate-face-embeddings-to-student.cjs",
-    "migrate:project-references": "node migrate-project-references.js"
+    "migrate:project-references": "node migrate-project-references.js",
+    "test": "node --test scripts/auth-middleware.test.js scripts/chat-authorization.test.js scripts/guard-demo-seed.test.js scripts/password-reset-guard.test.js scripts/posts-pagination.test.js scripts/url-validation.test.js scripts/opportunity-access.test.js"
   },
   "dependencies": {
     "axios": "^1.17.1",
@@ -26,11 +29,11 @@
     "helmet": "^8.3.0",
     "express-rate-limit": "^7.5.0",
     "jsonwebtoken": "^9.0.0",
-    "multer": "^2.1.2",
+    "multer": "^2.4.0",
     "pdfkit": "^0.18.0",
     "mongoose": "^7.8.12"
   },
-  "devDependencies": { "nodemon": "^3.1.14" },
+  "devDependencies": {},
   "overrides": {
     "qs": "^6.16.0",
     "uuid": "^11.1.1",
@@ -38,8 +41,10 @@
     "body-parser": "^1.20.6",
     "follow-redirects": "^1.15.12",
     "form-data": "^4.0.6",
-    "ip-address": "^10.7.0",
-    "brace-expansion@<=1.1.17": "1.1.18",
-    "brace-expansion@>=2.0.0 <2.1.4": "2.1.4"
+    "ip-address": "^10.7.1",
+    "brace-expansion@<=1.1.20": "1.1.21",
+    "brace-expansion@>=2.0.0 <2.1.7": "2.1.7",
+    "brace-expansion@>=4.0.0 <5.0.12": "5.0.12",
+    "proxy-addr": "^2.0.8"
   }
 }

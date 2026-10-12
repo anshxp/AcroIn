@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, Award, Calendar, ExternalLink, Trash2, Edit2, Building, CheckCircle, Clock, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { certificateAPI } from '../../services/api';
+import { certificateAPI, normalizeId } from '../../services/api';
 import '../../styles/pages.css';
 
 interface Certificate {
@@ -38,7 +38,6 @@ export const StudentCertificates: React.FC = () => {
         const studentIdentifier = user?.email || user?.id;
         if (!studentIdentifier) {
           setCertificates([]);
-          setCertificates([]);
           setIsLoadingData(false);
           return;
         }
@@ -46,10 +45,10 @@ export const StudentCertificates: React.FC = () => {
         const backendCertificates = await certificateAPI.getByStudent(studentIdentifier);
         const normalizedCertificates = Array.isArray(backendCertificates)
           ? backendCertificates
-              .filter((certificate): certificate is Certificate => Boolean(certificate && typeof certificate === 'object'))
+              .filter((certificate) => Boolean(certificate && typeof certificate === 'object'))
               .map((certificate) => ({
                 ...certificate,
-                _id: String(certificate._id || ''),
+                _id: normalizeId(certificate._id),
                 title: String(certificate.title || 'Untitled Certificate'),
                 organization: String(certificate.organization || 'Unknown Organization'),
                 issue_date: certificate.issue_date || '',
@@ -192,8 +191,8 @@ export const StudentCertificates: React.FC = () => {
         </div>
       ) : filteredCertificates.length > 0 ? (
         <div className="cards-grid">
-          {filteredCertificates.map((certificate) => (
-            <div key={certificate._id} className="certificate-card">
+          {filteredCertificates.map((certificate, index) => (
+            <div key={`${normalizeId(certificate._id) || "certificate"}-${index}`} className="certificate-card">
               <div className={`certificate-card-icon ${getIconClass(certificate.organization)}`}>
                 <Award size={28} />
               </div>

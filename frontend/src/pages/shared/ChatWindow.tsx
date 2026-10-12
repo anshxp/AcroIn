@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft, MoreVertical, Trash2, Flag, UserRound, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { chatAPI } from '../../services/api';
+import { chatAPI, normalizeId } from '../../services/api';
 import type { Chat } from '../../types';
 import './chat.css';
 import './chat-layout.css';
@@ -30,10 +30,11 @@ export const ChatWindow: React.FC = () => {
       if (showLoading) setIsLoading(true);
       setApiError('');
       const response = await chatAPI.getChats(authUserId);
-      const foundChat = response.find((c) => c._id === chatId);
+      const normalizedChatId = normalizeId(chatId);
+      const foundChat = response.find((c) => normalizeId(c._id) === normalizedChatId);
       if (foundChat) {
         setChat((current) => {
-          if (current?._id === foundChat._id && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
+          if (current && normalizeId(current._id) === normalizeId(foundChat._id) && JSON.stringify(current.messages) === JSON.stringify(foundChat.messages)) return current;
           return foundChat;
         });
       } else {
@@ -76,7 +77,7 @@ export const ChatWindow: React.FC = () => {
     if (!window.confirm('Delete this message?')) return;
     try {
       if (chatId) {
-        await chatAPI.deleteMessage(chatId, messageId);
+        await chatAPI.deleteMessage(chatId, normalizeId(messageId));
         await loadChat(false);
       }
     } catch (error: any) {
@@ -84,11 +85,11 @@ export const ChatWindow: React.FC = () => {
     }
   };
 
-  const getParticipantId = (participant: Participant) => typeof participant === 'string' ? participant : participant?._id;
+  const getParticipantId = (participant: Participant) => normalizeId(typeof participant === 'string' ? participant : participant?._id);
   const getParticipantName = (participant: Participant) => typeof participant === 'string' ? participant : participant?.name || participant?.email || 'Unknown';
   const getOtherParticipant = (): Participant | null => {
     if (!chat) return null;
-    return (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== authUserId) || null;
+    return (chat.participants as Participant[]).find((participant) => getParticipantId(participant) !== normalizeId(authUserId)) || null;
   };
   const getOtherParticipantName = () => { const other = getOtherParticipant(); return other ? getParticipantName(other) : 'Unknown'; };
   const getParticipantInitials = (participant: Participant | null) => {
@@ -96,7 +97,7 @@ export const ChatWindow: React.FC = () => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     return parts.length >= 2 ? `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase() : name.substring(0, 2).toUpperCase();
   };
-  const isOwnMessage = (sender: any) => (typeof sender === 'string' ? sender : sender?._id) === authUserId;
+  const isOwnMessage = (sender: unknown) => normalizeId(sender) === normalizeId(authUserId);
 
   const openParticipantProfile = () => {
     const participant = getOtherParticipant() as any;
@@ -143,7 +144,7 @@ export const ChatWindow: React.FC = () => {
 
       <div className="chat-messages">
         {!chat.messages?.length ? <div className="chat-messages-empty"><p>No messages yet. Start the conversation!</p></div> : <>
-          {chat.messages.map((message) => <div key={message._id} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}>
+          {chat.messages.map((message, index) => <div key={`${normalizeId(message._id) || 'message'}-${index}`} className={`message ${isOwnMessage(message.sender) ? 'message-sent' : 'message-received'}`}>
             <div className="message-bubble">
               {message.tag && message.tag !== 'GENERAL' && <span className="message-tag">{message.tag}</span>}
               <p className="message-text">{message.content}</p>

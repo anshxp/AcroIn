@@ -6,8 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthUserId } from '../../utils/authIds';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { useChats, useSendMessage } from '../../hooks/useApi';
 import { colors, spacing, radii, typography } from '../../theme';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function ChatWindowScreen({ route, navigation }: any) {
   const { chatId, participantName } = route.params;
@@ -18,7 +21,8 @@ export default function ChatWindowScreen({ route, navigation }: any) {
   const [message, setMessage] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
-  const chat = chats?.find((c: any) => c._id === chatId);
+  const normalizedRouteChatId = safeId(chatId);
+  const chat = chats?.find((c: any) => safeId(c?._id) === normalizedRouteChatId && Boolean(normalizedRouteChatId));
   const messages = chat?.messages || [];
 
   useEffect(() => {
@@ -50,10 +54,10 @@ export default function ChatWindowScreen({ route, navigation }: any) {
       {/* Messages */}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView ref={scrollRef} contentContainerStyle={s.messagesContainer} showsVerticalScrollIndicator={false}>
-          {messages.map((msg: any) => {
-            const isMine = msg.sender === authUserId;
+          {messages.map((msg: any, index: number) => {
+            const isMine = safeId(msg.sender) !== '' && safeId(msg.sender) === safeId(authUserId);
             return (
-              <View key={msg._id} style={[s.messageBubble, isMine ? s.myMessage : s.theirMessage]}>
+              <View key={`${safeId(msg._id) || 'message'}-${index}`} style={[s.messageBubble, isMine ? s.myMessage : s.theirMessage]}>
                 {msg.tag && <Text style={s.messageTag}>{msg.tag}</Text>}
                 <Text style={[s.messageText, isMine && s.myMessageText]}>{msg.content}</Text>
                 <Text style={[s.messageTime, isMine && s.myMessageTime]}>{formatTime(msg.createdAt)}</Text>

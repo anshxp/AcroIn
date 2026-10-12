@@ -73,7 +73,7 @@ router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
     const competitions = await Competition.find();
     res.json(competitions.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 
@@ -93,7 +93,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
     const competitions = await Competition.find({ student: studentId });
     res.json(competitions.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 
@@ -101,7 +101,13 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
+    const body = req.body || {};
+    const allowedFields = ['name', 'organizer', 'date', 'application_link', 'apply_link', 'applicationUrl', 'applyUrl', 'registration_link', 'registrationUrl', 'link', 'url', 'location', 'student'];
+    const payload = normalizeApplicationLinkPayload(Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    ));
 
     if (isAdminOrFacultyUser && !payload.application_link) {
       return res.status(400).json({
@@ -152,7 +158,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -183,7 +189,7 @@ router.post('/:id/apply', verifyToken, async (req, res) => {
     await competition.save();
     res.json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -204,17 +210,28 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this competition' });
     }
 
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
+    const body = req.body || {};
+    const normalizedBody = normalizeApplicationLinkPayload({ ...body });
+    const editableFields = ['name', 'organizer', 'date', 'application_link', 'location'];
+    const payload = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(normalizedBody, field))
+        .map((field) => [field, normalizedBody[field]])
+    );
+    if (Object.prototype.hasOwnProperty.call(body, 'student')) {
+      const studentId = await resolveStudentId(body.student);
+      if (!studentId || studentId.toString() !== competition.student?.toString()) {
+        return res.status(400).json({ success: false, message: 'Competition reassignment is not supported; create a new competition instead' });
+      }
     }
+    if (!Object.keys(payload).length) return res.status(400).json({ success: false, message: 'No editable competition fields supplied' });
 
     Object.assign(competition, payload);
     await competition.save();
 
     res.json(withApplicationLink(competition));
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error('[competitions] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process competition request' });
   }
 });
 
@@ -236,7 +253,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await Competition.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Competition deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[competitions] request failed:', err); res.status(500).json({ success: false, message: 'Unable to load competitions' });
   }
 });
 

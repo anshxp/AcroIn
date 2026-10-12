@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Search, ExternalLink, Trash2, Edit2, Github, FolderOpen, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { projectAPI } from '../../services/api';
+import { projectAPI, normalizeId } from '../../services/api';
 import '../../styles/pages.css';
 
 interface Project {
@@ -37,10 +37,10 @@ export const StudentProjects: React.FC = () => {
         const backendProjects = await projectAPI.getByStudent(studentIdentifier);
         const normalizedProjects = Array.isArray(backendProjects)
           ? backendProjects
-              .filter((project): project is Project => Boolean(project && typeof project === 'object'))
+              .filter((project) => Boolean(project && typeof project === 'object'))
               .map((project) => ({
                 ...project,
-                _id: String(project._id ?? ''),
+                _id: normalizeId(project._id),
                 title: String(project.title ?? 'Untitled Project'),
                 description: String(project.description ?? ''),
                 technologies: Array.isArray(project.technologies)
@@ -182,7 +182,7 @@ export const StudentProjects: React.FC = () => {
       ) : filteredProjects.length > 0 ? (
         <div className="cards-grid">
           {filteredProjects.map((project, index) => (
-            <div key={project._id} className="project-card">
+            <div key={`${normalizeId(project._id) || "project"}-${index}`} className="project-card">
               <div className="project-card-header">
                 <h3>{project.title}</h3>
                 <div className="project-card-actions">

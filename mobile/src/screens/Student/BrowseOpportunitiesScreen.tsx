@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, EmptyState, QueryState } from '../../components/ui';
 import { useOpportunities, useMarkInterest, useUnmarkInterest } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Opportunity } from '../../types';
@@ -24,6 +25,8 @@ const TYPE_COLORS: Record<string, string> = {
   workshop: '#8B5CF6',
   certification: '#EC4899',
 };
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function BrowseOpportunitiesScreen({ navigation }: any) {
   const { data: opportunities, isLoading, isError, error, refetch } = useOpportunities();
@@ -90,8 +93,8 @@ export default function BrowseOpportunitiesScreen({ navigation }: any) {
           emptySubtitle="When faculty post approved opportunities, they will appear here."
           onRetry={() => refetch()}
         >
-          {approved.map((opp: Opportunity) => (
-            <View key={opp._id} style={[s.card, shadows.card]}>
+          {approved.map((opp: Opportunity, index: number) => (
+            <View key={`${safeId(opp._id) || 'opportunity'}-${index}`} style={[s.card, shadows.card]}>
               <View style={s.cardTop}>
                 <View style={[s.typeBadge, { backgroundColor: (TYPE_COLORS[opp.type] || colors.accent) + '20' }]}>
                   <Text style={[s.typeText, { color: TYPE_COLORS[opp.type] || colors.accent }]}>

@@ -73,7 +73,7 @@ router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
     const internships = await Internship.find();
     res.json(internships.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[internships] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 
@@ -93,7 +93,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
     const internships = await Internship.find({ student: studentId });
     res.json(internships.map(withApplicationLink));
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[internships] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 
@@ -101,7 +101,13 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
+    const body = req.body || {};
+    const allowedFields = ['company', 'position', 'duration', 'description', 'certificate_link', 'application_link', 'apply_link', 'applicationUrl', 'applyUrl', 'registration_link', 'registrationUrl', 'link', 'url', 'location', 'student'];
+    const payload = normalizeApplicationLinkPayload(Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    ));
 
     if (isAdminOrFacultyUser && !payload.application_link) {
       return res.status(400).json({
@@ -152,7 +158,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(withApplicationLink(internship));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[internships] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 
@@ -183,7 +189,7 @@ router.post('/:id/apply', verifyToken, async (req, res) => {
     await internship.save();
     res.json(withApplicationLink(internship));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[internships] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 
@@ -202,17 +208,28 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this internship' });
     }
 
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
+    const body = req.body || {};
+    const normalizedBody = normalizeApplicationLinkPayload({ ...body });
+    const editableFields = ['company', 'position', 'duration', 'description', 'certificate_link', 'application_link', 'location'];
+    const payload = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(normalizedBody, field))
+        .map((field) => [field, normalizedBody[field]])
+    );
+    if (Object.prototype.hasOwnProperty.call(body, 'student')) {
+      const studentId = await resolveStudentId(body.student);
+      if (!studentId || studentId.toString() !== internship.student?.toString()) {
+        return res.status(400).json({ success: false, message: 'Internship reassignment is not supported; create a new internship instead' });
+      }
     }
+    if (!Object.keys(payload).length) return res.status(400).json({ success: false, message: 'No editable internship fields supplied' });
 
     Object.assign(internship, payload);
     await internship.save();
 
     res.json(withApplicationLink(internship));
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[internships] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 
@@ -234,7 +251,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await Internship.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Internship deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[internships] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process internship request' });
   }
 });
 

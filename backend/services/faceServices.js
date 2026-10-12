@@ -1,7 +1,5 @@
 import axios from "axios";
 import FormData from "form-data";
-import fs from "fs";
-import path from "path";
 
 // IMPORTANT:
 // This module is an HTTP proxy only.
@@ -10,7 +8,10 @@ import path from "path";
 const DEFAULT_FACE_API = 'http://127.0.0.1:8000';
 const FACE_API = process.env.FACE_REC_SERVICE_URL || DEFAULT_FACE_API;
 const FACE_API_KEY = process.env.FACE_API_KEY || '';
-const FACE_TIMEOUT_MS = Number(process.env.FACE_API_TIMEOUT_MS || 15000);
+const configuredFaceTimeout = Number(process.env.FACE_API_TIMEOUT_MS || 15000);
+const FACE_TIMEOUT_MS = Number.isFinite(configuredFaceTimeout) && configuredFaceTimeout > 0
+  ? Math.min(configuredFaceTimeout, 60000)
+  : 15000;
 
 const ensurePythonServiceConfigured = () => {
   if (!/^https?:\/\//i.test(FACE_API)) {
@@ -34,8 +35,6 @@ const mapFaceServiceError = (error, actionLabel) => {
   return new Error(`Python face_rec_service ${actionLabel} failed.`);
 };
 
-const isHttpUrl = (value) => /^https?:\/\//i.test(String(value || ''));
-
 const appendImageToForm = async (form, fieldName, imageSource) => {
   if (!imageSource) {
     throw new Error(`Missing image source for field: ${fieldName}`);
@@ -57,21 +56,11 @@ const appendImageToForm = async (form, fieldName, imageSource) => {
     return;
   }
 
-  if (isHttpUrl(imageSource)) {
-    const response = await axios.get(imageSource, { responseType: 'arraybuffer' });
-    const ext = path.extname(new URL(imageSource).pathname) || '.jpg';
-    form.append(fieldName, Buffer.from(response.data), {
-      filename: `${fieldName}${ext}`,
-      contentType: response.headers['content-type'] || 'image/jpeg',
-    });
-    return;
-  }
-
-  form.append(fieldName, fs.createReadStream(imageSource));
+  throw new Error(`Unsupported image source for field: ${fieldName}. Expected an uploaded image buffer.`);
 };
 
 // 🔥 ENROLL
-export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
+export const enrollFace = async (studentId, frontImage, leftImage, rightImage) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();
@@ -79,9 +68,9 @@ export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
   form.append("student_id", studentId);
 
   try {
-    await appendImageToForm(form, 'front', frontPath);
-    await appendImageToForm(form, 'left', leftPath);
-    await appendImageToForm(form, 'right', rightPath);
+    await appendImageToForm(form, 'front', frontImage);
+    await appendImageToForm(form, 'left', leftImage);
+    await appendImageToForm(form, 'right', rightImage);
   } catch (error) {
     throw mapFaceServiceError(error, 'enroll');
   }
@@ -106,13 +95,13 @@ export const enrollFace = async (studentId, frontPath, leftPath, rightPath) => {
 };
 
 // 🔥 SEARCH
-export const searchFace = async (imagePath) => {
+export const searchFace = async (imageFile) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();
 
   try {
-    await appendImageToForm(form, 'file', imagePath);
+    await appendImageToForm(form, 'file', imageFile);
   } catch (error) {
     throw mapFaceServiceError(error, 'search');
   }
@@ -136,7 +125,7 @@ export const searchFace = async (imagePath) => {
   }
 };
 
-export const extractFaceEmbedding = async (imagePath) => {
+export const extractFaceEmbedding = async (imageFile) => {
   ensurePythonServiceConfigured();
 
   const form = new FormData();

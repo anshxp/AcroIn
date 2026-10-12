@@ -38,17 +38,9 @@ export const verifyToken = (req, res, next) => {
 
     // JWT payloads should contain a scalar user id. Normalize legacy tokens
     // that may contain an ObjectId-like object before downstream Mongoose calls.
-    const rawId = decoded.id;
-    const normalizedId =
-      typeof rawId === 'string'
-        ? rawId.trim()
-        : typeof rawId === 'number' || typeof rawId === 'bigint'
-          ? String(rawId)
-          : rawId && typeof rawId === 'object'
-            ? String(rawId._id || rawId.id || rawId.$oid || '')
-            : '';
+    const normalizedId = normalizeAuthId(decoded.id);
 
-    if (!normalizedId || normalizedId === '[object Object]') {
+    if (!normalizedId || normalizedId === '[object Object]' || !mongoose.Types.ObjectId.isValid(normalizedId)) {
       return res.status(401).json({ success: false, message: 'Invalid user id in authentication token' });
     }
 
@@ -57,6 +49,18 @@ export const verifyToken = (req, res, next) => {
   } catch (_err) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }
+};
+
+// Public catalogue routes can expose approved records without a token while
+// still honoring a valid token for role-aware filtering. Invalid supplied
+// credentials are rejected instead of silently downgraded to anonymous access.
+export const optionalVerifyToken = (req, res, next) => {
+  const authorization = req.headers.authorization || '';
+  if (!authorization.trim()) {
+    req.user = {};
+    return next();
+  }
+  return verifyToken(req, res, next);
 };
 
 export const isAdmin = (req, res, next) => {
@@ -93,7 +97,7 @@ export const isDepartmentAdmin = async (req, res, next) => {
     if (!user?.email) return res.status(403).json({ success: false, message: 'User email not found' });
     const faculty = await Faculty.findOne({ email: user.email });
     if (!faculty) return res.status(403).json({ success: false, message: 'Faculty profile not found' });
-    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some(r => r === 'dept_admin');
+    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some((role) => role === 'dept_admin');
     if (!isDeptAdmin) return res.status(403).json({ success: false, message: 'Department admin access required' });
     req.faculty = faculty;
     next();
@@ -111,7 +115,7 @@ export const canApproveOpportunities = async (req, res, next) => {
     if (!user?.email) return res.status(403).json({ success: false, message: 'User email not found' });
     const faculty = await Faculty.findOne({ email: user.email });
     if (!faculty) return res.status(403).json({ success: false, message: 'Faculty profile not found' });
-    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some(r => r === 'dept_admin');
+    const isDeptAdmin = Array.isArray(faculty.role) && faculty.role.some((role) => role === 'dept_admin');
     if (!isDeptAdmin) return res.status(403).json({ success: false, message: 'Only department admin can approve opportunities' });
     req.faculty = faculty;
     next();

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Search, UserRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { facultyAPI } from '../../services/api';
+import { facultyAPI, normalizeId } from '../../services/api';
 import '../../styles/pages.css';
 
 interface FaceMatchStudent {
@@ -343,9 +343,9 @@ export const FacialRecognition: React.FC = () => {
             </div>
           </div>
           <div className="card-body" style={{ display: 'grid', gap: '10px' }}>
-            {recentMatches.map((item) => (
+            {recentMatches.map((item, index) => (
               <div
-                key={`${item.student._id}-${item.searchedAt}`}
+                key={`${normalizeId(item.student._id) || "student"}-${item.searchedAt}-${index}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

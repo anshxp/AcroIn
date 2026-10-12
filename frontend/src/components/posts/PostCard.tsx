@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import { 
   ThumbsUp, 
   MessageCircle, 
@@ -18,11 +19,11 @@ import {
   X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { facultyAPI, postAPI, studentAPI, interestAPI, opportunityAPI } from '../../services/api';
+import { facultyAPI, normalizeId, postAPI, studentAPI, interestAPI, opportunityAPI } from '../../services/api';
 import type { Post, Comment, Interest } from '../../types';
 import './posts.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 
 interface PostCardProps {
   post: Post;
@@ -52,10 +53,13 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPostDeleted 
 }) => {
   const { user } = useAuth();
-  const [isLiked, setIsLiked] = useState(post.likes.includes(user?.id || ''));
-  const [likesCount, setLikesCount] = useState(post.likes.length);
+  const authUserId = normalizeId(user?.authUserId) || normalizeId(user?.id);
+  const initialLikes = Array.isArray(post.likes) ? post.likes : [];
+  const [isLiked, setIsLiked] = useState(Boolean(authUserId && initialLikes.some((like) => normalizeId(like) === authUserId)));
+  const [likesCount, setLikesCount] = useState(initialLikes.length);
+  const [likeError, setLikeError] = useState('');
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(post.comments);
+  const [comments, setComments] = useState<Comment[]>(Array.isArray(post.comments) ? post.comments : []);
   const [newComment, setNewComment] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [commentError, setCommentError] = useState('');
@@ -224,21 +228,24 @@ export const PostCard: React.FC<PostCardProps> = ({
     return date.toLocaleDateString();
   };
 
+  useEffect(() => {
+    const likes = Array.isArray(post.likes) ? post.likes : [];
+    setLikesCount(likes.length);
+    setIsLiked(Boolean(authUserId && likes.some((like) => normalizeId(like) === authUserId)));
+  }, [post._id, post.likes, authUserId]);
+
   const handleLike = async () => {
+    setLikeError('');
     try {
-      if (isLiked) {
-        const updatedPost = await postAPI.unlike(post._id);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev - 1);
-      } else {
-        const updatedPost = await postAPI.like(post._id);
-        onPostUpdated?.(updatedPost);
-        setLikesCount((prev) => prev + 1);
-      }
-      setIsLiked(!isLiked);
-    } catch (error) {
-      setIsLiked(!isLiked);
-      setLikesCount((prev) => (isLiked ? prev - 1 : prev + 1));
+      const updatedPost = isLiked
+        ? await postAPI.unlike(post._id)
+        : await postAPI.like(post._id);
+      onPostUpdated?.(updatedPost);
+      const updatedLikes = Array.isArray(updatedPost.likes) ? updatedPost.likes : [];
+      setLikesCount(updatedLikes.length);
+      setIsLiked(Boolean(authUserId && updatedLikes.some((like) => normalizeId(like) === authUserId)));
+    } catch {
+      setLikeError('Unable to update like. Please try again.');
     }
   };
 
@@ -320,7 +327,7 @@ export const PostCard: React.FC<PostCardProps> = ({
     return () => window.clearTimeout(timer);
   }, [shareFeedback]);
 
-  const isAuthor = user?.id === post.author._id;
+  const isAuthor = Boolean(authUserId && normalizeId(post.author._id) === authUserId);
 
   const resolveImageUrl = (url: string) => {
     if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -364,7 +371,7 @@ export const PostCard: React.FC<PostCardProps> = ({
 
     // Backward compatibility: older comments may not have avatar saved.
     // If the comment belongs to the logged-in user, reuse current profile avatar.
-    if (comment.author?._id && user?.id && String(comment.author._id) === String(user.id)) {
+    if (comment.author?._id && authUserId && normalizeId(comment.author._id) === authUserId) {
       return getCurrentUserAvatar();
     }
 
@@ -621,10 +628,11 @@ export const PostCard: React.FC<PostCardProps> = ({
                 <p className="post-modal-empty">No students have clicked interest yet.</p>
               ) : (
                 <div className="post-interest-list">
-                  {interestedStudents.map((interest) => {
+                  {interestedStudents.map((interest, index) => {
                     const student = typeof interest.student === 'string' ? null : interest.student;
+                    const interestId = normalizeId(interest._id) || 'interest';
                     return (
-                      <div className="post-interest-item" key={interest._id}>
+                      <div className="post-interest-item" key={`${interestId}-${index}`}>
                         <strong>{student?.name || 'Unknown student'}</strong>
                         <span>{student?.roll || 'N/A'}</span>
                         <small>Interested on {new Date(interest.createdAt).toLocaleString()}</small>
@@ -655,7 +663,8 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
       </div>
 
-      <div className="post-actions">
+      {likeError && <p className="post-like-error" role="alert">{likeError}</p>}
+        <div className="post-actions">
         <button 
           className={`post-action ${isLiked ? 'liked' : ''}`}
           onClick={handleLike}
@@ -686,8 +695,8 @@ export const PostCard: React.FC<PostCardProps> = ({
 
       {showComments && (
         <div className="post-comments">
-          {comments.map((comment) => (
-            <div key={comment._id} className="comment">
+          {comments.map((comment, index) => (
+            <div key={`${normalizeId(comment._id) || 'comment'}-${index}`} className="comment">
               {getCommentAvatarUrl(comment) ? (
                 <img
                   className="comment-avatar comment-avatar--image"

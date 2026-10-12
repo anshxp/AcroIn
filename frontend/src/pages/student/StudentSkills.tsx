@@ -9,7 +9,7 @@ import {
   PencilLine,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { studentAPI } from '../../services/api';
+import { normalizeId, studentAPI } from '../../services/api';
 import type { StudentSkill } from '../../types';
 import { SKILL_CATALOG, SKILL_CATEGORIES } from '../../constants/skillCatalog';
 
@@ -36,7 +36,7 @@ const toUiSkill = (skill: StudentSkill, fallbackId: string): Skill => ({
 });
 
 const isDemoStudentAccount = (userId?: unknown, email?: unknown) => {
-  const normalizedUserId = typeof userId === 'string' ? userId : String(userId ?? '');
+  const normalizedUserId = normalizeId(userId);
   const normalizedEmail = typeof email === 'string' ? email : String(email ?? '');
   return Boolean(normalizedUserId.startsWith('demo-') || normalizedEmail.startsWith('demo.'));
 };

@@ -7,9 +7,9 @@ The browser/mobile clients communicate with the authenticated Node/Express API. 
 ## Required backend configuration
 
 - `NODE_ENV=production`
-- `MONGO_URI`
+- `MONGO_URI` (or the supported legacy alias `MONGODB_URI`)
 - `JWT_SECRET`
-- `FRONTEND_URLS`
+- Either `FRONTEND_URL` (one frontend origin) or `FRONTEND_URLS` (comma-separated allowed frontend origins; if both are set, `FRONTEND_URLS` takes precedence)
 - `FACE_REC_SERVICE_URL`
 - `FACE_API_KEY`
 - `RECOMMENDATION_SERVICE_URL`
@@ -24,6 +24,7 @@ Use long, randomly generated secrets. Do not commit `.env` files.
 - `MONGO_DB`
 - `MONGO_STUDENT_COLLECTION`
 - `RECOMMENDATION_API_KEY` (must match the backend)
+- `ALLOWED_ORIGINS` (comma-separated explicit HTTPS frontend origins; no wildcard in production)
 
 ## Frontend configuration
 

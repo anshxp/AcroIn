@@ -16,12 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, Badge, EmptyState, LoadingSpinner, ErrorBanner } from '../../components/ui';
 import { usePosts, useLikePost, useUnlikePost, useAddComment } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthUserId } from '../../utils/authIds';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Post } from '../../types';
 
 const { width } = Dimensions.get('window');
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function HomeFeedScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -191,8 +193,8 @@ export default function HomeFeedScreen({ navigation }: any) {
         {/* Comments Section */}
         {showComments && (
           <View style={styles.commentsSection}>
-            {post.comments.slice(0, 5).map((comment) => (
-              <View key={comment._id} style={styles.commentItem}>
+            {post.comments.slice(0, 5).map((comment, index) => (
+              <View key={`${safeId(comment._id) || 'comment'}-${index}`} style={styles.commentItem}>
                 <Avatar
                   name={comment.author?.name || 'User'}
                   imageUrl={comment.author?.profileImage}

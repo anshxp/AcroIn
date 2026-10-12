@@ -7,8 +7,11 @@ import { Input, Button, EmptyState, LoadingSpinner } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getProfileId } from '../../utils/authIds';
 import { useCertificates, useCreateCertificate, useUpdateCertificate, useDeleteCertificate } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Certificate } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function CertificatesScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -43,8 +46,8 @@ export default function CertificatesScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refetch(); setRefreshing(false); }} colors={[colors.accent]} />}>
         {isLoading ? <LoadingSpinner /> : !certificates?.length ? (
           <EmptyState icon="ribbon-outline" title="No certificates" subtitle="Add your certifications" action={<Button title="Add Certificate" onPress={() => { resetForm(); setShowModal(true); }} variant="secondary" />} />
-        ) : certificates.map((c) => (
-          <View key={c._id} style={[s.card, shadows.card]}>
+        ) : certificates.map((c, index) => (
+          <View key={`${safeId(c._id) || 'certificate'}-${index}`} style={[s.card, shadows.card]}>
             <View style={s.cardHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={s.cardTitle}>{c.title}</Text>

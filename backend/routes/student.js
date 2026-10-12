@@ -398,14 +398,15 @@ router.get('/:id/skills', verifyToken, async (req, res) => {
 
     res.json({ skills: normalizedSkills });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(`[students] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete student request', requestId: req.requestId || null });
   }
 });
 
 // Add student skill
 router.post('/:id/skills', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, verified, endorsements, progress } = req.body || {};
+    const { category, name, level, progress } = req.body || {};
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Skill name is required' });
@@ -424,7 +425,7 @@ router.post('/:id/skills', verifyToken, async (req, res) => {
       name: String(name).trim(),
       level: ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner',
       verified: false,
-      endorsements: Math.max(0, Number(endorsements) || 0),
+      endorsements: 0,
       progress: Math.min(100, Math.max(0, Number(progress) || 10)),
     };
 
@@ -451,7 +452,7 @@ router.post('/:id/skills', verifyToken, async (req, res) => {
 // Update student skill
 router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, verified, endorsements, progress } = req.body || {};
+    const { category, name, level, progress } = req.body || {};
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Skill name is required' });
@@ -473,11 +474,12 @@ router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
     const previousName = String(skill.name || '').trim();
     const nextName = String(name).trim();
 
+    const skillIdentityUnchanged = previousName.toLowerCase() === nextName.toLowerCase();
     skill.category = String(category || 'General').trim();
     skill.name = nextName;
     skill.level = ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner';
-    skill.verified = Boolean(skill.verified);
-    skill.endorsements = Math.max(0, Number(endorsements) || 0);
+    skill.verified = skillIdentityUnchanged && Boolean(skill.verified);
+    if (!skillIdentityUnchanged) skill.endorsements = 0;
     skill.progress = Math.min(100, Math.max(0, Number(progress) || 10));
 
     const techStack = new Set((student.tech_stack || []).map((item) => String(item).trim()).filter(Boolean));
@@ -501,47 +503,155 @@ router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
   }
 });
 
-// Update student
+// Update student profile using an explicit allowlist; verification and identity fields are server-managed.
 router.put('/:id', verifyToken, async (req, res) => {
-  const student = await resolveStudent(req.params.id);
-  if (!student) return res.status(404).json({ message: 'Student not found' });
+  try {
+    const student = await resolveStudent(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
 
-  const requester = await getRequesterContext(req);
-  const isAdminUser = requester.userType === 'admin';
-  const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
+    const requester = await getRequesterContext(req);
+    const isAdminUser = requester.userType === 'admin';
+    const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
 
-  if (!isAdminUser && !isSelf) {
-    return res.status(403).json({ message: 'Not authorized to update this profile' });
-  }
+    if (!isAdminUser && !isSelf) {
+      return res.status(403).json({ message: 'Not authorized to update this profile' });
+    }
 
-  // Check if student is trying to edit locked parent info
-  if (isSelf && req.body.parentInfo) {
-    if (student.parentInfo?.isParentInfoLocked) {
-      return res.status(403).json({ 
-        message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.' 
+    const body = req.body || {};
+    const normalizeText = (value) => String(value ?? '').trim();
+    if (Object.prototype.hasOwnProperty.call(body, 'email') &&
+        normalizeText(body.email).toLowerCase() !== normalizeText(student.email).toLowerCase()) {
+      return res.status(403).json({ message: 'Account email changes must be handled by an administrator workflow' });
+    }
+    if (!isAdminUser) {
+      for (const field of ['roll', 'department']) {
+        if (Object.prototype.hasOwnProperty.call(body, field) &&
+            normalizeText(body[field]) !== normalizeText(student[field])) {
+          return res.status(403).json({ message: `${field} is managed by an administrator` });
+        }
+      }
+    }
+
+    const editableFields = isAdminUser
+      ? ['name', 'roll', 'department', 'year', 'semester', 'phone', 'birthday', 'address', 'linkedin', 'github', 'portfolio', 'location', 'bio', 'tech_stack', 'skills', 'experiences', 'cgpa', 'resume']
+      : ['name', 'year', 'semester', 'phone', 'birthday', 'address', 'linkedin', 'github', 'portfolio', 'location', 'bio', 'tech_stack', 'skills', 'experiences', 'cgpa', 'resume'];
+    const updates = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+
+    if (Object.prototype.hasOwnProperty.call(body, 'skills')) {
+      if (!Array.isArray(body.skills)) return res.status(400).json({ message: 'Skills must be an array' });
+      updates.skills = body.skills.map((candidate) => {
+        if (!candidate || typeof candidate !== 'object' || !String(candidate.name || '').trim()) {
+          throw new Error('Each skill must have a name');
+        }
+        const name = String(candidate.name).trim();
+        const existing = candidate._id ? student.skills.id(candidate._id) : student.skills.find((item) => item.name === name);
+        const unchangedName = existing && String(existing.name).trim() === name;
+        const level = ['Beginner', 'Intermediate', 'Advanced'].includes(candidate.level) ? candidate.level : 'Beginner';
+        const progressValue = Number(candidate.progress);
+        return {
+          ...(existing ? { _id: existing._id } : {}),
+          category: String(candidate.category || 'General').trim(),
+          name,
+          level,
+          verified: unchangedName ? Boolean(existing.verified) : false,
+          endorsements: unchangedName ? Math.max(0, Number(existing.endorsements) || 0) : 0,
+          progress: Number.isFinite(progressValue) ? Math.min(100, Math.max(0, progressValue)) : 10,
+        };
       });
     }
-    
-    // If parent info is being submitted for the first time and all fields are present, lock it
-    if (!student.parentInfo?.isParentInfoLocked && 
-        req.body.parentInfo.fatherName && req.body.parentInfo.fatherPhone) {
-      req.body.parentInfo.isParentInfoLocked = true;
-      req.body.parentInfo.parentInfoLockedAt = new Date();
-    }
-  }
 
-  // Only admin can unlock or edit locked parent info
-  if (!isAdminUser && student.parentInfo?.isParentInfoLocked && req.body.parentInfo) {
-    return res.status(403).json({ 
-      message: 'Only department admin can edit locked parent information' 
+    if (Object.prototype.hasOwnProperty.call(body, 'experiences')) {
+      if (!Array.isArray(body.experiences)) return res.status(400).json({ message: 'Experiences must be an array' });
+      updates.experiences = body.experiences.map((candidate) => {
+        if (!candidate || typeof candidate !== 'object') throw new Error('Each experience must be an object');
+        const title = String(candidate.title || '').trim();
+        const company = String(candidate.company || '').trim();
+        const duration = String(candidate.duration || '').trim();
+        const type = String(candidate.type || '').trim();
+        if (!title || !company || !duration || !type) throw new Error('Experience title, company, duration, and type are required');
+        const existing = candidate._id ? student.experiences.id(candidate._id) : null;
+        const unchanged = existing &&
+          existing.title === title &&
+          existing.company === company &&
+          existing.duration === duration &&
+          existing.type === type;
+        return {
+          ...(existing ? { _id: existing._id } : {}),
+          title,
+          company,
+          duration,
+          type,
+          verified: Boolean(unchanged && existing.verified),
+        };
+      });
+    }
+
+    if (body.parentInfo !== undefined) {
+      if (!body.parentInfo || typeof body.parentInfo !== 'object' || Array.isArray(body.parentInfo)) {
+        return res.status(400).json({ message: 'Parent information must be an object' });
+      }
+      if (isSelf && student.parentInfo?.isParentInfoLocked) {
+        return res.status(403).json({
+          message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.',
+        });
+      }
+
+      const parentInfo = student.parentInfo?.toObject
+        ? student.parentInfo.toObject()
+        : { ...(student.parentInfo || {}) };
+      const parentFields = ['fatherName', 'fatherPhone', 'fatherEmail', 'motherName', 'motherPhone', 'motherEmail'];
+      for (const field of parentFields) {
+        if (Object.prototype.hasOwnProperty.call(body.parentInfo, field)) {
+          parentInfo[field] = body.parentInfo[field];
+        }
+      }
+
+      if (isAdminUser && typeof body.parentInfo.isParentInfoLocked === 'boolean') {
+        parentInfo.isParentInfoLocked = body.parentInfo.isParentInfoLocked;
+        parentInfo.parentInfoLockedAt = body.parentInfo.isParentInfoLocked
+          ? (parentInfo.parentInfoLockedAt || new Date())
+          : undefined;
+      } else if (isSelf && !student.parentInfo?.isParentInfoLocked &&
+          body.parentInfo.fatherName && body.parentInfo.fatherPhone) {
+        parentInfo.isParentInfoLocked = true;
+        parentInfo.parentInfoLockedAt = new Date();
+      }
+      // Parent-phone verification fields can only be changed by the dedicated verification endpoint.
+      parentInfo.isParentPhoneVerified = student.parentInfo?.isParentPhoneVerified || false;
+      parentInfo.parentPhoneVerifiedAt = student.parentInfo?.parentPhoneVerifiedAt;
+      updates.parentInfo = parentInfo;
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ message: 'No editable profile fields supplied' });
+    }
+
+    Object.assign(student, updates);
+    student.profileCompleteness = calculateProfileCompleteness(student);
+    await student.save();
+
+    // Keep the canonical User name aligned with the student profile for chat and search results.
+    if (updates.name !== undefined) {
+      await User.findOneAndUpdate(
+        { email: student.email },
+        { $set: { name: student.name } },
+        { runValidators: true }
+      );
+    }
+    await syncStudentProfileFromDoc(student);
+    return res.json(normalizeStudentResponse(student));
+  } catch (err) {
+    console.error(`[students] profile update failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update student profile',
+      requestId: req.requestId || null,
     });
   }
-
-  Object.assign(student, req.body);
-  student.profileCompleteness = calculateProfileCompleteness(student);
-  await student.save();
-  await syncStudentProfileFromDoc(student);
-  res.json(normalizeStudentResponse(student));
 });
 
 // Delete student
@@ -672,13 +782,18 @@ router.post(
         faceVerificationStatus: student.faceVerificationStatus,
       });
     } catch (err) {
+      console.error(`[face-enroll] failed (requestId=${req.requestId || 'unknown'}):`, err);
       if (student) {
-        student.faceVerificationStatus = 'partial';
-        student.profileCompleteness = calculateProfileCompleteness(student);
-        await student.save();
-        await syncStudentProfileFromDoc(student);
+        try {
+          student.faceVerificationStatus = 'partial';
+          student.profileCompleteness = calculateProfileCompleteness(student);
+          await student.save();
+          await syncStudentProfileFromDoc(student);
+        } catch (persistenceError) {
+          console.error(`[face-enroll] failed to persist partial status (requestId=${req.requestId || 'unknown'}):`, persistenceError);
+        }
       }
-      res.status(500).json({ success: false, message: err.message || 'Failed to enroll face data' });
+      return res.status(500).json({ success: false, message: 'Face enrollment failed', requestId: req.requestId || null });
     }
   }
 );

@@ -244,7 +244,8 @@ router.post('/face-search', verifyToken, isAdminOrFaculty, faceSearchUpload.sing
       student: safeStudent,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message || 'Face search failed' });
+    console.error(`[face-search] failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Face search failed', requestId: req.requestId || null });
   }
 });
 
@@ -293,7 +294,8 @@ router.post('/verify-student/:id', verifyToken, async (req, res) => {
       verifiedAt: student.verifiedAt,
     });
   } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
+    console.error(`[faculty] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete faculty request', requestId: req.requestId || null });
   }
 });
 
@@ -523,22 +525,25 @@ router.put('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Faculty profile not found' });
     }
 
-    const disallowedFields = new Set(['_id', 'password', 'role', 'createdAt', 'updatedAt']);
-    const requestedEmail = String(req.body?.email || '').trim();
-    if (requestedEmail) {
-      const existingUser = await User.findOne({ email: requestedEmail, _id: { $ne: req.user.id } });
-      const existingFaculty = await Faculty.findOne({ email: requestedEmail, _id: { $ne: faculty._id } });
-      if (existingUser || existingFaculty) {
-        return res.status(409).json({ success: false, message: 'Email is already in use' });
-      }
+    const requestedEmail = String(req.body?.email ?? faculty.email).trim().toLowerCase();
+    if (!requestedEmail) return res.status(400).json({ success: false, message: 'Email is required' });
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'department') &&
+        String(req.body.department || '').trim() !== String(faculty.department || '').trim()) {
+      return res.status(403).json({ success: false, message: 'Department changes must be made by an administrator' });
+    }
+    const existingUser = await User.findOne({ email: requestedEmail, _id: { $ne: req.user.id } });
+    const existingFaculty = await Faculty.findOne({ email: requestedEmail, _id: { $ne: faculty._id } });
+    if (existingUser || existingFaculty) {
+      return res.status(409).json({ success: false, message: 'Email is already in use' });
     }
 
-    const updates = Object.entries(req.body || {}).reduce((acc, [key, value]) => {
-      if (!disallowedFields.has(key)) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
+    const editableFields = ['firstname', 'lastName', 'profilepic', 'experience', 'dateOfJoining', 'qualification', 'subjects', 'headof', 'designation', 'dob', 'linkedin', 'skills', 'techstacks', 'phone'];
+    const updates = Object.fromEntries(
+      editableFields
+        .filter((key) => Object.prototype.hasOwnProperty.call(req.body || {}, key))
+        .map((key) => [key, req.body[key]])
+    );
+    updates.email = requestedEmail;
 
     Object.assign(faculty, updates);
     await faculty.save();
@@ -583,7 +588,8 @@ router.post('/profile/upload-profile-image', verifyToken, upload.single('profile
 
     return res.json({ message: 'Profile image uploaded successfully', profilepic: imageUrl });
   } catch (err) {
-    return res.status(500).json({ message: err.message });
+    return console.error(`[faculty] request failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({ success: false, message: 'Unable to complete faculty request', requestId: req.requestId || null });
   }
 });
 
@@ -627,23 +633,35 @@ router.get('/:id', verifyToken, isAdminOrFaculty, async (req, res) => {
 // Update faculty
 router.put('/:id', verifyToken, async (req, res) => {
   try {
+    if (req.user?.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only administrators can update another faculty record' });
+    }
     const targetFaculty = await Faculty.findById(req.params.id);
     if (!targetFaculty) {
       return res.status(404).json({ message: 'Faculty not found' });
     }
 
-    const requester = await getRequesterContext(req);
-    const isAdminUser = requester.userType === 'admin';
-    const isSelf = requester.userType === 'faculty' && requester.email && requester.email === targetFaculty.email;
-
-    if (!isAdminUser && !isSelf) {
-      return res.status(403).json({ message: 'Not authorized to update this faculty profile' });
+    const body = req.body || {};
+    const editableFields = ['firstname', 'lastName', 'profilepic', 'experience', 'dateOfJoining', 'qualification', 'subjects', 'department', 'headof', 'designation', 'dob', 'linkedin', 'skills', 'techstacks', 'phone'];
+    const updatedData = Object.fromEntries(
+      editableFields
+        .filter((key) => Object.prototype.hasOwnProperty.call(body, key))
+        .map((key) => [key, body[key]])
+    );
+    if (Object.prototype.hasOwnProperty.call(body, 'role')) {
+      const roles = Array.isArray(body.role) ? body.role : [body.role];
+      if (!roles.length || roles.some((role) => !['faculty', 'dept_admin'].includes(role))) {
+        return res.status(400).json({ success: false, message: 'Invalid faculty role' });
+      }
+      updatedData.role = [...new Set(roles)];
+    }
+    if (!Object.keys(updatedData).length) {
+      return res.status(400).json({ success: false, message: 'No editable faculty fields supplied' });
     }
 
-    const updatedData = { ...req.body };
-
-    if (updatedData.password) {
-      updatedData.password = await bcrypt.hash(updatedData.password, 10);
+    const linkedUser = await User.findOne({ email: targetFaculty.email });
+    if ((updatedData.role || updatedData.department !== undefined) && !linkedUser) {
+      return res.status(409).json({ success: false, message: 'The faculty record has no linked User account; role/department changes were not applied' });
     }
 
     const faculty = await Faculty.findByIdAndUpdate(req.params.id, updatedData, {
@@ -651,6 +669,15 @@ router.put('/:id', verifyToken, async (req, res) => {
       runValidators: true,
     }).select('-password');
 
+    // Keep the canonical User role/department/name aligned with the Faculty record.
+    if (linkedUser) {
+      if (updatedData.role) linkedUser.role = [...updatedData.role];
+      if (updatedData.department !== undefined) linkedUser.department = faculty.department;
+      if (updatedData.firstname !== undefined || updatedData.lastName !== undefined) {
+        linkedUser.name = `${faculty.firstname || ''} ${faculty.lastName || ''}`.trim();
+      }
+      await linkedUser.save();
+    }
     await syncFacultyProfileFromDoc(faculty);
 
     res.json(faculty);

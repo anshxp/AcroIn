@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { assertDemoSeedAllowed } from './guard-demo-seed.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
@@ -12,7 +13,11 @@ import Chat from '../models/Chat.js';
 
 dotenv.config();
 const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/AcroIn';
-const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD || 'AcroIn@2026';
+assertDemoSeedAllowed(mongoUri);
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD?.trim();
+if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 12) {
+  throw new Error('Set DEMO_SEED_PASSWORD to a unique password of at least 12 characters before seeding.');
+}
 const departments = ['CSE','AIML','DS','CSIT','CYBER','ECE','EEE','VLSI','ME','CE','IT','IL'];
 const firstNames = ['Aarav','Aditya','Akash','Aman','Ananya','Arjun','Ayush','Diya','Isha','Kavya','Karan','Meera','Neha','Nikhil','Pooja','Rahul','Riya','Rohan','Sakshi','Simran'];
 const lastNames = ['Sharma','Verma','Patel','Jain','Joshi','Singh','Gupta','Yadav','Mehta','Mishra','Khan','Saxena','Chouhan','Tiwari','Agarwal','Bansal','Soni','Dubey','Rathore','Vyas'];
@@ -119,7 +124,7 @@ try {
     internships: await Internship.countDocuments({ company:'AcroIn Demo Labs' }),
     chats: await Chat.countDocuments({ messageType:'STUDENT_TO_FACULTY' }),
   };
-  console.log(JSON.stringify({ success:true, counts, departmentalAdmin:'demo.faculty.cse.1@acropolis.in', password:DEMO_PASSWORD }, null, 2));
+  console.log(JSON.stringify({ success:true, counts, departmentalAdmin:'demo.faculty.cse.1@acropolis.in', passwordConfigured:true }, null, 2));
 } catch (error) {
   console.error('Seed failed:', error);
   process.exitCode = 1;

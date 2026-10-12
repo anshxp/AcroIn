@@ -1,7 +1,9 @@
 from fastapi.testclient import TestClient
+import pytest
 
 from app.main import app
 from app.services.recommendation_service import build_recommendations
+from app.core.config import Settings, validate_production_configuration
 
 
 client = TestClient(app)
@@ -56,3 +58,44 @@ def test_cgpa_filter():
     ]
     ranked = build_recommendations(students, {"min_cgpa": 8})
     assert [item["student_id"] for item in ranked] == ["high"]
+
+
+def test_production_config_requires_explicit_origins():
+    config = Settings(
+        environment="production",
+        mongo_uri="mongodb://localhost:27017/acroin",
+        internal_api_key="test-key",
+        allowed_origins=("https://app.example.com",),
+    )
+    with pytest.raises(RuntimeError, match="ALLOWED_ORIGINS"):
+        validate_production_configuration(config, "")
+
+
+def test_production_config_rejects_wildcard_and_http_origins():
+    wildcard_config = Settings(
+        environment="production",
+        mongo_uri="mongodb://localhost:27017/acroin",
+        internal_api_key="test-key",
+        allowed_origins=("*",),
+    )
+    with pytest.raises(RuntimeError, match="explicit HTTPS origins"):
+        validate_production_configuration(wildcard_config, "*")
+
+    http_config = Settings(
+        environment="production",
+        mongo_uri="mongodb://localhost:27017/acroin",
+        internal_api_key="test-key",
+        allowed_origins=("http://app.example.com",),
+    )
+    with pytest.raises(RuntimeError, match="explicit HTTPS origins"):
+        validate_production_configuration(http_config, "http://app.example.com")
+
+
+def test_production_config_accepts_explicit_https_origin():
+    config = Settings(
+        environment="production",
+        mongo_uri="mongodb://localhost:27017/acroin",
+        internal_api_key="test-key",
+        allowed_origins=("https://app.example.com",),
+    )
+    validate_production_configuration(config, "https://app.example.com")

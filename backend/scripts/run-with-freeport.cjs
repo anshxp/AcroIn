@@ -11,8 +11,8 @@ try {
   // ignore errors
 }
 
-// Spawn the actual server in a child process so nodemon can supervise this wrapper
-const child = spawn(process.execPath, ['server.js'], { stdio: 'inherit', cwd: CWD });
+// Spawn Node's built-in watch mode so server modules reload without a third-party watcher.
+const child = spawn(process.execPath, ['--watch', '--watch-preserve-output', 'server.js'], { stdio: 'inherit', cwd: CWD });
 
 const forward = (sig) => {
   try {

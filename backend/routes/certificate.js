@@ -39,7 +39,13 @@ const canMutateCertificate = async (req, certificate) => {
 // Create certificate - students add their own, admin/faculty add for others
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const payload = { ...(req.body || {}) };
+    const body = req.body || {};
+    const allowedFields = ['title', 'organization', 'issue_date', 'certificate_link', 'student'];
+    const payload = Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
 
     if (payload.student) {
@@ -107,7 +113,7 @@ router.post('/', verifyToken, async (req, res) => {
 
     res.status(201).json(certificate);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[certificates] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -117,7 +123,7 @@ router.get('/', verifyToken, isAdminOrFaculty, async (_req, res) => {
     const certificates = await Certificate.find();
     res.json(certificates);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -137,7 +143,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
     const certificates = await Certificate.find({ student: studentId });
     res.json(certificates);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -160,7 +166,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 
     res.json(certificate);
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -179,17 +185,30 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this certificate' });
     }
 
-    const payload = { ...(req.body || {}) };
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
+    const body = req.body || {};
+    const editableFields = ['title', 'organization', 'issue_date', 'certificate_link'];
+    const payload = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+
+    if (req.user?.userType === 'admin') {
+      if (typeof body.verified === 'boolean') payload.verified = body.verified;
+      if (typeof body.adminAssigned === 'boolean') payload.adminAssigned = body.adminAssigned;
+    } else if (Object.prototype.hasOwnProperty.call(body, 'verified') || Object.prototype.hasOwnProperty.call(body, 'adminAssigned')) {
+      return res.status(403).json({ success: false, message: 'Only administrators can change certificate verification state' });
     }
 
+    if (!Object.keys(payload).length) {
+      return res.status(400).json({ success: false, message: 'No editable certificate fields supplied' });
+    }
     Object.assign(certificate, payload);
     await certificate.save();
 
     res.json(certificate);
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('[certificates] mutation failed:', err); res.status(400).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 
@@ -211,7 +230,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     await Certificate.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Certificate deleted' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('[certificates] request failed:', err); res.status(500).json({ success: false, message: 'Unable to process certificate request' });
   }
 });
 

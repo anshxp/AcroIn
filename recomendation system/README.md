@@ -21,4 +21,6 @@ uvicorn app.main:app --reload --port 8001
 - `MONGO_URI` - MongoDB connection string used to load students
 - `MONGO_DB` - Database name, defaults to `acroin`
 - `MONGO_STUDENT_COLLECTION` - Student collection name, defaults to `students`
-- `ALLOWED_ORIGINS` - Comma-separated CORS origins
+- `RECOMMENDATION_API_KEY` - Internal service key; must match the backend value in production
+- `ENVIRONMENT` - Use `production` for deployment; production startup requires a key, MongoDB URI, and explicit origins
+- `ALLOWED_ORIGINS` - Comma-separated explicit HTTPS frontend origins in production; wildcard origins are rejected

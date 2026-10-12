@@ -127,9 +127,23 @@ export const updateProject = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this project' });
     }
 
-    const payload = { ...(req.body || {}) };
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
+    const body = req.body || {};
+    const allowedFields = ['title', 'description', 'technologies', 'github_link', 'live_link'];
+    const payload = Object.fromEntries(
+      allowedFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+
+    // Project ownership is fixed after creation so Student.projects references remain consistent.
+    if (Object.prototype.hasOwnProperty.call(body, 'student')) {
+      const studentId = await resolveStudentId(body.student);
+      if (!studentId || studentId.toString() !== project.student?.toString()) {
+        return res.status(400).json({ success: false, message: 'Project reassignment is not supported; create a new project instead' });
+      }
+    }
+    if (!Object.keys(payload).length) {
+      return res.status(400).json({ success: false, message: 'No editable project fields supplied' });
     }
 
     const updatedProject = await Project.findByIdAndUpdate(req.params.id, payload, {

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState, LoadingSpinner, ErrorBanner, Button } from '../../components/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { getAuthUserId } from '../../utils/authIds';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useNotifications, useMarkAsRead } from '../../hooks/useApi';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
@@ -17,6 +18,8 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   system: 'settings-outline',
   certificate: 'ribbon-outline',
 };
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function NotificationsScreen() {
   const { user } = useAuthStore();
@@ -53,11 +56,11 @@ export default function NotificationsScreen() {
           </View>
         ) : !notifications?.length ? (
           <EmptyState icon="notifications-off-outline" title="No notifications" subtitle="You're all caught up!" />
-        ) : notifications.map((notif: any) => (
+        ) : notifications.map((notif: any, index: number) => (
           <TouchableOpacity
-            key={notif._id}
+            key={`${safeId(notif._id) || 'notification'}-${index}`}
             style={[s.notifItem, !notif.read && s.notifUnread, shadows.soft]}
-            onPress={() => !notif.read && markAsReadMut.mutate(notif._id)}
+            onPress={() => { const notificationId = safeId(notif._id); if (!notif.read && notificationId) markAsReadMut.mutate(notificationId); }}
           >
             <View style={[s.notifIcon, !notif.read && s.notifIconUnread]}>
               <Ionicons name={ICONS[notif.type] || 'notifications-outline'} size={20} color={!notif.read ? colors.accent : colors.gray[400]} />

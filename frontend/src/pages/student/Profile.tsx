@@ -18,7 +18,7 @@ import {
   Star
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { certificateAPI, internshipAPI, projectAPI, studentAPI } from '../../services/api';
+import { certificateAPI, internshipAPI, normalizeId, projectAPI, studentAPI } from '../../services/api';
 import type { StudentExperience, StudentSkill } from '../../types';
 import { SKILL_CATALOG, SKILL_CATEGORIES } from '../../constants/skillCatalog';
 import '../../styles/profile.css';
@@ -50,7 +50,7 @@ interface ProfileForm {
 }
 
 const isDemoStudentAccount = (userId?: unknown, email?: unknown) => {
-  const normalizedUserId = typeof userId === 'string' ? userId : String(userId ?? '');
+  const normalizedUserId = normalizeId(userId);
   const normalizedEmail = typeof email === 'string' ? email : String(email ?? '');
 
   return Boolean(
@@ -1176,7 +1176,8 @@ export const StudentProfile: React.FC = () => {
                       <input
                         type="email"
                         value={profile.email}
-                        onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                        readOnly
+                        aria-label="Email (managed by account settings)"
                         className="contact-input"
                       />
                     ) : (
@@ -1493,9 +1494,9 @@ export const StudentProfile: React.FC = () => {
                     <input
                       type="text"
                       value={profile.roll}
-                      onChange={(e) => setProfile({ ...profile, roll: e.target.value })}
+                      readOnly
+                      aria-label="Roll number (managed by an administrator)"
                       className="contact-input"
-                      placeholder="Enter roll number"
                     />
                   ) : (
                     <span className="academic-value">{profile.roll || 'Not added'}</span>
@@ -1507,9 +1508,9 @@ export const StudentProfile: React.FC = () => {
                     <input
                       type="text"
                       value={profile.department}
-                      onChange={(e) => setProfile({ ...profile, department: e.target.value })}
+                      readOnly
+                      aria-label="Department (managed by an administrator)"
                       className="contact-input"
-                      placeholder="Enter department"
                     />
                   ) : (
                     <span className="academic-value">{profile.department || 'Not added'}</span>

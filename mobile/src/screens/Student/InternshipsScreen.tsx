@@ -7,8 +7,11 @@ import { Input, Button, EmptyState, LoadingSpinner, ErrorBanner } from '../../co
 import { useAuthStore } from '../../stores/authStore';
 import { getProfileId } from '../../utils/authIds';
 import { useInternships, useCreateInternship, useUpdateInternship, useDeleteInternship } from '../../hooks/useApi';
+import { normalizeIdentifier } from '../../services/apiClient';
 import { colors, spacing, radii, typography, shadows } from '../../theme';
 import type { Internship } from '../../types';
+
+const safeId = (value: unknown): string => { try { return normalizeIdentifier(value); } catch { return ''; } };
 
 export default function InternshipsScreen({ navigation }: any) {
   const { user } = useAuthStore();
@@ -58,8 +61,8 @@ export default function InternshipsScreen({ navigation }: any) {
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refetch(); setRefreshing(false); }} colors={[colors.accent]} />}>
         {isLoading ? <LoadingSpinner /> : !internships || internships.length === 0 ? (
           <EmptyState icon="briefcase-outline" title="No internships yet" subtitle="Add your internship experiences" action={<Button title="Add Internship" onPress={() => { resetForm(); setShowModal(true); }} variant="secondary" />} />
-        ) : internships.map((item) => (
-          <View key={item._id} style={[styles.card, shadows.card]}>
+        ) : internships.map((item, index) => (
+          <View key={`${safeId(item._id) || 'internship'}-${index}`} style={[styles.card, shadows.card]}>
             <View style={styles.cardHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{item.position}</Text>

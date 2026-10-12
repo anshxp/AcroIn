@@ -1,18 +1,20 @@
 # AcroIn API Audit Report
 
-Date: 2026-09-06
+Historical snapshot date: 2026-09-06
+
+> **Not a current runtime verification.** The findings below describe observations from the date above and must be re-tested against the current deployment. Credential values have been removed from this report.
 
 ## Executive Summary
 
-The backend is running and MongoDB connectivity is healthy, but the application is not fully operational in the current environment because the production auth configuration is invalid. The backend refuses to start in production mode unless required environment variables are supplied and the JWT secret is at least 32 characters long. As a result, live authentication and all JWT-protected routes are blocked until the runtime configuration is corrected.
+In the 2026-09-06 snapshot, health checks responded and MongoDB was connected, but the production auth configuration observed then prevented authentication from starting. The backend's production checks require its configured environment variables and a JWT secret of at least 32 characters. This is historical evidence only; the current deployment status is unverified.
 
 The core evidence is from live requests to the running API and direct inspection of the backend configuration in [backend/server.js](backend/server.js) and [backend/routes/auth.js](backend/routes/auth.js):
 
 - `/health` returns `200` with `{"success":true,"status":"healthy","database":"connected"}`.
 - `/ready` returns `200`.
 - Public landing endpoints return `200`.
-- Login attempts return `500` when the server runs without a valid JWT secret, and the app exits in production mode if the secret is too short.
-- Auth-protected endpoints return `401 No token provided` when no token exists, which is expected; however, the app cannot issue valid tokens in the current production configuration.
+- At snapshot time, login attempts returned `500` when the server ran without a valid JWT secret, and the app exited in production mode when the secret was too short.
+- Auth-protected endpoints returned `401 No token provided` when no token existed, which is expected. Authentication was blocked by the configuration observed at that time.
 
 ## Environment and Runtime Findings
 
@@ -28,25 +30,18 @@ Observed runtime startup output:
 - `Missing required production environment variables: FRONTEND_URL, RECOMMENDATION_SERVICE_URL, RECOMMENDATION_API_KEY`
 - `JWT_SECRET must be at least 32 characters in production.`
 
-This is a real blocker, not a test artifact.
+The historical audit treated these as confirmed blockers at snapshot time; the current status requires a fresh runtime check.
 
 ### Database status
 
-Live MongoDB validation shows the project is connected to the configured Atlas database and contains seed/demo data. Verified counts included:
+The historical live database validation reported a connection to the configured Atlas database and seed/demo data. Counts recorded at that time included:
 
 - 7 students
 - 1 faculty
 - 0 admins in the default seeded dataset
 - several demo users and the expected demo faculty/student accounts
 
-The seeded credentials in the repo include:
-
-- `lavishjangid230719@acropolis.in` / `Lavish@262`
-- `lavishjnagid682@gmail.com` / `Lavish@262`
-- `sandeep.sharma@acropolis.in` / `Lavish@262`
-
-These were validated as valid hash comparisons against the database records.
-
+The historical audit found seeded demo accounts in the configured database. Specific emails and passwords are intentionally omitted here. Review the current database and rotate any credentials that may have been shared or committed.
 ## Endpoint Testing Results
 
 ### Public / non-authenticated endpoints
@@ -109,11 +104,11 @@ From the route declarations in the backend, the following route groups exist:
 - Projects: [backend/routes/project.js](backend/routes/project.js)
 - UI: [backend/routes/ui.js](backend/routes/ui.js)
 
-The codebase clearly contains a broad API surface, but the live audit shows the application is not currently in a fully working state because the auth/config pipeline is broken.
+The codebase contains a broad API surface, but the historical audit could not validate protected workflows because the auth/config pipeline was broken at that time.
 
-## Final Verdict
+The current `backend/server.js` also validates the face-recognition service configuration (`FACE_REC_SERVICE_URL` and `FACE_API_KEY`). Verify the exact required variable list in that file before deployment; the list above records the older audit snapshot.\n\n## Final Verdict
 
-This project does not currently pass a full functional API audit.
+The project did not pass a full functional API audit in the 2026-09-06 snapshot. The current state is unknown until the audit is rerun.
 
 ### Verified working
 - health/readiness checks
@@ -127,17 +122,10 @@ This project does not currently pass a full functional API audit.
 - admin/faculty/student authenticated workflows
 
 ### Root cause
-The backend enforces a minimum 32-character `JWT_SECRET` in production and it is currently configured with a too-short value. This prevents the API from fully booting and issuing valid tokens. The app also requires other production env values that are not present unless set for the local runtime.
+At the time of the 2026-09-06 snapshot, the backend's production checks rejected the configured `JWT_SECRET` as too short and required additional production environment variables. This historical observation is not evidence of the current deployment configuration.
 
 ## Recommended Next Step
 
-Set a valid 32+ character JWT secret and the required production env values, then restart the backend and rerun the auth tests before continuing with the full route-by-route validation.
+For a fresh audit, verify a unique 32+ character JWT secret and all required production environment variables in the deployment secret manager, restart the backend if configuration changed, and rerun the auth tests before route-by-route validation.
 
-Example fix:
-
-- `JWT_SECRET=your-32-character-long-secret-here`
-- `FRONTEND_URL=http://localhost:5173`
-- `RECOMMENDATION_SERVICE_URL=http://localhost:8000`
-- `RECOMMENDATION_API_KEY=test-key`
-
-Once the env is corrected, the next audit pass should test each protected route with real JWTs generated by the live login endpoints.
+Generate a unique JWT secret with a cryptographically secure random generator and configure all required values in the deployment's secret manager. Do not copy example secrets or service keys from documentation. After configuration is verified, re-run login and route-by-route tests with tokens issued by the running backend.

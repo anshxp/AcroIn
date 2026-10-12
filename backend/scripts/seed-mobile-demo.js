@@ -5,6 +5,7 @@
  * Usage: node scripts/seed-mobile-demo.js
  */
 import bcrypt from 'bcryptjs';
+import { assertDemoSeedAllowed } from './guard-demo-seed.js';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
@@ -20,7 +21,12 @@ const mongoUri =
   process.env.MONGODB_URI ||
   'mongodb://localhost:27017/AcroIn';
 
-const DEMO_PASSWORD = 'Lavish@262';
+assertDemoSeedAllowed(mongoUri);
+
+const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD?.trim();
+if (!DEMO_PASSWORD || DEMO_PASSWORD.length < 12) {
+  throw new Error('Set DEMO_SEED_PASSWORD to a unique password of at least 12 characters before seeding.');
+}
 
 const upsertUser = async ({ email, name, userType, passwordHash, extras = {} }) => {
   const existing = await User.findOne({ email });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../config/apiBaseUrl';
 import {
   Search,
   Plus,
@@ -22,7 +23,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { adminAPI, facultyAPI } from '../../services/api';
+import { adminAPI, facultyAPI, normalizeId } from '../../services/api';
 import '../../styles/pages.css';
 
 interface Faculty {
@@ -60,7 +61,7 @@ interface FacultyCreateForm {
 
 export const ManageFaculty: React.FC = () => {
   const { user } = useAuth();
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [brokenImageMap, setBrokenImageMap] = useState<Record<string, boolean>>({});
 
@@ -610,8 +611,8 @@ export const ManageFaculty: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {paginatedFaculty.map((f) => (
-              <tr key={f._id}>
+            {paginatedFaculty.map((f, index) => (
+              <tr key={`${normalizeId(f._id) || 'faculty'}-${index}`}>
                 <td>
                   {(() => {
                     const imageKey = `faculty-table-${f._id}`;
