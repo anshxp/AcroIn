@@ -90,7 +90,7 @@ export interface Faculty {
   skills: string[];
   techstacks: string[];
   phone: string;
-  role: ('faculty' | 'dept_admin')[];
+  role: ('faculty' | 'dept_admin' | 'super_admin')[];
   createdAt: string;
   updatedAt: string;
 }
