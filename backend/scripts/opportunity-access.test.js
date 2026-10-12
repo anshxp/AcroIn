@@ -9,6 +9,7 @@ const inactive = { isActive: false, status: 'APPROVED' };
 test('anonymous users and students only see active approved opportunities', () => {
   assert.equal(canViewOpportunity(approved), true);
   assert.equal(canViewOpportunity(approved, { userType: 'student' }), true);
+  assert.equal(canViewOpportunity({ isActive: true }, { userType: 'student' }), true);
   assert.equal(canViewOpportunity(pending), false);
   assert.equal(canViewOpportunity(pending, { userType: 'student' }), false);
   assert.equal(canViewOpportunity(inactive), false);
