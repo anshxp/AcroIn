@@ -59,7 +59,13 @@ export const verifyToken = async (req, res, next) => {
 
     // Revalidate the account on each request so deleted or demoted accounts
     // cannot continue using an otherwise unexpired access token.
-    const currentUser = await User.findById(normalizedId).select('_id userType').lean();
+    let currentUser;
+    try {
+      currentUser = await User.findById(normalizedId).select('_id userType').lean();
+    } catch (_databaseError) {
+      return res.status(503).json({ success: false, message: 'Unable to validate account at this time' });
+    }
+
     if (!currentUser || currentUser.userType !== decoded.userType) {
       return res.status(401).json({ success: false, message: 'Account is no longer authorized; please log in again' });
     }
