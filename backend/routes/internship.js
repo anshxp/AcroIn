@@ -102,7 +102,7 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
     const body = req.body || {};
-    const allowedFields = ['company', 'position', 'duration', 'description', 'certificate_link', 'application_link', 'location', 'student'];
+    const allowedFields = ['company', 'position', 'duration', 'description', 'certificate_link', 'application_link', 'apply_link', 'applicationUrl', 'applyUrl', 'registration_link', 'registrationUrl', 'link', 'url', 'location', 'student'];
     const payload = normalizeApplicationLinkPayload(Object.fromEntries(
       allowedFields
         .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
