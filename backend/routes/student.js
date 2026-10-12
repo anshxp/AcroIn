@@ -502,47 +502,97 @@ router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
   }
 });
 
-// Update student
+// Update student profile using an explicit allowlist; verification and identity fields are server-managed.
 router.put('/:id', verifyToken, async (req, res) => {
-  const student = await resolveStudent(req.params.id);
-  if (!student) return res.status(404).json({ message: 'Student not found' });
+  try {
+    const student = await resolveStudent(req.params.id);
+    if (!student) return res.status(404).json({ message: 'Student not found' });
 
-  const requester = await getRequesterContext(req);
-  const isAdminUser = requester.userType === 'admin';
-  const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
+    const requester = await getRequesterContext(req);
+    const isAdminUser = requester.userType === 'admin';
+    const isSelf = requester.userType === 'student' && requester.email && requester.email === student.email;
 
-  if (!isAdminUser && !isSelf) {
-    return res.status(403).json({ message: 'Not authorized to update this profile' });
-  }
-
-  // Check if student is trying to edit locked parent info
-  if (isSelf && req.body.parentInfo) {
-    if (student.parentInfo?.isParentInfoLocked) {
-      return res.status(403).json({ 
-        message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.' 
-      });
+    if (!isAdminUser && !isSelf) {
+      return res.status(403).json({ message: 'Not authorized to update this profile' });
     }
-    
-    // If parent info is being submitted for the first time and all fields are present, lock it
-    if (!student.parentInfo?.isParentInfoLocked && 
-        req.body.parentInfo.fatherName && req.body.parentInfo.fatherPhone) {
-      req.body.parentInfo.isParentInfoLocked = true;
-      req.body.parentInfo.parentInfoLockedAt = new Date();
-    }
-  }
 
-  // Only admin can unlock or edit locked parent info
-  if (!isAdminUser && student.parentInfo?.isParentInfoLocked && req.body.parentInfo) {
-    return res.status(403).json({ 
-      message: 'Only department admin can edit locked parent information' 
+    const body = req.body || {};
+    const normalizeText = (value) => String(value ?? '').trim();
+    if (Object.prototype.hasOwnProperty.call(body, 'email') &&
+        normalizeText(body.email).toLowerCase() !== normalizeText(student.email).toLowerCase()) {
+      return res.status(403).json({ message: 'Account email changes must be handled by an administrator workflow' });
+    }
+    if (!isAdminUser) {
+      for (const field of ['roll', 'department']) {
+        if (Object.prototype.hasOwnProperty.call(body, field) &&
+            normalizeText(body[field]) !== normalizeText(student[field])) {
+          return res.status(403).json({ message: `${field} is managed by an administrator` });
+        }
+      }
+    }
+
+    const editableFields = isAdminUser
+      ? ['name', 'roll', 'department', 'year', 'semester', 'phone', 'birthday', 'address', 'linkedin', 'github', 'portfolio', 'location', 'bio', 'tech_stack', 'skills', 'experiences', 'cgpa', 'resume']
+      : ['name', 'year', 'semester', 'phone', 'birthday', 'address', 'linkedin', 'github', 'portfolio', 'location', 'bio', 'tech_stack', 'skills', 'experiences', 'cgpa', 'resume'];
+    const updates = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+
+    if (body.parentInfo !== undefined) {
+      if (!body.parentInfo || typeof body.parentInfo !== 'object' || Array.isArray(body.parentInfo)) {
+        return res.status(400).json({ message: 'Parent information must be an object' });
+      }
+      if (isSelf && student.parentInfo?.isParentInfoLocked) {
+        return res.status(403).json({
+          message: 'Parent information is locked and cannot be edited. Contact department admin for modifications.',
+        });
+      }
+
+      const parentInfo = student.parentInfo?.toObject
+        ? student.parentInfo.toObject()
+        : { ...(student.parentInfo || {}) };
+      const parentFields = ['fatherName', 'fatherPhone', 'fatherEmail', 'motherName', 'motherPhone', 'motherEmail'];
+      for (const field of parentFields) {
+        if (Object.prototype.hasOwnProperty.call(body.parentInfo, field)) {
+          parentInfo[field] = body.parentInfo[field];
+        }
+      }
+
+      if (isAdminUser && typeof body.parentInfo.isParentInfoLocked === 'boolean') {
+        parentInfo.isParentInfoLocked = body.parentInfo.isParentInfoLocked;
+        parentInfo.parentInfoLockedAt = body.parentInfo.isParentInfoLocked
+          ? (parentInfo.parentInfoLockedAt || new Date())
+          : undefined;
+      } else if (isSelf && !student.parentInfo?.isParentInfoLocked &&
+          body.parentInfo.fatherName && body.parentInfo.fatherPhone) {
+        parentInfo.isParentInfoLocked = true;
+        parentInfo.parentInfoLockedAt = new Date();
+      }
+      // Parent-phone verification fields can only be changed by the dedicated verification endpoint.
+      parentInfo.isParentPhoneVerified = student.parentInfo?.isParentPhoneVerified || false;
+      parentInfo.parentPhoneVerifiedAt = student.parentInfo?.parentPhoneVerifiedAt;
+      updates.parentInfo = parentInfo;
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ message: 'No editable profile fields supplied' });
+    }
+
+    Object.assign(student, updates);
+    student.profileCompleteness = calculateProfileCompleteness(student);
+    await student.save();
+    await syncStudentProfileFromDoc(student);
+    return res.json(normalizeStudentResponse(student));
+  } catch (err) {
+    console.error(`[students] profile update failed (requestId=${req.requestId || 'unknown'}):`, err);
+    return res.status(500).json({
+      success: false,
+      message: 'Unable to update student profile',
+      requestId: req.requestId || null,
     });
   }
-
-  Object.assign(student, req.body);
-  student.profileCompleteness = calculateProfileCompleteness(student);
-  await student.save();
-  await syncStudentProfileFromDoc(student);
-  res.json(normalizeStudentResponse(student));
 });
 
 // Delete student
