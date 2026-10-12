@@ -78,8 +78,7 @@ router.post('/create', async (req, res) => {
 
 // Create faculty account, compensating for partial writes if any later step fails.
 router.post('/faculty/create', async (req, res) => {
-  let createdFaculty = null;
-  let createdUser = null;
+  let session = null;
 
   try {
     const requester = await getRequesterAccess(req);
@@ -142,36 +141,39 @@ router.post('/faculty/create', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
-    const faculty = await Faculty.create({
-      firstname: normalizedFirstname,
-      lastName: normalizedLastName,
-      email: normalizedEmail,
-      password: hashedPassword,
-      department: normalizedDepartment,
-      designation: String(designation || '').trim(),
-      qualification: String(qualification || '').trim(),
-      experience: Number.isFinite(Number(experience)) ? Number(experience) : undefined,
-      phone: String(phone || '').trim(),
-      subjects: Array.isArray(subjects) ? subjects : [],
-      skills: Array.isArray(skills) ? skills : [],
-      techstacks: Array.isArray(techstacks) ? techstacks : [],
-      headof: Array.isArray(headof) ? headof : [],
-      role: normalizedRoles,
-    });
-    createdFaculty = faculty;
+    session = await mongoose.startSession();
+    let faculty;
+    let user;
+    await session.withTransaction(async () => {
+      [faculty] = await Faculty.create([{
+        firstname: normalizedFirstname,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        department: normalizedDepartment,
+        designation: String(designation || '').trim(),
+        qualification: String(qualification || '').trim(),
+        experience: Number.isFinite(Number(experience)) ? Number(experience) : undefined,
+        phone: String(phone || '').trim(),
+        subjects: Array.isArray(subjects) ? subjects : [],
+        skills: Array.isArray(skills) ? skills : [],
+        techstacks: Array.isArray(techstacks) ? techstacks : [],
+        headof: Array.isArray(headof) ? headof : [],
+        role: normalizedRoles,
+      }], { session });
 
-    const user = await User.create({
-      email: normalizedEmail,
-      password: hashedPassword,
-      name: `${normalizedFirstname} ${normalizedLastName}`.trim(),
-      userType: 'faculty',
-      role: normalizedRoles,
-      department: normalizedDepartment,
-      designation: String(designation || '').trim(),
-    });
-    createdUser = user;
+      [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: `${normalizedFirstname} ${normalizedLastName}`.trim(),
+        userType: 'faculty',
+        role: normalizedRoles,
+        department: normalizedDepartment,
+        designation: String(designation || '').trim(),
+      }], { session });
 
-    await syncFacultyProfile({ user, faculty });
+      await syncFacultyProfile({ user, faculty, session });
+    });
 
     const { password: _, ...facultyWithoutPassword } = faculty._doc;
     const { password: __, ...userWithoutPassword } = user._doc;
@@ -182,20 +184,19 @@ router.post('/faculty/create', async (req, res) => {
       user: userWithoutPassword,
       faculty: facultyWithoutPassword,
     });
-  } catch (_err) {
-    // These references are only set after this request creates the record, so
-    // compensation cannot remove a pre-existing account.
-    const cleanup = [];
-    if (createdUser?._id) {
-      cleanup.push(mongoose.model('Profile').deleteOne({ user: createdUser._id }));
-      cleanup.push(User.deleteOne({ _id: createdUser._id }));
+  } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(409).json({ message: 'A user or faculty account with this email already exists.' });
     }
-    if (createdFaculty?._id) {
-      cleanup.push(Faculty.deleteOne({ _id: createdFaculty._id }));
-    }
-    await Promise.allSettled(cleanup);
-
-    return res.status(500).json({ message: 'Unable to create faculty account' });
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic faculty creation requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to create faculty account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
