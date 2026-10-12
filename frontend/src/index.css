@@ -1,47 +1,19 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* Import common styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import './styles/common.css';
 @import './styles/profile-fixes.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.55;
   font-weight: 400;
-  color-scheme: light;
-  color: #213547;
-  background-color: #ffffff;
+  color: #172033;
+  background: #f5f7fb;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-a {
-  font-weight: 500;
-  color: #6366f1;
-  text-decoration: inherit;
-}
-
-a:hover { color: #4f46e5; }
-
-h1 { font-size: 2.5em; line-height: 1.1; }
-
-input, textarea, select {
-  font-family: inherit;
-  background-color: #ffffff;
-  color: #0f172a;
-}
-
-input::placeholder,
-textarea::placeholder { color: #94a3b8; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
