@@ -647,38 +647,42 @@ router.put('/:id', verifyToken, async (req, res) => {
 
 // Delete a faculty account and its login/search-profile records together.
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
+  let session;
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ success: false, message: 'Invalid faculty ID' });
     }
-
     const faculty = await Faculty.findById(req.params.id).select('_id email');
-    if (!faculty) {
-      return res.status(404).json({ success: false, message: 'Faculty not found' });
-    }
-
+    if (!faculty) return res.status(404).json({ success: false, message: 'Faculty not found' });
     const normalizedEmail = String(faculty.email || '').trim().toLowerCase();
     const user = normalizedEmail
       ? await User.findOne({ email: normalizedEmail, userType: 'faculty' }).select('_id email userType')
       : null;
-
     if (!user) {
-      return res.status(409).json({
-        success: false,
-        message: 'Matching faculty login account is missing; repair account consistency before deletion',
-      });
+      return res.status(409).json({ success: false, message: 'Matching faculty login account is missing; repair account consistency before deletion' });
     }
 
-    // Delete the account first so a failure cannot leave an accessible login
-    // after the faculty profile has already been removed.
-    await User.deleteOne({ _id: user._id, userType: 'faculty' });
-    await Faculty.deleteOne({ _id: faculty._id });
     const Profile = mongoose.model('Profile');
-    await Profile.deleteOne({ user: user._id });
-
-    return res.json({ success: true, message: 'Faculty account deleted' });
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const userResult = await User.deleteOne({ _id: user._id, userType: 'faculty' }, { session });
+      const facultyResult = await Faculty.deleteOne({ _id: faculty._id }, { session });
+      await Profile.deleteOne({ user: user._id }, { session });
+      if (userResult.deletedCount !== 1 || facultyResult.deletedCount !== 1) {
+        throw new Error('Account records changed during deletion; transaction aborted');
+      }
+    });
+    return res.json({ success: true, message: 'Faculty account deleted atomically' });
   } catch (err) {
-    return res.status(500).json({ success: false, message: 'Unable to delete faculty account' });
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic account deletion requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to delete faculty account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
