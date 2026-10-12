@@ -406,7 +406,7 @@ router.get('/:id/skills', verifyToken, async (req, res) => {
 // Add student skill
 router.post('/:id/skills', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, verified, endorsements, progress } = req.body || {};
+    const { category, name, level, progress } = req.body || {};
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Skill name is required' });
@@ -425,7 +425,7 @@ router.post('/:id/skills', verifyToken, async (req, res) => {
       name: String(name).trim(),
       level: ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner',
       verified: false,
-      endorsements: Math.max(0, Number(endorsements) || 0),
+      endorsements: 0,
       progress: Math.min(100, Math.max(0, Number(progress) || 10)),
     };
 
@@ -452,7 +452,7 @@ router.post('/:id/skills', verifyToken, async (req, res) => {
 // Update student skill
 router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
   try {
-    const { category, name, level, verified, endorsements, progress } = req.body || {};
+    const { category, name, level, progress } = req.body || {};
 
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Skill name is required' });
@@ -478,7 +478,6 @@ router.put('/:id/skills/:skillId', verifyToken, async (req, res) => {
     skill.name = nextName;
     skill.level = ['Beginner', 'Intermediate', 'Advanced'].includes(level) ? level : 'Beginner';
     skill.verified = Boolean(skill.verified);
-    skill.endorsements = Math.max(0, Number(endorsements) || 0);
     skill.progress = Math.min(100, Math.max(0, Number(progress) || 10));
 
     const techStack = new Set((student.tech_stack || []).map((item) => String(item).trim()).filter(Boolean));
