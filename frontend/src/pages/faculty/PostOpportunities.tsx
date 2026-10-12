@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Calendar, MapPin, Briefcase, Trash2, Edit2, ExternalLink, X, Sparkles, Clock } from 'lucide-react';
 import { CheckCircle, XCircle, Users } from 'lucide-react';
-import { facultyAPI, opportunityAPI } from '../../services/api';
+import { facultyAPI, normalizeId, opportunityAPI } from '../../services/api';
 import { interestAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import type { Opportunity } from '../../types';
@@ -11,6 +11,7 @@ import './PostOpportunities.css';
 export const PostOpportunities: React.FC = () => {
   const { user } = useAuth();
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [isDepartmentAdmin, setIsDepartmentAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -43,8 +44,28 @@ export const PostOpportunities: React.FC = () => {
       return false;
     }
 
-    return String(opportunity.createdBy || '') === String(user?.id || '');
+    const authenticatedUserId = normalizeId(user?.authUserId) || normalizeId(user?.id);
+    return Boolean(authenticatedUserId && normalizeId(opportunity.createdBy) === authenticatedUserId);
   };
+
+  useEffect(() => {
+    let active = true;
+    if (user?.userType !== 'faculty') {
+      setIsDepartmentAdmin(false);
+      return () => { active = false; };
+    }
+
+    facultyAPI.getProfile()
+      .then((profile) => {
+        if (!active) return;
+        setIsDepartmentAdmin(Array.isArray(profile.role) && profile.role.some((role) => role === 'dept_admin' || role === 'super_admin'));
+      })
+      .catch(() => {
+        if (active) setIsDepartmentAdmin(false);
+      });
+
+    return () => { active = false; };
+  }, [user?.userType]);
 
   // Load opportunities on mount
   useEffect(() => {
@@ -465,7 +486,7 @@ export const PostOpportunities: React.FC = () => {
                 </div>
 
                 <div className="opportunity-card-actions">
-                  {opportunity.status === 'PENDING' && (
+                  {opportunity.status === 'PENDING' && isDepartmentAdmin && (
                     <>
                       <button
                         onClick={() => handleApprove(opportunity._id)}
