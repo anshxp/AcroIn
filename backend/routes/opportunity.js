@@ -106,6 +106,26 @@ router.get('/', optionalVerifyToken, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+router.get('/stats/pending', verifyToken, async (req, res) => {
+  try {
+    const faculty = await getApprover(req);
+    if (!faculty) return res.status(403).json({ success: false, message: 'Only the department admin can view approval stats' });
+    const departmentFaculty = await Faculty.find({ department: faculty.department }).select('email');
+    const departmentEmails = departmentFaculty.map((item) => item.email).filter(Boolean);
+    const departmentUsers = departmentEmails.length
+      ? await User.find({ email: { $in: departmentEmails } }).select('_id')
+      : [];
+    const departmentUserIds = departmentUsers.map((item) => item._id);
+    const departmentFilter = { createdBy: { $in: departmentUserIds } };
+    const [pending, approved, rejected] = await Promise.all([
+      Opportunity.countDocuments({ ...departmentFilter, status: 'PENDING', createdByRole: 'faculty' }),
+      Opportunity.countDocuments({ ...departmentFilter, status: 'APPROVED' }),
+      Opportunity.countDocuments({ ...departmentFilter, status: 'REJECTED' }),
+    ]);
+    res.json({ pending, approved, rejected });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 router.get('/:id', optionalVerifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
@@ -211,24 +231,6 @@ router.patch('/:id/reject', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 
-router.get('/stats/pending', verifyToken, async (req, res) => {
-  try {
-    const faculty = await getApprover(req);
-    if (!faculty) return res.status(403).json({ success: false, message: 'Only the department admin can view approval stats' });
-    const departmentFaculty = await Faculty.find({ department: faculty.department }).select('email');
-    const departmentEmails = departmentFaculty.map((item) => item.email).filter(Boolean);
-    const departmentUsers = departmentEmails.length
-      ? await User.find({ email: { $in: departmentEmails } }).select('_id')
-      : [];
-    const departmentUserIds = departmentUsers.map((item) => item._id);
-    const departmentFilter = { createdBy: { $in: departmentUserIds } };
-    const [pending, approved, rejected] = await Promise.all([
-      Opportunity.countDocuments({ ...departmentFilter, status: 'PENDING', createdByRole: 'faculty' }),
-      Opportunity.countDocuments({ ...departmentFilter, status: 'APPROVED' }),
-      Opportunity.countDocuments({ ...departmentFilter, status: 'REJECTED' }),
-    ]);
-    res.json({ pending, approved, rejected });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+
 
 export default router;
