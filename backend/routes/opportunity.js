@@ -5,7 +5,8 @@ import Faculty from '../models/Faculty.js';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
 import { createAnnouncementNotifications } from '../utils/announcementNotifications.js';
-import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
+import { verifyToken, optionalVerifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
+import { isHttpUrl } from '../utils/urlValidation.js';
 import { postUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -62,21 +63,34 @@ const publishApprovedOpportunity = async (req, opportunity) => {
   return createdPost;
 };
 
-router.get('/', async (req, res) => {
+router.get('/', optionalVerifyToken, async (req, res) => {
   try {
     const query = { isActive: true };
-    if (req.user?.userType === 'student') query.status = 'APPROVED';
+    // Pending/rejected opportunities are visible only to authenticated staff.
+    if (!['admin', 'faculty'].includes(req.user?.userType)) query.status = 'APPROVED';
     res.json(await Opportunity.find(query).sort({ createdAt: -1 }));
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) {
+    console.error('[opportunities] GET /opportunities failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to load opportunities' });
+  }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', optionalVerifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
     const opportunity = await Opportunity.findById(req.params.id);
     if (!opportunity) return res.status(404).json({ success: false, message: 'Opportunity not found' });
+
+    const isAdminUser = req.user?.userType === 'admin';
+    const isStaffUser = isAdminUser || req.user?.userType === 'faculty';
+    if (!isAdminUser && (!opportunity.isActive || (!isStaffUser && opportunity.status !== 'APPROVED'))) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
     res.json(opportunity);
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) {
+    console.error('[opportunities] GET /opportunities/:id failed:', err);
+    res.status(500).json({ success: false, message: 'Unable to load opportunity' });
+  }
 });
 
 router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), async (req, res) => {
@@ -85,7 +99,7 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
     const uploadedAttachments = Array.isArray(req.files) ? req.files.map((file) => toAbsoluteUploadUrl(req, file.path || `/uploads/${file.filename}`)).filter(Boolean) : [];
     const normalizedRequirements = Array.isArray(requirements) ? requirements : typeof requirements === 'string' && requirements.trim() ? [requirements.trim()] : [];
     if (!title || !application_link) return res.status(400).json({ success: false, message: 'Title and application link are required' });
-    try { new URL(application_link); } catch { return res.status(400).json({ success: false, message: 'Application link must be a valid URL' }); }
+    if (!isHttpUrl(application_link)) return res.status(400).json({ success: false, message: 'Application link must be a valid HTTP(S) URL' });
 
     const facultyContext = await getFacultyContext(req);
     const isFacultyAdmin = Boolean(facultyContext?.isDepartmentAdmin);
@@ -104,7 +118,7 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
     }
 
     return res.status(201).json({ ...opportunity.toObject(), message: 'Opportunity submitted for department-admin approval', status: 'PENDING' });
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
 });
 
 router.put('/:id', verifyToken, async (req, res) => {
@@ -121,7 +135,7 @@ router.put('/:id', verifyToken, async (req, res) => {
         .map((field) => [field, body[field]])
     );
     if (!Object.keys(updateData).length) return res.status(400).json({ success: false, message: 'No editable opportunity fields supplied' });
-    if (updateData.application_link) { try { const link = new URL(updateData.application_link); if (!['http:', 'https:'].includes(link.protocol)) throw new Error('Unsupported protocol'); } catch { return res.status(400).json({ success: false, message: 'Application link must be a valid HTTP(S) URL' }); } }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'application_link') && !isHttpUrl(updateData.application_link)) return res.status(400).json({ success: false, message: 'Application link must be a valid HTTP(S) URL' });
     const updated = await Opportunity.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.json(updated);
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
@@ -188,7 +202,7 @@ router.get('/stats/pending', verifyToken, async (req, res) => {
       Opportunity.countDocuments({ status: 'APPROVED' }), Opportunity.countDocuments({ status: 'REJECTED' }),
     ]);
     res.json({ pending, approved, rejected });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] stats request failed:', err); res.status(500).json({ success: false, message: 'Unable to load opportunity statistics' }); }
 });
 
 export default router;
