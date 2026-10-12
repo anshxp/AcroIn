@@ -903,10 +903,9 @@ export const opportunityAPI = {
 // ─── Chat APIs ───────────────────────────────────────────────────────
 
 export const chatAPI = {
-  getChats: async (userId: unknown): Promise<Chat[]> => {
-    const normalizedUserId = normalizeIdentifier(userId, 'user id');
-    if (!normalizedUserId) return [];
-    const { data } = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
+  getChats: async (_userId?: unknown): Promise<Chat[]> => {
+    // The backend derives the participant from the verified token.
+    const { data } = await api.get('/chats');
     return Array.isArray(data?.chats) ? data.chats : [];
   },
   createChat: async (facultyId: unknown): Promise<Chat> => {
@@ -934,10 +933,9 @@ export const chatAPI = {
 // ─── Notification APIs ───────────────────────────────────────────────
 
 export const notificationAPI = {
-  getByUser: async (userId: unknown): Promise<NotificationItem[]> => {
-    const normalizedUserId = normalizeIdentifier(userId, 'user id');
-    if (!normalizedUserId) return [];
-    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
+  getByUser: async (_userId?: unknown): Promise<NotificationItem[]> => {
+    // The backend derives the recipient from the verified token.
+    const { data } = await api.get('/notifications');
     return Array.isArray(data) ? data : [];
   },
   markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
