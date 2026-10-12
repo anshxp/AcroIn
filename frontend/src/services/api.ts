@@ -180,9 +180,8 @@ export const authAPI = {
     return response.data;
   },
 
-  facultyRegister: async (data: FacultyRegisterData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/faculty/register', data);
-    return response.data;
+  facultyRegister: async (_data: FacultyRegisterData): Promise<AuthResponse> => {
+    throw new Error('Faculty self-registration is not supported. Faculty accounts must be provisioned by an administrator.');
   },
 
   bootstrapAdminRegister: async (
