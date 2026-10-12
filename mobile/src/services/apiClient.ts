@@ -120,56 +120,29 @@ const handleMockFallback = (config: any): any => {
   let mockData: any = null;
 
   // 1. Authentication
+  // This fallback is an opt-in development mock, not real authentication.
+  // Never embed personal credentials or impersonate a real account here.
   if (url.includes('/auth/login')) {
     let credentials = { email: '', password: '' };
     try { credentials = JSON.parse(config.data || '{}'); } catch {}
-    const email = (credentials.email || 'student@acropolis.in').trim().toLowerCase();
-    const password = credentials.password || '';
+    const email = (credentials.email || 'student@example.test').trim().toLowerCase();
+    const isFaculty = email.includes('faculty') || email.includes('prof');
 
-    // Enforce correct password for Lavish's specific acropolis address
-    if (email === 'lavishjangid230719@acropolis.in') {
-      if (password !== 'Lavish@262') {
-        return {
-          status: 401,
-          statusText: 'Unauthorized',
-          headers: { 'content-type': 'application/json' },
-          config,
-          data: {
-            success: false,
-            message: 'Invalid credentials. Please verify your password.',
-          }
-        };
+    mockData = {
+      success: true,
+      token: 'demo-session-token',
+      user: {
+        _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
+        email,
+        name: isFaculty ? 'Demo Faculty' : 'Demo Student',
+        userType: isFaculty ? 'faculty' : 'student',
+        role: isFaculty ? 'faculty' : 'student',
+        department: 'CSE',
+        designation: isFaculty ? 'Demo Faculty Member' : undefined,
       }
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: 'student-demo-id',
-          email: 'lavishjangid230719@acropolis.in',
-          name: 'Lavish Jangid',
-          userType: 'student',
-          role: 'student',
-          department: 'CSE',
-        }
-      };
-    } else {
-      const isFaculty = email.includes('faculty') || email.includes('prof');
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
-          email: email,
-          name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
-          userType: isFaculty ? 'faculty' : 'student',
-          role: isFaculty ? 'faculty' : 'student',
-          department: 'CSE',
-          designation: isFaculty ? 'Professor & HOD' : undefined,
-        }
-      };
-    }
+    };
   } else if (url.includes('/auth/student/register')) {
-    let payload = { email: 'student@acropolis.in', name: 'Lavish Jangid', roll: '0812CS221045', department: 'CSE' };
+    let payload = { email: 'student@example.test', name: 'Demo Student', roll: 'DEMO001', department: 'CSE' };
     try { payload = JSON.parse(config.data || '{}'); } catch {}
     mockData = {
       success: true,
@@ -185,7 +158,7 @@ const handleMockFallback = (config: any): any => {
       }
     };
   } else if (url.includes('/auth/faculty/register')) {
-    let payload = { email: 'faculty@acropolis.in', firstname: 'Sandeep', lastName: 'Sharma', department: 'CSE', designation: 'Professor' };
+    let payload = { email: 'faculty@example.test', firstname: 'Demo', lastName: 'Faculty', department: 'CSE', designation: 'Faculty' };
     try { payload = JSON.parse(config.data || '{}'); } catch {}
     mockData = {
       success: true,
