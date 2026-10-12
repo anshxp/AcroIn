@@ -51,6 +51,18 @@ export const verifyToken = (req, res, next) => {
   }
 };
 
+// Public catalogue routes can expose approved records without a token while
+// still honoring a valid token for role-aware filtering. Invalid supplied
+// credentials are rejected instead of silently downgraded to anonymous access.
+export const optionalVerifyToken = (req, res, next) => {
+  const authorization = req.headers.authorization || '';
+  if (!authorization.trim()) {
+    req.user = {};
+    return next();
+  }
+  return verifyToken(req, res, next);
+};
+
 export const isAdmin = (req, res, next) => {
   if (req.user?.userType !== 'admin') return res.status(403).json({ success: false, message: 'Admin access required' });
   next();
