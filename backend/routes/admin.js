@@ -261,6 +261,9 @@ router.post('/remove-role', async (req, res) => {
     if (REGISTER_ONLY_ROLES.has(role)) {
       return res.status(403).json({ message: `${role} role cannot be removed from this endpoint` });
     }
+    if (role === 'faculty') {
+      return res.status(403).json({ message: 'The base faculty role cannot be removed here; use a dedicated account deactivation or demotion workflow' });
+    }
     if (!ASSIGNABLE_FACULTY_ROLES.has(role)) {
       return res.status(400).json({ message: 'Unsupported role' });
     }
