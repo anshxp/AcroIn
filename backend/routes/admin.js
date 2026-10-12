@@ -275,19 +275,25 @@ router.post('/remove-role', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    user.role = (user.role || []).filter((existingRole) => existingRole !== role);
-    await user.save();
-
-    if (FACULTY_ADMIN_ROLES.has(role) && user.userType === 'faculty') {
-      const faculty = await Faculty.findOne({ email: user.email });
-      if (faculty) {
-        faculty.role = (faculty.role || []).filter((existingRole) => existingRole !== role);
-        await faculty.save();
-        await syncFacultyProfile({ user, faculty });
+    let faculty = null;
+    if (user.userType === 'faculty') {
+      faculty = await Faculty.findOne({ email: user.email });
+      if (!faculty) {
+        return res.status(409).json({ message: 'Faculty profile is missing; repair the account before removing roles' });
       }
     }
 
-    res.json({ success: true, user });
+    user.role = (user.role || []).filter((existingRole) => existingRole !== role);
+    if (faculty) {
+      faculty.role = (faculty.role || []).filter((existingRole) => existingRole !== role);
+      await faculty.save();
+    }
+    await user.save();
+
+    if (faculty) await syncFacultyProfile({ user, faculty });
+
+    const { password: _password, ...userWithoutPassword } = user.toObject();
+    res.json({ success: true, user: userWithoutPassword });
 
   } catch (err) {
     res.status(500).json({ message: err.message });
