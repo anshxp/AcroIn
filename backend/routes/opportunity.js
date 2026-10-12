@@ -113,8 +113,15 @@ router.put('/:id', verifyToken, async (req, res) => {
     const opportunity = await Opportunity.findById(req.params.id);
     if (!opportunity) return res.status(404).json({ success: false, message: 'Opportunity not found' });
     if (opportunity.createdBy.toString() !== req.user?.id && req.user?.userType !== 'admin') return res.status(403).json({ success: false, message: 'Not authorized to update this opportunity' });
-    const updateData = { ...req.body };
-    if (updateData.application_link) { try { new URL(updateData.application_link); } catch { return res.status(400).json({ success: false, message: 'Application link must be a valid URL' }); } }
+    const body = req.body || {};
+    const editableFields = ['title', 'type', 'company', 'location', 'eventDate', 'deadline', 'description', 'requirements', 'attachments', 'application_link', 'isActive'];
+    const updateData = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+        .map((field) => [field, body[field]])
+    );
+    if (!Object.keys(updateData).length) return res.status(400).json({ success: false, message: 'No editable opportunity fields supplied' });
+    if (updateData.application_link) { try { const link = new URL(updateData.application_link); if (!['http:', 'https:'].includes(link.protocol)) throw new Error('Unsupported protocol'); } catch { return res.status(400).json({ success: false, message: 'Application link must be a valid HTTP(S) URL' }); } }
     const updated = await Opportunity.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.json(updated);
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
