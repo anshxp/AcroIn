@@ -11,7 +11,7 @@ import { canViewOpportunity } from '../utils/opportunityAccess.js';
 import { postUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
-const DEPARTMENT_ADMIN_ROLES = new Set(['dept_admin', 'super_admin']);
+const DEPARTMENT_ADMIN_ROLES = new Set(['dept_admin']);
 const normalizeDepartment = (value) => String(value || '').trim().toLowerCase();
 
 const toAbsoluteUploadUrl = (req, filePath) => {
