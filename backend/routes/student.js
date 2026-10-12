@@ -571,13 +571,33 @@ router.put('/:id', verifyToken, async (req, res) => {
   res.json(normalizeStudentResponse(student));
 });
 
-// Delete student
+// Delete a student account and its login/search-profile records together.
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
-  const student = await resolveStudent(req.params.id);
-  if (!student) return res.status(404).json({ message: 'Student not found' });
+  try {
+    const student = await resolveStudent(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
 
-  await Student.deleteOne({ _id: student._id });
-  res.json({ message: 'Student deleted' });
+    const normalizedEmail = String(student.email || '').trim().toLowerCase();
+    const user = normalizedEmail
+      ? await User.findOne({ email: normalizedEmail, userType: 'student' }).select('_id email userType')
+      : null;
+
+    if (!user) {
+      return res.status(409).json({
+        success: false,
+        message: 'Matching student login account is missing; repair account consistency before deletion',
+      });
+    }
+
+    await User.deleteOne({ _id: user._id, userType: 'student' });
+    await Student.deleteOne({ _id: student._id });
+    const Profile = mongoose.model('Profile');
+    await Profile.deleteOne({ user: user._id });
+
+    return res.json({ success: true, message: 'Student account deleted' });
+  } catch (_err) {
+    return res.status(500).json({ success: false, message: 'Unable to delete student account' });
+  }
 });
 
 // Upload profile image
