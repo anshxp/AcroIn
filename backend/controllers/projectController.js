@@ -77,7 +77,9 @@ export const listProjectsByStudent = async (req, res, next) => {
 
 export const createProject = async (req, res, next) => {
   try {
-    const payload = { ...(req.body || {}) };
+    const payload = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => ['title', 'description', 'technologies', 'github_link', 'live_link', 'student'].includes(key))
+    );
 
     if (payload.student) {
       payload.student = await resolveStudentId(payload.student);
