@@ -186,8 +186,8 @@ const handleMockFallback = (config: any): any => {
     mockData = {
       _id: id,
       roll: '0812CS221045',
-      email: id === 'student-demo-id' ? 'lavishjangid230719@acropolis.in' : 'sandeep@acropolis.in',
-      name: id === 'faculty-demo-id' ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
+      email: id === 'faculty-demo-id' ? 'faculty@example.test' : 'student@example.test',
+      name: id === 'faculty-demo-id' ? 'Demo Faculty' : 'Demo Student',
       userType: id === 'faculty-demo-id' ? 'faculty' : 'student',
       department: 'CSE',
       cgpa: 9.15,
@@ -885,11 +885,15 @@ export const chatAPI = {
 
 export const notificationAPI = {
   getByUser: async (userId: string): Promise<NotificationItem[]> => {
-    const { data } = await api.get(`/notifications/${userId}`);
+    const normalizedUserId = typeof userId === 'string' ? userId.trim() : '';
+    if (!normalizedUserId) return [];
+    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
     return data;
   },
   markAsRead: async (notificationId: string): Promise<NotificationItem> => {
-    const { data } = await api.patch(`/notifications/${notificationId}/read`);
+    const normalizedNotificationId = typeof notificationId === 'string' ? notificationId.trim() : '';
+    if (!normalizedNotificationId) throw new Error('Invalid notification id');
+    const { data } = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return data;
   },
 };
