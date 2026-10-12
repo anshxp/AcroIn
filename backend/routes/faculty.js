@@ -522,7 +522,7 @@ router.put('/profile', verifyToken, async (req, res) => {
     // Keep User collection profile fields aligned with faculty profile edits.
     const displayName = `${faculty.firstname || ''} ${faculty.lastName || ''}`.trim();
     await User.findByIdAndUpdate(req.user.id, {
-      email: requestedEmail || faculty.email,
+      email: faculty.email,
       name: displayName,
       firstname: faculty.firstname,
       lastName: faculty.lastName,
