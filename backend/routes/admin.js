@@ -215,25 +215,27 @@ router.post('/assign-role', async (req, res) => {
       return res.status(400).json({ message: 'Unsupported role' });
     }
 
-    if (!user.role) user.role = [];
+    // Role assignment only applies to an existing faculty account. Creating a
+    // faculty profile and its login record is handled by /faculty/create.
+    if (user.userType !== 'faculty') {
+      return res.status(409).json({ message: 'Faculty roles can only be assigned to an existing faculty account' });
+    }
+
+    const faculty = await Faculty.findOne({ email: user.email });
+    if (!faculty) {
+      return res.status(409).json({ message: 'Faculty profile is missing; repair the account before assigning roles' });
+    }
+
+    if (!Array.isArray(user.role)) user.role = [];
     if (!user.role.includes(normalizedRole)) user.role.push(normalizedRole);
+    faculty.role = Array.from(new Set([...(faculty.role || []), normalizedRole]));
 
-    if (FACULTY_ADMIN_ROLES.has(normalizedRole)) {
-      user.userType = 'faculty';
-    }
-
+    await faculty.save();
     await user.save();
+    await syncFacultyProfile({ user, faculty });
 
-    if (FACULTY_ADMIN_ROLES.has(normalizedRole)) {
-      const faculty = await Faculty.findOne({ email: user.email });
-      if (faculty) {
-        faculty.role = Array.from(new Set([...(faculty.role || []), normalizedRole]));
-        await faculty.save();
-        await syncFacultyProfile({ user, faculty });
-      }
-    }
-
-    res.json(user);
+    const { password: _password, ...userWithoutPassword } = user.toObject();
+    res.json(userWithoutPassword);
 
   } catch (err) {
     res.status(500).json({ message: err.message });
