@@ -161,22 +161,6 @@ const handleMockFallback = (config: any): any => {
         roll: payload.roll,
       }
     };
-  } else if (url.includes('/auth/faculty/register')) {
-    let payload = { email: 'faculty@example.test', firstname: 'Demo', lastName: 'Faculty', department: 'CSE', designation: 'Faculty' };
-    try { payload = JSON.parse(config.data || '{}'); } catch {}
-    mockData = {
-      success: true,
-      token: 'demo-session-token',
-      user: {
-        _id: 'faculty-demo-id',
-        email: payload.email,
-        name: `${payload.firstname} ${payload.lastName}`,
-        userType: 'faculty',
-        role: 'faculty',
-        department: payload.department,
-        designation: payload.designation,
-      }
-    };
   }
 
   // 2. Profile Details
@@ -614,9 +598,8 @@ export const authAPI = {
     const { data } = await api.post('/auth/student/register', payload);
     return data;
   },
-  facultyRegister: async (payload: FacultyRegisterData): Promise<AuthResponse> => {
-    const { data } = await api.post('/auth/faculty/register', payload);
-    return data;
+  facultyRegister: async (_payload: FacultyRegisterData): Promise<AuthResponse> => {
+    throw new Error('Faculty self-registration is not supported. Faculty accounts must be provisioned by an administrator.');
   },
 };
 
