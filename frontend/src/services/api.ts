@@ -469,11 +469,10 @@ export const certificateAPI = {
 
 // Notification APIs
 export const notificationAPI = {
-  getByUser: async (userId: string | Record<string, unknown>): Promise<NotificationItem[]> => {
-    const normalizedUserId = normalizeId(userId);
-    if (!normalizedUserId) return [];
-    const response = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
-    return response.data;
+  getByUser: async (_userId?: string | Record<string, unknown>): Promise<NotificationItem[]> => {
+    // The backend derives the recipient from the verified token; do not trust a profile ID from the UI.
+    const response = await api.get('/notifications');
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   markAsRead: async (notificationId: string | Record<string, unknown>): Promise<NotificationItem> => {
@@ -681,10 +680,9 @@ export const interestAPI = {
 
 // Chat APIs
 export const chatAPI = {
-  getChats: async (userId: string | Record<string, unknown>): Promise<Chat[]> => {
-    const normalizedUserId = normalizeId(userId);
-    if (!normalizedUserId) return [];
-    const response = await api.get(`/chats/${encodeURIComponent(normalizedUserId)}`);
+  getChats: async (_userId?: string | Record<string, unknown>): Promise<Chat[]> => {
+    // The backend derives the participant from the verified token, avoiding profile/User ID mismatches.
+    const response = await api.get('/chats');
     return Array.isArray(response.data?.chats) ? response.data.chats : [];
   },
 
