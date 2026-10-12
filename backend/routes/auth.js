@@ -88,6 +88,9 @@ const registerBootstrapAdmin = async (req, res) => {
 };
 
 const registerStudent = async (req, res) => {
+  let createdStudent = null;
+  let createdUser = null;
+
   try {
     const { name, roll, email, password, department } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -100,13 +103,24 @@ const registerStudent = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
     const student = await Student.create({ name: String(name).trim(), roll: String(roll).trim(), email: normalizedEmail, password: hashedPassword, department: String(department).trim() });
+    createdStudent = student;
     const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: String(name).trim(), userType: 'student' });
+    createdUser = user;
     await syncStudentProfile({ user, student });
     const token = signAccessToken(user);
     const { password: _, ...studentWithoutPassword } = student.toObject();
     return res.status(201).json({ success: true, message: 'Student registered', token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: 'student' } });
   } catch (_err) {
-    return res.status(400).json({ success: false, message: 'Registration failed' });
+    const cleanup = [];
+    if (createdUser?._id) {
+      cleanup.push(Profile.deleteOne({ user: createdUser._id }));
+      cleanup.push(User.deleteOne({ _id: createdUser._id, userType: 'student' }));
+    }
+    if (createdStudent?._id) {
+      cleanup.push(Student.deleteOne({ _id: createdStudent._id }));
+    }
+    await Promise.allSettled(cleanup);
+    return res.status(500).json({ success: false, message: 'Registration failed; any partially created records were scheduled for cleanup' });
   }
 };
 
