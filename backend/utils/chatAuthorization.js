@@ -22,3 +22,7 @@ export const canDeleteChatMessage = (user, chat, message) => {
   const senderId = normalizeIdentifier(message?.sender);
   return Boolean(userId && senderId && userId === senderId && isChatParticipant(chat, userId));
 };
+
+export const canDeleteChat = (user, chat) => (
+  user?.userType === 'admin' || isChatParticipant(chat, user?.id)
+);
