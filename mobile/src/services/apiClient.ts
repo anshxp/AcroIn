@@ -910,6 +910,7 @@ export const chatAPI = {
   },
   createChat: async (facultyId: unknown): Promise<Chat> => {
     const normalizedFacultyId = normalizeIdentifier(facultyId, 'faculty id');
+    if (!normalizedFacultyId) throw new Error('Invalid faculty identifier');
     const { data } = await api.post('/chats', { facultyId: normalizedFacultyId });
     return unwrapData<Chat>(data?.chat || data);
   },
@@ -940,6 +941,7 @@ export const notificationAPI = {
   },
   markAsRead: async (notificationId: unknown): Promise<NotificationItem> => {
     const normalizedNotificationId = normalizeIdentifier(notificationId, 'notification id');
+    if (!normalizedNotificationId) throw new Error('Invalid notification identifier');
     const { data } = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return data;
   },
