@@ -123,9 +123,13 @@ const handleMockFallback = (config: any): any => {
   // This fallback is an opt-in development mock, not real authentication.
   // Never embed personal credentials or impersonate a real account here.
   if (url.includes('/auth/login')) {
-    let credentials = { email: '', password: '' };
-    try { credentials = JSON.parse(config.data || '{}'); } catch {}
-    const email = (credentials.email || 'student@example.test').trim().toLowerCase();
+    let credentials: { email?: unknown; password?: unknown } = {};
+    try {
+      const parsed = JSON.parse(config.data || '{}');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) credentials = parsed;
+    } catch {}
+    const rawEmail = typeof credentials.email === 'string' ? credentials.email : '';
+    const email = (rawEmail || 'student@example.test').trim().toLowerCase();
     const isFaculty = email.includes('faculty') || email.includes('prof');
 
     mockData = {
