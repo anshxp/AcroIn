@@ -659,13 +659,17 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(400).json({ success: false, message: 'No editable faculty fields supplied' });
     }
 
+    const linkedUser = await User.findOne({ email: targetFaculty.email });
+    if ((updatedData.role || updatedData.department !== undefined) && !linkedUser) {
+      return res.status(409).json({ success: false, message: 'The faculty record has no linked User account; role/department changes were not applied' });
+    }
+
     const faculty = await Faculty.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
       runValidators: true,
     }).select('-password');
 
     // Keep the canonical User role/department/name aligned with the Faculty record.
-    const linkedUser = await User.findOne({ email: targetFaculty.email });
     if (linkedUser) {
       if (updatedData.role) linkedUser.role = [...updatedData.role];
       if (updatedData.department !== undefined) linkedUser.department = faculty.department;
