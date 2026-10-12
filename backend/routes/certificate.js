@@ -9,6 +9,11 @@ import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+const CERTIFICATE_EDITABLE_FIELDS = new Set(['title', 'organization', 'issue_date', 'certificate_link']);
+const pickCertificateFields = (payload, { includeStudent = false } = {}) => Object.fromEntries(
+  Object.entries(payload || {}).filter(([key]) => CERTIFICATE_EDITABLE_FIELDS.has(key) || (includeStudent && key === 'student'))
+);
+
 const resolveRequesterStudentId = async (req) => {
   if (req.user?.userType !== 'student' || !req.user?.id) {
     return null;
@@ -39,7 +44,7 @@ const canMutateCertificate = async (req, certificate) => {
 // Create certificate - students add their own, admin/faculty add for others
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const payload = { ...(req.body || {}) };
+    const payload = pickCertificateFields(req.body, { includeStudent: true });
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
 
     if (payload.student) {
@@ -179,7 +184,7 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this certificate' });
     }
 
-    const payload = { ...(req.body || {}) };
+    const payload = pickCertificateFields(req.body);
     if (payload.student) {
       payload.student = await resolveStudentId(payload.student);
     }
