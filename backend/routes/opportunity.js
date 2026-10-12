@@ -138,7 +138,7 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(updateData, 'application_link') && !isHttpUrl(updateData.application_link)) return res.status(400).json({ success: false, message: 'Application link must be a valid HTTP(S) URL' });
     const updated = await Opportunity.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
     res.json(updated);
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
 });
 
 router.delete('/:id', verifyToken, async (req, res) => {
@@ -149,7 +149,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
     if (opportunity.createdBy.toString() !== req.user?.id && req.user?.userType !== 'admin') return res.status(403).json({ success: false, message: 'Not authorized to delete this opportunity' });
     await Opportunity.deleteOne({ _id: req.params.id });
     res.json({ success: true, message: 'Opportunity deleted' });
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
 });
 
 const getApprover = async (req) => {
@@ -175,7 +175,7 @@ router.patch('/:id/approve', verifyToken, async (req, res) => {
     await opportunity.save();
     await publishApprovedOpportunity(req, opportunity);
     res.json({ success: true, message: 'Opportunity approved', opportunity });
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
 });
 
 router.patch('/:id/reject', verifyToken, async (req, res) => {
@@ -190,7 +190,7 @@ router.patch('/:id/reject', verifyToken, async (req, res) => {
     opportunity.status = 'REJECTED'; opportunity.approvedBy = faculty._id; opportunity.approvedAt = new Date(); opportunity.rejectionReason = req.body?.reason || 'No reason provided';
     await opportunity.save();
     res.json({ success: true, message: 'Opportunity rejected', opportunity });
-  } catch (err) { res.status(400).json({ success: false, message: err.message }); }
+  } catch (err) { console.error('[opportunities] mutation failed:', err); res.status(500).json({ success: false, message: 'Unable to process opportunity request' }); }
 });
 
 router.get('/stats/pending', verifyToken, async (req, res) => {
