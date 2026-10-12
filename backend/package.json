@@ -16,7 +16,7 @@
     "sync:profiles": "node sync-profiles.js",
     "migrate:face-embeddings": "node migrate-face-embeddings-to-student.cjs",
     "migrate:project-references": "node migrate-project-references.js",
-    "test": "node --test scripts/auth-middleware.test.js scripts/guard-demo-seed.test.js scripts/password-reset-guard.test.js scripts/posts-pagination.test.js"
+    "test": "node --test scripts/auth-middleware.test.js scripts/chat-authorization.test.js scripts/guard-demo-seed.test.js scripts/password-reset-guard.test.js scripts/posts-pagination.test.js"
   },
   "dependencies": {
     "axios": "^1.17.1",
