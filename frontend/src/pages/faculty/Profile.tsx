@@ -429,8 +429,9 @@ export const FacultyProfile: React.FC = () => {
               Department
               <input
                 value={current.department}
-                disabled={!isEditing}
-                onChange={(event) => setDraftProfile({ ...draftProfile, department: event.target.value })}
+                disabled
+                readOnly
+                aria-label="Department (managed by an administrator)"
               />
             </label>
             <label>
