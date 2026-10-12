@@ -58,7 +58,7 @@ export const PostOpportunities: React.FC = () => {
     facultyAPI.getProfile()
       .then((profile) => {
         if (!active) return;
-        setIsDepartmentAdmin(Array.isArray(profile.role) && profile.role.some((role) => role === 'dept_admin' || role === 'super_admin'));
+        setIsDepartmentAdmin(Array.isArray(profile.role) && profile.role.some((role) => role === 'dept_admin'));
       })
       .catch(() => {
         if (active) setIsDepartmentAdmin(false);
