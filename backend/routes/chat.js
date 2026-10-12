@@ -2,7 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import Chat from '../models/Chat.js';
 import User from '../models/User.js';
-import { canDeleteChatMessage } from '../utils/chatAuthorization.js';
+import { canDeleteChat, canDeleteChatMessage } from '../utils/chatAuthorization.js';
 import Faculty from '../models/Faculty.js';
 import Student from '../models/Student.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
@@ -160,9 +160,10 @@ router.put('/:chatId', verifyToken, async (req, res) => {
 router.delete('/:chatId', verifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.chatId)) return res.status(400).json({ success: false, message: 'Invalid chat id' });
-    if (req.user?.userType !== 'admin') return res.status(403).json({ success: false, message: 'Only admin can delete chats' });
-    const result = await Chat.findByIdAndDelete(req.params.chatId);
-    if (!result) return res.status(404).json({ success: false, message: 'Chat not found' });
+    const chat = await Chat.findById(req.params.chatId).select('participants');
+    if (!chat) return res.status(404).json({ success: false, message: 'Chat not found' });
+    if (!canDeleteChat(req.user, chat)) return res.status(403).json({ success: false, message: 'Not authorized to delete this chat' });
+    await Chat.deleteOne({ _id: chat._id });
     res.json({ success: true, message: 'Chat deleted' });
   } catch (_err) { res.status(500).json({ success: false, message: 'Unable to delete chat' }); }
 });
