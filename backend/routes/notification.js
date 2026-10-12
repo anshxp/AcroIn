@@ -106,8 +106,13 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (!notification) return res.status(404).json({ success: false, message: 'Notification not found' });
     if (!canAccessNotification(req, notification)) return res.status(403).json({ success: false, message: 'Not authorized to update this notification' });
     const body = req.body || {};
-    if (typeof body.read === 'boolean') notification.read = body.read;
-    if (typeof body.message === 'string' && body.message.trim()) notification.message = body.message.trim();
+    if (typeof body.read !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'A boolean read value is required' });
+    }
+
+    // Recipients may change read state, but notification content is immutable
+    // through this endpoint so recipients cannot rewrite messages they receive.
+    notification.read = body.read;
     await notification.save();
     res.json(notification);
   } catch (_err) {
