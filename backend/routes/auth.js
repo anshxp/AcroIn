@@ -44,11 +44,21 @@ const loginUser = async (req, res, expectedUserType = null) => {
 
     if (user.userType === 'student') {
       const student = await Student.findOne({ email: normalizedEmail });
-      if (student) {
-        const { password: __, ...studentWithoutPassword } = student.toObject();
-        return res.status(200).json({ success: true, token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: user.userType, role: user.role || [] } });
+      if (!student) {
+        return res.status(409).json({ success: false, message: 'Student login exists without a matching student profile; contact an administrator' });
+      }
+      const { password: __, ...studentWithoutPassword } = student.toObject();
+      return res.status(200).json({ success: true, token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: user.userType, role: user.role || [] } });
+    }
+
+    if (user.userType === 'faculty') {
+      const Faculty = (await import('../models/Faculty.js')).default;
+      const faculty = await Faculty.findOne({ email: normalizedEmail }).select('_id');
+      if (!faculty) {
+        return res.status(409).json({ success: false, message: 'Faculty login exists without a matching faculty profile; contact an administrator' });
       }
     }
+
     return res.status(200).json({ success: true, token, user: { ...userWithoutPassword, authUserId: user._id.toString() } });
   } catch (_err) {
     return res.status(500).json({ success: false, message: 'Login failed' });
@@ -107,18 +117,30 @@ const registerStudent = async (req, res) => {
 
   try {
     const { name, roll, email, password, department } = req.body || {};
+    const normalizedName = String(name || '').trim();
+    const normalizedRoll = String(roll || '').trim();
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!name || !roll || !department || !isCollegeEmail(normalizedEmail)) return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
+    const normalizedDepartment = String(department || '').trim();
+    if (!normalizedName || !normalizedRoll || !normalizedDepartment || !isCollegeEmail(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
+    }
     if (!isStrongPassword(password)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
 
-    const existingStudent = await Student.findOne({ $or: [{ roll }, { email: normalizedEmail }] });
-    if (existingStudent) return res.status(409).json({ success: false, message: existingStudent.roll === roll ? 'A student with this roll number already exists.' : 'A student with this email already exists.' });
+    const existingStudent = await Student.findOne({ $or: [{ roll: normalizedRoll }, { email: normalizedEmail }] });
+    if (existingStudent) {
+      return res.status(409).json({
+        success: false,
+        message: existingStudent.roll === normalizedRoll
+          ? 'A student with this roll number already exists.'
+          : 'A student with this email already exists.',
+      });
+    }
     if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const student = await Student.create({ name: String(name).trim(), roll: String(roll).trim(), email: normalizedEmail, password: hashedPassword, department: String(department).trim() });
+    const student = await Student.create({ name: normalizedName, roll: normalizedRoll, email: normalizedEmail, password: hashedPassword, department: normalizedDepartment });
     createdStudent = student;
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: String(name).trim(), userType: 'student' });
+    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'student' });
     createdUser = user;
     await syncStudentProfile({ user, student });
     const token = signAccessToken(user);
