@@ -7,6 +7,7 @@ import User from '../models/User.js';
 import { createAnnouncementNotifications } from '../utils/announcementNotifications.js';
 import { verifyToken, optionalVerifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
 import { isHttpUrl } from '../utils/urlValidation.js';
+import { canViewOpportunity } from '../utils/opportunityAccess.js';
 import { postUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
@@ -81,9 +82,7 @@ router.get('/:id', optionalVerifyToken, async (req, res) => {
     const opportunity = await Opportunity.findById(req.params.id);
     if (!opportunity) return res.status(404).json({ success: false, message: 'Opportunity not found' });
 
-    const isAdminUser = req.user?.userType === 'admin';
-    const isStaffUser = isAdminUser || req.user?.userType === 'faculty';
-    if (!isAdminUser && (!opportunity.isActive || (!isStaffUser && opportunity.status !== 'APPROVED'))) {
+    if (!canViewOpportunity(opportunity, req.user)) {
       return res.status(404).json({ success: false, message: 'Opportunity not found' });
     }
     res.json(opportunity);
