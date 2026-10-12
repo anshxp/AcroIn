@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canDeleteChatMessage, isChatParticipant } from '../utils/chatAuthorization.js';
+import { canDeleteChat, canDeleteChatMessage, isChatParticipant } from '../utils/chatAuthorization.js';
 
 const participant = '507f1f77bcf86cd799439011';
 const otherParticipant = '507f1f77bcf86cd799439012';
@@ -32,9 +32,10 @@ test('allows an administrator to delete messages', () => {
 });
 
 test('allows a participant or admin to delete a chat but blocks outsiders', () => {
-  const chat = { participants: [studentId, facultyId] };
-  assert.equal(canDeleteChat({ id: studentId, userType: 'student' }, chat), true);
-  assert.equal(canDeleteChat({ id: facultyId, userType: 'faculty' }, chat), true);
-  assert.equal(canDeleteChat({ id: outsiderId, userType: 'faculty' }, chat), false);
-  assert.equal(canDeleteChat({ id: outsiderId, userType: 'admin' }, chat), true);
+  const chat = { participants: [participant, otherParticipant] };
+  const outsider = '507f1f77bcf86cd799439013';
+  assert.equal(canDeleteChat({ id: participant, userType: 'student' }, chat), true);
+  assert.equal(canDeleteChat({ id: otherParticipant, userType: 'faculty' }, chat), true);
+  assert.equal(canDeleteChat({ id: outsider, userType: 'faculty' }, chat), false);
+  assert.equal(canDeleteChat({ id: outsider, userType: 'admin' }, chat), true);
 });
