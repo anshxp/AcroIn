@@ -631,6 +631,15 @@ router.put('/:id', verifyToken, async (req, res) => {
     Object.assign(student, updates);
     student.profileCompleteness = calculateProfileCompleteness(student);
     await student.save();
+
+    // Keep the canonical User name aligned with the student profile for chat and search results.
+    if (updates.name !== undefined) {
+      await User.findOneAndUpdate(
+        { email: student.email },
+        { $set: { name: student.name } },
+        { runValidators: true }
+      );
+    }
     await syncStudentProfileFromDoc(student);
     return res.json(normalizeStudentResponse(student));
   } catch (err) {
