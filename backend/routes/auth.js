@@ -56,6 +56,9 @@ const loginUser = async (req, res, expectedUserType = null) => {
 };
 
 const registerBootstrapAdmin = async (req, res) => {
+  let createdUser = null;
+  let createdAdmin = null;
+
   try {
     if (String(process.env.ADMIN_BOOTSTRAP_ENABLED || '').toLowerCase() !== 'true') return res.status(404).json({ success: false, message: 'Bootstrap disabled' });
     const bootstrapKey = String(req.headers['x-bootstrap-key'] || '').trim();
@@ -76,14 +79,25 @@ const registerBootstrapAdmin = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(normalizedPassword, 12);
     const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'admin', role: ['admin'] });
-    await Admin.create({ user: user._id, permissions: ['all'] });
+    createdUser = user;
+    const admin = await Admin.create({ user: user._id, permissions: ['all'] });
+    createdAdmin = admin;
     await Profile.findOneAndUpdate({ user: user._id }, { $set: { userType: 'admin', displayName: normalizedName, email: normalizedEmail, department: 'Administration', designation: 'System Administrator', skills: [], tags: ['admin'], profileCompleteness: 100, verificationStatus: 'verified', isActive: true } }, { new: true, upsert: true, setDefaultsOnInsert: true });
 
     const token = signAccessToken(user);
     const { password: _, ...userWithoutPassword } = user.toObject();
     return res.status(201).json({ success: true, message: 'Admin account created', token, user: userWithoutPassword });
   } catch (_err) {
-    return res.status(500).json({ success: false, message: 'Admin bootstrap failed' });
+    const cleanup = [];
+    if (createdUser?._id) {
+      cleanup.push(Profile.deleteOne({ user: createdUser._id }));
+      cleanup.push(User.deleteOne({ _id: createdUser._id, userType: 'admin' }));
+    }
+    if (createdAdmin?._id) {
+      cleanup.push(Admin.deleteOne({ _id: createdAdmin._id }));
+    }
+    await Promise.allSettled(cleanup);
+    return res.status(500).json({ success: false, message: 'Admin bootstrap failed; cleanup was attempted' });
   }
 };
 
@@ -120,7 +134,7 @@ const registerStudent = async (req, res) => {
       cleanup.push(Student.deleteOne({ _id: createdStudent._id }));
     }
     await Promise.allSettled(cleanup);
-    return res.status(500).json({ success: false, message: 'Registration failed; any partially created records were scheduled for cleanup' });
+    return res.status(500).json({ success: false, message: 'Registration failed; cleanup was attempted' });
   }
 };
 
