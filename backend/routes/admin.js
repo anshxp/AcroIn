@@ -187,12 +187,8 @@ router.post('/faculty/create', async (req, res) => {
     // compensation cannot remove a pre-existing account.
     const cleanup = [];
     if (createdUser?._id) {
-      cleanup.push(
-        (async () => {
-          await mongoose.model('Profile').deleteOne({ user: createdUser._id });
-          await User.deleteOne({ _id: createdUser._id });
-        })()
-      );
+      cleanup.push(mongoose.model('Profile').deleteOne({ user: createdUser._id }));
+      cleanup.push(User.deleteOne({ _id: createdUser._id }));
     }
     if (createdFaculty?._id) {
       cleanup.push(Faculty.deleteOne({ _id: createdFaculty._id }));
