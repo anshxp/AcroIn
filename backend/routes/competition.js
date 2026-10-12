@@ -204,10 +204,22 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this competition' });
     }
 
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
+    const body = req.body || {};
+    const normalizedBody = normalizeApplicationLinkPayload({ ...body });
+    const editableFields = ['name', 'organizer', 'date', 'application_link', 'location'];
+    const payload = Object.fromEntries(
+      editableFields
+        .filter((field) => Object.prototype.hasOwnProperty.call(normalizedBody, field))
+        .map((field) => [field, normalizedBody[field]])
+    );
+    if (req.user?.userType === 'admin' && Object.prototype.hasOwnProperty.call(body, 'student')) {
+      const studentId = await resolveStudentId(body.student);
+      if (!studentId) return res.status(400).json({ success: false, message: 'Invalid student for competition assignment' });
+      payload.student = studentId;
+    } else if (req.user?.userType !== 'admin' && Object.prototype.hasOwnProperty.call(body, 'student')) {
+      return res.status(403).json({ success: false, message: 'Only administrators can reassign a competition to a student' });
     }
+    if (!Object.keys(payload).length) return res.status(400).json({ success: false, message: 'No editable competition fields supplied' });
 
     Object.assign(competition, payload);
     await competition.save();
