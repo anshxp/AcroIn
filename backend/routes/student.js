@@ -555,6 +555,15 @@ router.put('/:id', verifyToken, async (req, res) => {
     Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
   );
 
+  // Merge parent details rather than replacing the subdocument, so lock metadata
+  // and other server-managed parent-info state cannot be erased by profile edits.
+  if (updates.parentInfo && typeof updates.parentInfo === 'object') {
+    const existingParentInfo = typeof student.parentInfo?.toObject === 'function'
+      ? student.parentInfo.toObject()
+      : (student.parentInfo || {});
+    updates.parentInfo = { ...existingParentInfo, ...updates.parentInfo };
+  }
+
   Object.assign(student, updates);
   student.profileCompleteness = calculateProfileCompleteness(student);
   await student.save();
