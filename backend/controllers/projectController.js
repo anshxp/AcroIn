@@ -135,11 +135,12 @@ export const updateProject = async (req, res, next) => {
         .map((field) => [field, body[field]])
     );
 
-    // Ownership is derived from the original project and cannot be reassigned through a profile update.
-    if (req.user?.userType === 'admin' && Object.prototype.hasOwnProperty.call(body, 'student')) {
+    // Project ownership is fixed after creation so Student.projects references remain consistent.
+    if (Object.prototype.hasOwnProperty.call(body, 'student')) {
       const studentId = await resolveStudentId(body.student);
-      if (!studentId) return res.status(400).json({ success: false, message: 'Invalid student for project assignment' });
-      payload.student = studentId;
+      if (!studentId || studentId.toString() !== project.student?.toString()) {
+        return res.status(400).json({ success: false, message: 'Project reassignment is not supported; create a new project instead' });
+      }
     }
     if (!Object.keys(payload).length) {
       return res.status(400).json({ success: false, message: 'No editable project fields supplied' });
