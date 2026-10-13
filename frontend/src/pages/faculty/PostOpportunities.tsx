@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Search, Calendar, MapPin, Briefcase, Trash2, Edit2, ExternalLink, X, Sparkles, Clock } from 'lucide-react';
 import { CheckCircle, XCircle, Users } from 'lucide-react';
 import { facultyAPI, opportunityAPI } from '../../services/api';
@@ -697,11 +698,23 @@ export const PostOpportunities: React.FC = () => {
       )}
 
       {/* Interested Students Modal */}
-      {interestedStudentsModalOpen && (
-        <div className="opportunity-modal-overlay" onClick={() => setInterestedStudentsModalOpen(null)}>
-          <div className="opportunity-modal opportunity-modal-large" onClick={(e) => e.stopPropagation()}>
+      {interestedStudentsModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          className="opportunity-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setInterestedStudentsModalOpen(null);
+          }}
+          role="presentation"
+        >
+          <div
+            className="opportunity-modal opportunity-modal-large"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="opportunity-interested-students-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="opportunity-modal-header">
-              <h3>Students Interested ({interestedStudents.length})</h3>
+              <h3 id="opportunity-interested-students-title">Students Interested ({interestedStudents.length})</h3>
               <div className="opportunity-modal-header-actions">
                 {interestedStudentsModalOpen && (
                   <button
@@ -739,7 +752,8 @@ export const PostOpportunities: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
