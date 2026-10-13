@@ -5,10 +5,20 @@ import { randomUUID } from 'crypto';
 import { v2 as cloudinary } from 'cloudinary';
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Support the canonical names and the mixed-case names already used in some
+// local .env files. Cloudinary credentials must remain backend-only.
+const cloudinaryCloudName =
+  process.env.CLOUDINARY_CLOUD_NAME || process.env.Cloudinary_cloud_name;
+const cloudinaryApiKey =
+  process.env.CLOUDINARY_API_KEY || process.env.Cloudinary_api_key;
+const cloudinaryApiSecret =
+  process.env.CLOUDINARY_API_SECRET ||
+  process.env.Cloudinary_api_secret ||
+  process.env.Cloudinary_API_SECRET;
+
 const isCloudinaryConfigured = Boolean(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET,
+  cloudinaryCloudName && cloudinaryApiKey && cloudinaryApiSecret,
 );
 
 if (isProduction && !isCloudinaryConfigured) {
@@ -17,9 +27,9 @@ if (isProduction && !isCloudinaryConfigured) {
 
 if (isCloudinaryConfigured) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: cloudinaryCloudName,
+    api_key: cloudinaryApiKey,
+    api_secret: cloudinaryApiSecret,
     secure: true,
   });
 }

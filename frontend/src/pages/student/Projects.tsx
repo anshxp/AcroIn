@@ -11,7 +11,9 @@ interface Project {
   technologies: string[];
   github_link?: string;
   live_link?: string;
-  student?: string;
+  student: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const techColors = ['blue', 'green', 'purple', 'orange', 'pink', 'cyan'];

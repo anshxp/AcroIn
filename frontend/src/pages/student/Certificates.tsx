@@ -11,7 +11,9 @@ interface Certificate {
   issue_date: string;
   certificate_link?: string;
   verified?: boolean;
-  student?: string;
+  student: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export const StudentCertificates: React.FC = () => {
