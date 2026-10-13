@@ -39,6 +39,8 @@ export const PostOpportunities: React.FC = () => {
     application_link: '',
   });
 
+  const isDepartmentAdmin = user?.userType === 'faculty' && Array.isArray(user.role) && user.role.includes('dept_admin');
+
   const isOpportunityOwner = (opportunity: Opportunity) => {
     if (user?.userType !== 'faculty' && user?.userType !== 'admin') {
       return false;
@@ -466,7 +468,7 @@ export const PostOpportunities: React.FC = () => {
                 </div>
 
                 <div className="opportunity-card-actions">
-                  {opportunity.status === 'PENDING' && (
+                  {isDepartmentAdmin && opportunity.status === 'PENDING' && (
                     <>
                       <button
                         onClick={() => handleApprove(opportunity._id)}
@@ -484,7 +486,7 @@ export const PostOpportunities: React.FC = () => {
                       </button>
                     </>
                   )}
-                  {(isOpportunityOwner(opportunity) || user?.userType === 'admin') && (
+                  {(isOpportunityOwner(opportunity) || user?.userType === 'admin' || isDepartmentAdmin) && (
                     <button
                       onClick={() => loadInterestedStudents(opportunity._id)}
                       className="btn-view-interest"
