@@ -66,6 +66,22 @@ router.get('/', async (req, res) => {
   try {
     const query = { isActive: true };
     if (req.user?.userType === 'student') query.status = 'APPROVED';
+
+    // Keep the department-admin review board scoped to its own department.
+    if (req.user?.userType === 'faculty' && req.user?.id) {
+      const user = await User.findById(req.user.id).select('email department');
+      const faculty = user?.email ? await Faculty.findOne({ email: user.email }).select('department role') : null;
+      const isDepartmentAdmin = Array.isArray(faculty?.role) && faculty.role.includes('dept_admin');
+      if (isDepartmentAdmin) {
+        const department = String(faculty.department || user?.department || '').trim();
+        if (!department) return res.json([]);
+        const departmentFaculty = await Faculty.find({ department }).select('email');
+        const emails = departmentFaculty.map((member) => member.email).filter(Boolean);
+        const departmentUsers = await User.find({ $or: [{ department }, { email: { $in: emails } }] }).select('_id');
+        query.createdBy = { $in: departmentUsers.map((member) => member._id) };
+      }
+    }
+
     res.json(await Opportunity.find(query).sort({ createdAt: -1 }));
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -87,9 +103,8 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
     if (!title || !application_link) return res.status(400).json({ success: false, message: 'Title and application link are required' });
     try { new URL(application_link); } catch { return res.status(400).json({ success: false, message: 'Application link must be a valid URL' }); }
 
-    const facultyContext = await getFacultyContext(req);
-    const isFacultyAdmin = Boolean(facultyContext?.isDepartmentAdmin);
-    const status = req.user?.userType === 'admin' || isFacultyAdmin ? 'APPROVED' : 'PENDING';
+    // All opportunities must be reviewed by a department admin, including those submitted by admins.
+    const status = 'PENDING';
 
     const opportunity = new Opportunity({ title, type: type || 'internship', company, location, eventDate: eventDate ? new Date(eventDate) : null, deadline: deadline ? new Date(deadline) : null, description, requirements: normalizedRequirements, application_link, attachments: uploadedAttachments, createdBy: req.user?.id, createdByRole: req.user?.userType, status });
     if (status === 'APPROVED' && facultyContext?.faculty?._id) {
