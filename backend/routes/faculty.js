@@ -686,10 +686,20 @@ router.get('/export/interested/:opportunityId', verifyToken, async (req, res) =>
       return res.status(404).json({ success: false, message: 'Opportunity not found' });
     }
 
-    // If requester is faculty, ensure they created this opportunity
+    // Keep export permissions aligned with the interested-students endpoint.
     if (req.user?.userType === 'faculty') {
-      if (!req.user?.id || opportunity.createdBy.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, message: 'Only the faculty who posted this opportunity can export interested students' });
+      const isOwner = Boolean(req.user?.id && opportunity.createdBy.toString() === req.user.id);
+      if (!isOwner) {
+        const requester = await User.findById(req.user.id).select('email department');
+        const requesterFaculty = requester?.email ? await Faculty.findOne({ email: requester.email }).select('department role') : null;
+        const isDepartmentAdmin = Array.isArray(requesterFaculty?.role) && requesterFaculty.role.includes('dept_admin');
+        const creator = await User.findById(opportunity.createdBy).select('email department');
+        const creatorFaculty = creator?.email ? await Faculty.findOne({ email: creator.email }).select('department') : null;
+        const requesterDepartment = String(requesterFaculty?.department || requester?.department || '').trim().toLowerCase();
+        const creatorDepartment = String(creatorFaculty?.department || creator?.department || '').trim().toLowerCase();
+        if (!isDepartmentAdmin || !requesterDepartment || requesterDepartment !== creatorDepartment) {
+          return res.status(403).json({ success: false, message: 'Only the opportunity owner, its department admin, or the main admin can export interested students' });
+        }
       }
     }
 
