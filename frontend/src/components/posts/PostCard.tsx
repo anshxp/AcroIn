@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ThumbsUp, 
   MessageCircle, 
@@ -169,13 +170,13 @@ export const PostCard: React.FC<PostCardProps> = ({
   }, [opportunityId, user?.userType]);
 
   const loadInterestedStudents = async () => {
-    if (!opportunityId) return;
+    if (!opportunityId || isLoadingInterestedStudents) return;
 
     try {
       setIsLoadingInterestedStudents(true);
       setInterestedStudentsError('');
       const response = await interestAPI.getInterestedStudents(opportunityId);
-      setInterestedStudents(response || []);
+      setInterestedStudents(Array.isArray(response) ? response : []);
       setShowInterestedStudentsModal(true);
     } catch (error) {
       setInterestedStudentsError('Failed to load interested students.');
@@ -594,20 +595,33 @@ export const PostCard: React.FC<PostCardProps> = ({
         )}
       </div>
 
-      {showInterestedStudentsModal && (
-        <div className="post-modal-overlay" onClick={() => setShowInterestedStudentsModal(false)}>
-          <div className="post-modal" onClick={(event) => event.stopPropagation()}>
+      {showInterestedStudentsModal && typeof document !== 'undefined' && createPortal(
+        <div
+          className="post-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowInterestedStudentsModal(false);
+          }}
+          role="presentation"
+        >
+          <div
+            className="post-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={`interested-students-title-${post._id}`}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="post-modal-header">
-              <h3>Interested Students ({interestedStudents.length})</h3>
+              <h3 id={`interested-students-title-${post._id}`}>Interested Students ({interestedStudents.length})</h3>
               <div className="post-modal-header-actions">
                 <button
                   type="button"
                   className="post-export-btn"
                   onClick={() => exportInterestedStudents('csv')}
+                  disabled={isLoadingInterestedStudents}
                 >
                   Export CSV
                 </button>
-                <button onClick={() => setShowInterestedStudentsModal(false)} aria-label="Close modal">
+                <button type="button" onClick={() => setShowInterestedStudentsModal(false)} aria-label="Close modal">
                   <X size={18} />
                 </button>
               </div>
@@ -635,7 +649,8 @@ export const PostCard: React.FC<PostCardProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="post-stats">
