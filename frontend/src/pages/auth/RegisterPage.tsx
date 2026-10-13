@@ -168,13 +168,18 @@ export const RegisterPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => setUserType('faculty')}
-              className={`auth-toggle-btn ${userType === 'faculty' ? 'active' : ''}`}
+              disabled
+              aria-disabled="true"
+              title="Faculty accounts are provisioned by an administrator"
+              className="auth-toggle-btn"
             >
               <Users size={18} />
-              <span>Faculty</span>
+              <span>Faculty (admin-provisioned)</span>
             </button>
           </div>
+          <p className="auth-footer">
+            Faculty accounts are created by an administrator. Student self-registration is available here.
+          </p>
 
           {error && (
             <div className="auth-error">

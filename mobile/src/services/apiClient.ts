@@ -120,56 +120,33 @@ const handleMockFallback = (config: any): any => {
   let mockData: any = null;
 
   // 1. Authentication
+  // This fallback is an opt-in development mock, not real authentication.
+  // Never embed personal credentials or impersonate a real account here.
   if (url.includes('/auth/login')) {
-    let credentials = { email: '', password: '' };
-    try { credentials = JSON.parse(config.data || '{}'); } catch {}
-    const email = (credentials.email || 'student@acropolis.in').trim().toLowerCase();
-    const password = credentials.password || '';
+    let credentials: { email?: unknown; password?: unknown } = {};
+    try {
+      const parsed = JSON.parse(config.data || '{}');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) credentials = parsed;
+    } catch {}
+    const rawEmail = typeof credentials.email === 'string' ? credentials.email : '';
+    const email = (rawEmail || 'student@example.test').trim().toLowerCase();
+    const isFaculty = email.includes('faculty') || email.includes('prof');
 
-    // Enforce correct password for Lavish's specific acropolis address
-    if (email === 'lavishjangid230719@acropolis.in') {
-      if (password !== 'Lavish@262') {
-        return {
-          status: 401,
-          statusText: 'Unauthorized',
-          headers: { 'content-type': 'application/json' },
-          config,
-          data: {
-            success: false,
-            message: 'Invalid credentials. Please verify your password.',
-          }
-        };
+    mockData = {
+      success: true,
+      token: 'demo-session-token',
+      user: {
+        _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
+        email,
+        name: isFaculty ? 'Demo Faculty' : 'Demo Student',
+        userType: isFaculty ? 'faculty' : 'student',
+        role: isFaculty ? 'faculty' : 'student',
+        department: 'CSE',
+        designation: isFaculty ? 'Demo Faculty Member' : undefined,
       }
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: 'student-demo-id',
-          email: 'lavishjangid230719@acropolis.in',
-          name: 'Lavish Jangid',
-          userType: 'student',
-          role: 'student',
-          department: 'CSE',
-        }
-      };
-    } else {
-      const isFaculty = email.includes('faculty') || email.includes('prof');
-      mockData = {
-        success: true,
-        token: 'demo-session-token',
-        user: {
-          _id: isFaculty ? 'faculty-demo-id' : 'student-demo-id',
-          email: email,
-          name: isFaculty ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
-          userType: isFaculty ? 'faculty' : 'student',
-          role: isFaculty ? 'faculty' : 'student',
-          department: 'CSE',
-          designation: isFaculty ? 'Professor & HOD' : undefined,
-        }
-      };
-    }
+    };
   } else if (url.includes('/auth/student/register')) {
-    let payload = { email: 'student@acropolis.in', name: 'Lavish Jangid', roll: '0812CS221045', department: 'CSE' };
+    let payload = { email: 'student@example.test', name: 'Demo Student', roll: 'DEMO001', department: 'CSE' };
     try { payload = JSON.parse(config.data || '{}'); } catch {}
     mockData = {
       success: true,
@@ -182,22 +159,6 @@ const handleMockFallback = (config: any): any => {
         role: 'student',
         department: payload.department,
         roll: payload.roll,
-      }
-    };
-  } else if (url.includes('/auth/faculty/register')) {
-    let payload = { email: 'faculty@acropolis.in', firstname: 'Sandeep', lastName: 'Sharma', department: 'CSE', designation: 'Professor' };
-    try { payload = JSON.parse(config.data || '{}'); } catch {}
-    mockData = {
-      success: true,
-      token: 'demo-session-token',
-      user: {
-        _id: 'faculty-demo-id',
-        email: payload.email,
-        name: `${payload.firstname} ${payload.lastName}`,
-        userType: 'faculty',
-        role: 'faculty',
-        department: payload.department,
-        designation: payload.designation,
       }
     };
   }
@@ -213,8 +174,8 @@ const handleMockFallback = (config: any): any => {
     mockData = {
       _id: id,
       roll: '0812CS221045',
-      email: id === 'student-demo-id' ? 'lavishjangid230719@acropolis.in' : 'sandeep@acropolis.in',
-      name: id === 'faculty-demo-id' ? 'Dr. Sandeep Sharma' : 'Lavish Jangid',
+      email: id === 'faculty-demo-id' ? 'faculty@example.test' : 'student@example.test',
+      name: id === 'faculty-demo-id' ? 'Demo Faculty' : 'Demo Student',
       userType: id === 'faculty-demo-id' ? 'faculty' : 'student',
       department: 'CSE',
       cgpa: 9.15,
@@ -637,9 +598,8 @@ export const authAPI = {
     const { data } = await api.post('/auth/student/register', payload);
     return data;
   },
-  facultyRegister: async (payload: FacultyRegisterData): Promise<AuthResponse> => {
-    const { data } = await api.post('/auth/faculty/register', payload);
-    return data;
+  facultyRegister: async (_payload: FacultyRegisterData): Promise<AuthResponse> => {
+    throw new Error('Faculty self-registration is not supported. Faculty accounts must be provisioned by an administrator.');
   },
 };
 
@@ -912,11 +872,15 @@ export const chatAPI = {
 
 export const notificationAPI = {
   getByUser: async (userId: string): Promise<NotificationItem[]> => {
-    const { data } = await api.get(`/notifications/${userId}`);
+    const normalizedUserId = typeof userId === 'string' ? userId.trim() : '';
+    if (!normalizedUserId) return [];
+    const { data } = await api.get(`/notifications/${encodeURIComponent(normalizedUserId)}`);
     return data;
   },
   markAsRead: async (notificationId: string): Promise<NotificationItem> => {
-    const { data } = await api.patch(`/notifications/${notificationId}/read`);
+    const normalizedNotificationId = typeof notificationId === 'string' ? notificationId.trim() : '';
+    if (!normalizedNotificationId) throw new Error('Invalid notification id');
+    const { data } = await api.patch(`/notifications/${encodeURIComponent(normalizedNotificationId)}/read`);
     return data;
   },
 };

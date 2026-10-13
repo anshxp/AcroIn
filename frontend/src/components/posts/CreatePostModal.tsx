@@ -91,9 +91,15 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
 
   const isFaculty = user?.userType === 'faculty';
+  const canPublishOpportunity = isFaculty || user?.userType === 'admin';
 
   const handleSubmit = async () => {
     if (publishMode === 'post' && !content.trim() && selectedFiles.length === 0) return;
+
+    if (publishMode === 'opportunity' && !canPublishOpportunity) {
+      setSubmitError('Only faculty and administrators can publish opportunities.');
+      return;
+    }
 
     if (publishMode === 'opportunity') {
       const normalizedTitle = opportunityTitle.trim();
@@ -236,7 +242,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         <div className="modal-body">
           <div className="post-mode-toggle" role="tablist" aria-label="Publish mode">
             <button type="button" className={`mode-chip ${publishMode === 'post' ? 'active' : ''}`} onClick={() => { setPublishMode('post'); setSubmitError(''); }}>Post</button>
-            <button type="button" className={`mode-chip ${publishMode === 'opportunity' ? 'active' : ''}`} onClick={() => { setPublishMode('opportunity'); setUploadError(''); setSelectedFiles([]); setSubmitError(''); }}>Opportunity</button>
+            {canPublishOpportunity && (
+              <button type="button" className={`mode-chip ${publishMode === 'opportunity' ? 'active' : ''}`} onClick={() => { setPublishMode('opportunity'); setUploadError(''); setSelectedFiles([]); setSubmitError(''); }}>Opportunity</button>
+            )}
           </div>
 
           <div className="post-author-info">

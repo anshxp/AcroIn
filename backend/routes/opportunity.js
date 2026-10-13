@@ -62,19 +62,78 @@ const publishApprovedOpportunity = async (req, opportunity) => {
   return createdPost;
 };
 
-router.get('/', async (req, res) => {
+const optionalVerifyToken = (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return verifyToken(req, res, next);
+};
+
+const canViewUnapprovedOpportunity = async (req, opportunity) => {
+  if (!req.user?.id || !opportunity) return false;
+  if (req.user.userType === 'admin' || String(opportunity.createdBy) === String(req.user.id)) return true;
+  if (req.user.userType !== 'faculty') return false;
+
+  const faculty = await getFacultyContext(req);
+  if (!faculty?.isDepartmentAdmin || !faculty.faculty.department) return false;
+  const creator = await getAuthorFromUser(opportunity.createdBy);
+  return Boolean(creator && normalizeDepartment(creator.department) === normalizeDepartment(faculty.faculty.department));
+};
+
+router.get('/', optionalVerifyToken, async (req, res) => {
   try {
     const query = { isActive: true };
-    if (req.user?.userType === 'student') query.status = 'APPROVED';
+    if (req.user?.userType === 'admin') {
+      // System admins can review all active opportunities.
+    } else if (req.user?.userType === 'faculty' && req.user?.id) {
+      const facultyContext = await getFacultyContext(req);
+      const visibleCreatorIds = [req.user.id];
+      if (facultyContext?.isDepartmentAdmin && facultyContext.faculty.department) {
+        const departmentFaculty = await Faculty.find({
+          department: facultyContext.faculty.department,
+          role: { $in: ['faculty', 'dept_admin', 'super_admin'] },
+        }).select('email');
+        const emails = departmentFaculty.map((item) => item.email).filter(Boolean);
+        const departmentUsers = emails.length ? await User.find({ email: { $in: emails } }).select('_id') : [];
+        visibleCreatorIds.push(...departmentUsers.map((item) => String(item._id)));
+      }
+      query.$or = [
+        { status: 'APPROVED' },
+        { createdBy: { $in: [...new Set(visibleCreatorIds)] } },
+      ];
+    } else {
+      query.status = 'APPROVED';
+    }
     res.json(await Opportunity.find(query).sort({ createdAt: -1 }));
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
-router.get('/:id', async (req, res) => {
+router.get('/stats/pending', verifyToken, async (req, res) => {
+  try {
+    const faculty = await getApprover(req);
+    if (!faculty) return res.status(403).json({ success: false, message: 'Only the department admin can view approval stats' });
+    const departmentFaculty = await Faculty.find({ department: faculty.department }).select('email');
+    const departmentEmails = departmentFaculty.map((item) => item.email).filter(Boolean);
+    const departmentUsers = departmentEmails.length
+      ? await User.find({ email: { $in: departmentEmails } }).select('_id')
+      : [];
+    const departmentUserIds = departmentUsers.map((item) => item._id);
+    const departmentFilter = { createdBy: { $in: departmentUserIds } };
+    const [pending, approved, rejected] = await Promise.all([
+      Opportunity.countDocuments({ ...departmentFilter, status: 'PENDING', createdByRole: 'faculty' }),
+      Opportunity.countDocuments({ ...departmentFilter, status: 'APPROVED' }),
+      Opportunity.countDocuments({ ...departmentFilter, status: 'REJECTED' }),
+    ]);
+    res.json({ pending, approved, rejected });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.get('/:id', optionalVerifyToken, async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(400).json({ success: false, message: 'Invalid opportunity id' });
-    const opportunity = await Opportunity.findById(req.params.id);
+    const opportunity = await Opportunity.findOne({ _id: req.params.id, isActive: true });
     if (!opportunity) return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    if (opportunity.status !== 'APPROVED' && !(await canViewUnapprovedOpportunity(req, opportunity))) {
+      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+    }
     res.json(opportunity);
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -172,16 +231,6 @@ router.patch('/:id/reject', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ success: false, message: err.message }); }
 });
 
-router.get('/stats/pending', verifyToken, async (req, res) => {
-  try {
-    const faculty = await getApprover(req);
-    if (!faculty) return res.status(403).json({ success: false, message: 'Only the department admin can view approval stats' });
-    const [pending, approved, rejected] = await Promise.all([
-      Opportunity.countDocuments({ status: 'PENDING', createdByRole: 'faculty' }),
-      Opportunity.countDocuments({ status: 'APPROVED' }), Opportunity.countDocuments({ status: 'REJECTED' }),
-    ]);
-    res.json({ pending, approved, rejected });
-  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
-});
+
 
 export default router;

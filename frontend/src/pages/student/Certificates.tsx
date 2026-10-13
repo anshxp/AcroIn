@@ -46,7 +46,7 @@ export const StudentCertificates: React.FC = () => {
         const backendCertificates = await certificateAPI.getByStudent(studentIdentifier);
         const normalizedCertificates = Array.isArray(backendCertificates)
           ? backendCertificates
-              .filter((certificate): certificate is Certificate => Boolean(certificate && typeof certificate === 'object'))
+              .filter((certificate) => Boolean(certificate && typeof certificate === 'object'))
               .map((certificate) => ({
                 ...certificate,
                 _id: String(certificate._id || ''),

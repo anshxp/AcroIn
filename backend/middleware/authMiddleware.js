@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import User from '../models/User.js';
 
 const JWT_ALGORITHMS = ['HS256'];
 
@@ -17,7 +18,7 @@ const normalizeAuthId = (value) => {
   return '';
 };
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   try {
     const authorization = req.headers.authorization || '';
     const [scheme, token] = authorization.split(' ');
@@ -52,8 +53,25 @@ export const verifyToken = (req, res, next) => {
       return res.status(401).json({ success: false, message: 'Invalid user id in authentication token' });
     }
 
+    if (!mongoose.Types.ObjectId.isValid(normalizedId)) {
+      return res.status(401).json({ success: false, message: 'Invalid user id in authentication token' });
+    }
+
+    // Revalidate the account on each request so deleted or demoted accounts
+    // cannot continue using an otherwise unexpired access token.
+    let currentUser;
+    try {
+      currentUser = await User.findById(normalizedId).select('_id userType').lean();
+    } catch (_databaseError) {
+      return res.status(503).json({ success: false, message: 'Unable to validate account at this time' });
+    }
+
+    if (!currentUser || currentUser.userType !== decoded.userType) {
+      return res.status(401).json({ success: false, message: 'Account is no longer authorized; please log in again' });
+    }
+
     req.user = { ...decoded, id: normalizedId };
-    next();
+    return next();
   } catch (_err) {
     res.status(401).json({ success: false, message: 'Invalid or expired token' });
   }

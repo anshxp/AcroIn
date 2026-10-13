@@ -537,20 +537,76 @@ router.put('/:id', verifyToken, async (req, res) => {
     });
   }
 
-  Object.assign(student, req.body);
+  // Students can edit profile content, but academic identity, verification
+  // state, and linked record IDs are maintained by trusted workflows/admins.
+  const selfEditableFields = new Set([
+    'name', 'firstname', 'firstName', 'lastName', 'lastname',
+    'phone', 'birthday', 'address', 'location', 'bio', 'linkedin',
+    'github', 'portfolio', 'resume', 'tech_stack', 'skills',
+    'experiences', 'parentInfo',
+  ]);
+  const adminEditableFields = new Set([
+    ...selfEditableFields, 'roll', 'rollNo', 'department', 'year',
+    'semester', 'cgpa', 'projects', 'certificates', 'internships',
+    'competitions',
+  ]);
+  const allowedFields = isAdminUser ? adminEditableFields : selfEditableFields;
+  const updates = Object.fromEntries(
+    Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
+  );
+
+  // Merge parent details rather than replacing the subdocument, so lock metadata
+  // and other server-managed parent-info state cannot be erased by profile edits.
+  if (updates.parentInfo && typeof updates.parentInfo === 'object') {
+    const existingParentInfo = typeof student.parentInfo?.toObject === 'function'
+      ? student.parentInfo.toObject()
+      : (student.parentInfo || {});
+    updates.parentInfo = { ...existingParentInfo, ...updates.parentInfo };
+  }
+
+  Object.assign(student, updates);
   student.profileCompleteness = calculateProfileCompleteness(student);
   await student.save();
   await syncStudentProfileFromDoc(student);
   res.json(normalizeStudentResponse(student));
 });
 
-// Delete student
+// Delete a student account and its login/search-profile records together.
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
-  const student = await resolveStudent(req.params.id);
-  if (!student) return res.status(404).json({ message: 'Student not found' });
+  let session;
+  try {
+    const student = await resolveStudent(req.params.id);
+    if (!student) return res.status(404).json({ success: false, message: 'Student not found' });
+    const normalizedEmail = String(student.email || '').trim().toLowerCase();
+    const user = normalizedEmail
+      ? await User.findOne({ email: normalizedEmail, userType: 'student' }).select('_id email userType')
+      : null;
+    if (!user) {
+      return res.status(409).json({ success: false, message: 'Matching student login account is missing; repair account consistency before deletion' });
+    }
 
-  await Student.deleteOne({ _id: student._id });
-  res.json({ message: 'Student deleted' });
+    const Profile = mongoose.model('Profile');
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const userResult = await User.deleteOne({ _id: user._id, userType: 'student' }, { session });
+      const studentResult = await Student.deleteOne({ _id: student._id }, { session });
+      await Profile.deleteOne({ user: user._id }, { session });
+      if (userResult.deletedCount !== 1 || studentResult.deletedCount !== 1) {
+        throw new Error('Account records changed during deletion; transaction aborted');
+      }
+    });
+    return res.json({ success: true, message: 'Student account deleted atomically' });
+  } catch (err) {
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic account deletion requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to delete student account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
+  }
 });
 
 // Upload profile image

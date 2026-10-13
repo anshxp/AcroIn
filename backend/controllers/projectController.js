@@ -77,7 +77,9 @@ export const listProjectsByStudent = async (req, res, next) => {
 
 export const createProject = async (req, res, next) => {
   try {
-    const payload = { ...(req.body || {}) };
+    const payload = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => ['title', 'description', 'technologies', 'github_link', 'live_link', 'student'].includes(key))
+    );
 
     if (payload.student) {
       payload.student = await resolveStudentId(payload.student);
@@ -127,10 +129,12 @@ export const updateProject = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to update this project' });
     }
 
-    const payload = { ...(req.body || {}) };
-    if (payload.student) {
-      payload.student = await resolveStudentId(payload.student);
-    }
+    // A project owner may edit project content, but cannot transfer ownership by
+    // submitting another student's ID or mutate internal fields such as timestamps.
+    const editableFields = new Set(['title', 'description', 'technologies', 'github_link', 'live_link']);
+    const payload = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => editableFields.has(key))
+    );
 
     const updatedProject = await Project.findByIdAndUpdate(req.params.id, payload, {
       new: true,

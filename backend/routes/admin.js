@@ -76,8 +76,10 @@ router.post('/create', async (req, res) => {
 });
 
 
-// ✅ Create faculty or faculty admin
+// Create faculty account, compensating for partial writes if any later step fails.
 router.post('/faculty/create', async (req, res) => {
+  let session = null;
+
   try {
     const requester = await getRequesterAccess(req);
     const {
@@ -139,34 +141,39 @@ router.post('/faculty/create', async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(String(password), 10);
-    const faculty = await Faculty.create({
-      firstname: normalizedFirstname,
-      lastName: normalizedLastName,
-      email: normalizedEmail,
-      password: hashedPassword,
-      department: normalizedDepartment,
-      designation: String(designation || '').trim(),
-      qualification: String(qualification || '').trim(),
-      experience: Number.isFinite(Number(experience)) ? Number(experience) : undefined,
-      phone: String(phone || '').trim(),
-      subjects: Array.isArray(subjects) ? subjects : [],
-      skills: Array.isArray(skills) ? skills : [],
-      techstacks: Array.isArray(techstacks) ? techstacks : [],
-      headof: Array.isArray(headof) ? headof : [],
-      role: normalizedRoles,
-    });
+    session = await mongoose.startSession();
+    let faculty;
+    let user;
+    await session.withTransaction(async () => {
+      [faculty] = await Faculty.create([{
+        firstname: normalizedFirstname,
+        lastName: normalizedLastName,
+        email: normalizedEmail,
+        password: hashedPassword,
+        department: normalizedDepartment,
+        designation: String(designation || '').trim(),
+        qualification: String(qualification || '').trim(),
+        experience: Number.isFinite(Number(experience)) ? Number(experience) : undefined,
+        phone: String(phone || '').trim(),
+        subjects: Array.isArray(subjects) ? subjects : [],
+        skills: Array.isArray(skills) ? skills : [],
+        techstacks: Array.isArray(techstacks) ? techstacks : [],
+        headof: Array.isArray(headof) ? headof : [],
+        role: normalizedRoles,
+      }], { session });
 
-    const user = await User.create({
-      email: normalizedEmail,
-      password: hashedPassword,
-      name: `${normalizedFirstname} ${normalizedLastName}`.trim(),
-      userType: 'faculty',
-      role: normalizedRoles,
-      department: normalizedDepartment,
-      designation: String(designation || '').trim(),
-    });
+      [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: `${normalizedFirstname} ${normalizedLastName}`.trim(),
+        userType: 'faculty',
+        role: normalizedRoles,
+        department: normalizedDepartment,
+        designation: String(designation || '').trim(),
+      }], { session });
 
-    await syncFacultyProfile({ user, faculty });
+      await syncFacultyProfile({ user, faculty, session });
+    });
 
     const { password: _, ...facultyWithoutPassword } = faculty._doc;
     const { password: __, ...userWithoutPassword } = user._doc;
@@ -178,7 +185,18 @@ router.post('/faculty/create', async (req, res) => {
       faculty: facultyWithoutPassword,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err?.code === 11000) {
+      return res.status(409).json({ message: 'A user or faculty account with this email already exists.' });
+    }
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic faculty creation requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to create faculty account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 });
 
@@ -215,25 +233,27 @@ router.post('/assign-role', async (req, res) => {
       return res.status(400).json({ message: 'Unsupported role' });
     }
 
-    if (!user.role) user.role = [];
+    // Role assignment only applies to an existing faculty account. Creating a
+    // faculty profile and its login record is handled by /faculty/create.
+    if (user.userType !== 'faculty') {
+      return res.status(409).json({ message: 'Faculty roles can only be assigned to an existing faculty account' });
+    }
+
+    const faculty = await Faculty.findOne({ email: user.email });
+    if (!faculty) {
+      return res.status(409).json({ message: 'Faculty profile is missing; repair the account before assigning roles' });
+    }
+
+    if (!Array.isArray(user.role)) user.role = [];
     if (!user.role.includes(normalizedRole)) user.role.push(normalizedRole);
+    faculty.role = Array.from(new Set([...(faculty.role || []), normalizedRole]));
 
-    if (FACULTY_ADMIN_ROLES.has(normalizedRole)) {
-      user.userType = 'faculty';
-    }
-
+    await faculty.save();
     await user.save();
+    await syncFacultyProfile({ user, faculty });
 
-    if (FACULTY_ADMIN_ROLES.has(normalizedRole)) {
-      const faculty = await Faculty.findOne({ email: user.email });
-      if (faculty) {
-        faculty.role = Array.from(new Set([...(faculty.role || []), normalizedRole]));
-        await faculty.save();
-        await syncFacultyProfile({ user, faculty });
-      }
-    }
-
-    res.json(user);
+    const { password: _password, ...userWithoutPassword } = user.toObject();
+    res.json(userWithoutPassword);
 
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -249,10 +269,23 @@ router.post('/remove-role', async (req, res) => {
       return res.status(403).json({ message: 'Super admin access required' });
     }
 
-    const { userId, role } = req.body;
+    const { userId } = req.body || {};
+    const role = String(req.body?.role || '').trim();
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: "Invalid user ID" });
+    }
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
+    }
+    if (REGISTER_ONLY_ROLES.has(role)) {
+      return res.status(403).json({ message: `${role} role cannot be removed from this endpoint` });
+    }
+    if (role === 'faculty') {
+      return res.status(403).json({ message: 'The base faculty role cannot be removed here; use a dedicated account deactivation or demotion workflow' });
+    }
+    if (!ASSIGNABLE_FACULTY_ROLES.has(role)) {
+      return res.status(400).json({ message: 'Unsupported role' });
     }
 
     const user = await User.findById(userId);
@@ -260,15 +293,25 @@ router.post('/remove-role', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (REGISTER_ONLY_ROLES.has(String(role || '').trim())) {
-      return res.status(403).json({ message: `${role} role cannot be removed from this endpoint` });
+    let faculty = null;
+    if (user.userType === 'faculty') {
+      faculty = await Faculty.findOne({ email: user.email });
+      if (!faculty) {
+        return res.status(409).json({ message: 'Faculty profile is missing; repair the account before removing roles' });
+      }
     }
 
-    user.role = (user.role || []).filter(r => r !== role);
-
+    user.role = (user.role || []).filter((existingRole) => existingRole !== role);
+    if (faculty) {
+      faculty.role = (faculty.role || []).filter((existingRole) => existingRole !== role);
+      await faculty.save();
+    }
     await user.save();
 
-    res.json(user);
+    if (faculty) await syncFacultyProfile({ user, faculty });
+
+    const { password: _password, ...userWithoutPassword } = user.toObject();
+    res.json({ success: true, user: userWithoutPassword });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

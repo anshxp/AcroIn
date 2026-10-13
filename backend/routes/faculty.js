@@ -1,5 +1,4 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import mongoose from 'mongoose';
 import multer from 'multer';
@@ -169,31 +168,14 @@ const promoteToStronglyVerifiedIfEligible = (student, facultyId) => {
   }
 };
 
-// Create faculty
-router.post('/', verifyToken, isAdmin, async (req, res) => {
-  try {
-    const { password, ...rest } = req.body;
-
-    if (!password) {
-      return res.status(400).json({ message: 'Password is required' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const faculty = new Faculty({
-      ...rest,
-      password: hashedPassword,
-    });
-
-    await faculty.save();
-    await syncFacultyProfileFromDoc(faculty);
-
-    const { password: _, ...facultyData } = faculty._doc;
-
-    res.status(201).json(facultyData);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
+// Faculty account creation must create both the Faculty profile and its
+// corresponding User login record. Keep this legacy endpoint disabled so it
+// cannot create profile-only faculty records; use POST /admin/faculty/create.
+router.post('/', verifyToken, isAdmin, async (_req, res) => {
+  return res.status(410).json({
+    success: false,
+    message: 'This faculty creation endpoint is retired. Use POST /admin/faculty/create to create a complete faculty account.',
+  });
 });
 
 // Get all faculty
@@ -523,22 +505,16 @@ router.put('/profile', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Faculty profile not found' });
     }
 
-    const disallowedFields = new Set(['_id', 'password', 'role', 'createdAt', 'updatedAt']);
-    const requestedEmail = String(req.body?.email || '').trim();
-    if (requestedEmail) {
-      const existingUser = await User.findOne({ email: requestedEmail, _id: { $ne: req.user.id } });
-      const existingFaculty = await Faculty.findOne({ email: requestedEmail, _id: { $ne: faculty._id } });
-      if (existingUser || existingFaculty) {
-        return res.status(409).json({ success: false, message: 'Email is already in use' });
-      }
-    }
-
-    const updates = Object.entries(req.body || {}).reduce((acc, [key, value]) => {
-      if (!disallowedFields.has(key)) {
-        acc[key] = value;
-      }
-      return acc;
-    }, {});
+    // Faculty may edit contact/profile details, but not their department,
+    // designation, role, verification state, or account credentials.
+    const editableFields = new Set([
+      'firstname', 'lastName', 'phone', 'bio', 'linkedin', 'github',
+      'portfolio', 'qualification', 'experience', 'subjects', 'skills',
+      'techstacks', 'headof', 'profilepic',
+    ]);
+    const updates = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => editableFields.has(key))
+    );
 
     Object.assign(faculty, updates);
     await faculty.save();
@@ -546,7 +522,7 @@ router.put('/profile', verifyToken, async (req, res) => {
     // Keep User collection profile fields aligned with faculty profile edits.
     const displayName = `${faculty.firstname || ''} ${faculty.lastName || ''}`.trim();
     await User.findByIdAndUpdate(req.user.id, {
-      email: requestedEmail || faculty.email,
+      email: faculty.email,
       name: displayName,
       firstname: faculty.firstname,
       lastName: faculty.lastName,
@@ -640,11 +616,21 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this faculty profile' });
     }
 
-    const updatedData = { ...req.body };
-
-    if (updatedData.password) {
-      updatedData.password = await bcrypt.hash(updatedData.password, 10);
-    }
+    // Self-service updates must never change authorization or identity fields.
+    // Administrators can maintain faculty profile details, but role assignment
+    // remains in the dedicated admin role-management workflow.
+    const selfEditableFields = new Set([
+      'firstname', 'lastName', 'phone', 'bio', 'linkedin', 'github',
+      'portfolio', 'qualification', 'experience', 'subjects', 'skills',
+      'techstacks', 'headof', 'profilepic',
+    ]);
+    const adminEditableFields = new Set([
+      ...selfEditableFields, 'department', 'designation',
+    ]);
+    const allowedFields = isAdminUser ? adminEditableFields : selfEditableFields;
+    const updatedData = Object.fromEntries(
+      Object.entries(req.body || {}).filter(([key]) => allowedFields.has(key))
+    );
 
     const faculty = await Faculty.findByIdAndUpdate(req.params.id, updatedData, {
       new: true,
@@ -659,10 +645,45 @@ router.put('/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Delete faculty
+// Delete a faculty account and its login/search-profile records together.
 router.delete('/:id', verifyToken, isAdmin, async (req, res) => {
-  await Faculty.findByIdAndDelete(req.params.id);
-  res.json({ message: 'Faculty deleted' });
+  let session;
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ success: false, message: 'Invalid faculty ID' });
+    }
+    const faculty = await Faculty.findById(req.params.id).select('_id email');
+    if (!faculty) return res.status(404).json({ success: false, message: 'Faculty not found' });
+    const normalizedEmail = String(faculty.email || '').trim().toLowerCase();
+    const user = normalizedEmail
+      ? await User.findOne({ email: normalizedEmail, userType: 'faculty' }).select('_id email userType')
+      : null;
+    if (!user) {
+      return res.status(409).json({ success: false, message: 'Matching faculty login account is missing; repair account consistency before deletion' });
+    }
+
+    const Profile = mongoose.model('Profile');
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const userResult = await User.deleteOne({ _id: user._id, userType: 'faculty' }, { session });
+      const facultyResult = await Faculty.deleteOne({ _id: faculty._id }, { session });
+      await Profile.deleteOne({ user: user._id }, { session });
+      if (userResult.deletedCount !== 1 || facultyResult.deletedCount !== 1) {
+        throw new Error('Account records changed during deletion; transaction aborted');
+      }
+    });
+    return res.json({ success: true, message: 'Faculty account deleted atomically' });
+  } catch (err) {
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic account deletion requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Unable to delete faculty account; database transaction was aborted',
+    });
+  } finally {
+    if (session) await session.endSession();
+  }
 });
 
 // Export interested students (faculty only)

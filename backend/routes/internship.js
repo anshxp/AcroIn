@@ -9,6 +9,12 @@ import { verifyToken, isAdminOrFaculty } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+const EDITABLE_FIELDS = new Set(["company","position","duration","description","certificate_link","application_link","location"]);
+
+const pickEditableFields = (payload, { includeStudent = false } = {}) => Object.fromEntries(
+  Object.entries(payload || {}).filter(([key]) => EDITABLE_FIELDS.has(key) || (includeStudent && key === 'student') || ['apply_link', 'applicationUrl', 'applyUrl', 'registration_link', 'registrationUrl', 'link', 'url'].includes(key))
+);
+
 const withApplicationLink = (doc) => {
   const obj = typeof doc?.toObject === 'function' ? doc.toObject() : doc;
   const link = obj?.application_link || null;
@@ -101,7 +107,7 @@ router.get('/student/:studentId', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const isAdminOrFacultyUser = req.user?.userType === 'admin' || req.user?.userType === 'faculty';
-    const payload = normalizeApplicationLinkPayload({ ...(req.body || {}) });
+    const payload = normalizeApplicationLinkPayload(pickEditableFields(req.body, { includeStudent: true }));
 
     if (isAdminOrFacultyUser && !payload.application_link) {
       return res.status(400).json({

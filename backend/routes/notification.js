@@ -53,17 +53,30 @@ router.get('/:userId', verifyToken, async (req, res) => {
 router.post('/', verifyToken, isAdminOrFaculty, async (req, res) => {
   try {
     const body = req.body || {};
+    const recipientId = await resolveUserId(body.user);
+    const recipient = recipientId ? await User.findById(recipientId).select('_id userType email') : null;
+    const requester = await User.findById(req.user.id).select('email userType');
+    if (!recipient) return res.status(400).json({ success: false, message: 'Valid recipient user is required' });
+    if (req.user?.userType !== 'admin' && recipient.userType !== 'student') {
+      return res.status(403).json({ success: false, message: 'Faculty may create notifications only for students' });
+    }
+    if (req.user?.userType === 'faculty' && requester?.email) {
+      const faculty = await Faculty.findOne({ email: requester.email }).select('department');
+      const student = await Student.findOne({ email: recipient.email }).select('department');
+      if (!faculty || !student || String(faculty.department || '').trim().toLowerCase() !== String(student.department || '').trim().toLowerCase()) {
+        return res.status(403).json({ success: false, message: 'Faculty may notify students only within their department' });
+      }
+    }
     const payload = {
-      user: await resolveUserId(body.user),
+      user: recipient._id,
       message: typeof body.message === 'string' ? body.message.trim() : '',
       type: body.type,
-      read: typeof body.read === 'boolean' ? body.read : undefined,
       sourceType: body.sourceType,
-      sourceId: body.sourceId,
-      sourceTitle: body.sourceTitle,
-      actionPath: body.actionPath,
+      sourceId: mongoose.Types.ObjectId.isValid(body.sourceId) ? body.sourceId : undefined,
+      sourceTitle: typeof body.sourceTitle === 'string' ? body.sourceTitle.trim() : undefined,
+      actionPath: typeof body.actionPath === 'string' && body.actionPath.startsWith('/') && !body.actionPath.startsWith('//') ? body.actionPath : undefined,
     };
-    if (!payload.user || !payload.message) return res.status(400).json({ success: false, message: 'Valid recipient user and message are required' });
+    if (!payload.message) return res.status(400).json({ success: false, message: 'Notification message is required' });
     const notification = new Notification(payload);
     await notification.save();
     res.status(201).json(notification);
@@ -93,8 +106,13 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (!notification) return res.status(404).json({ success: false, message: 'Notification not found' });
     if (!canAccessNotification(req, notification)) return res.status(403).json({ success: false, message: 'Not authorized to update this notification' });
     const body = req.body || {};
-    if (typeof body.read === 'boolean') notification.read = body.read;
-    if (typeof body.message === 'string' && body.message.trim()) notification.message = body.message.trim();
+    if (typeof body.read !== 'boolean') {
+      return res.status(400).json({ success: false, message: 'A boolean read value is required' });
+    }
+
+    // Recipients may change read state, but notification content is immutable
+    // through this endpoint so recipients cannot rewrite messages they receive.
+    notification.read = body.read;
     await notification.save();
     res.json(notification);
   } catch (_err) {

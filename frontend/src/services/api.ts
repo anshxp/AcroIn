@@ -132,14 +132,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle response errors
+// Handle expired sessions without hijacking failed login/registration requests.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const requestUrl = String(error.config?.url || '');
+    const isAuthRequest = /^\/auth(?:\/|$)/i.test(requestUrl);
+    const hasStoredSession = Boolean(localStorage.getItem('token'));
+
+    if (status === 401 && !isAuthRequest && hasStoredSession) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -158,8 +165,14 @@ export const authAPI = {
   },
 
   facultyLogin: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/auth/faculty/login', credentials);
-    return response.data;
+    // The backend exposes a shared /auth/login route, not /auth/faculty/login.
+    const response = await api.post('/auth/login', credentials);
+    const authResponse = response.data as AuthResponse;
+    const responseUserType = (authResponse?.user as { userType?: string } | undefined)?.userType;
+    if (responseUserType !== 'faculty') {
+      throw new Error('Please log in with a faculty account');
+    }
+    return authResponse;
   },
 
   studentRegister: async (data: StudentRegisterData): Promise<AuthResponse> => {
@@ -167,9 +180,8 @@ export const authAPI = {
     return response.data;
   },
 
-  facultyRegister: async (data: FacultyRegisterData): Promise<AuthResponse> => {
-    const response = await api.post('/auth/faculty/register', data);
-    return response.data;
+  facultyRegister: async (_data: FacultyRegisterData): Promise<AuthResponse> => {
+    throw new Error('Faculty self-registration is not supported. Faculty accounts must be provisioned by an administrator.');
   },
 
   bootstrapAdminRegister: async (

@@ -44,11 +44,21 @@ const loginUser = async (req, res, expectedUserType = null) => {
 
     if (user.userType === 'student') {
       const student = await Student.findOne({ email: normalizedEmail });
-      if (student) {
-        const { password: __, ...studentWithoutPassword } = student.toObject();
-        return res.status(200).json({ success: true, token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: user.userType, role: user.role || [] } });
+      if (!student) {
+        return res.status(409).json({ success: false, message: 'Student login exists without a matching student profile; contact an administrator' });
+      }
+      const { password: __, ...studentWithoutPassword } = student.toObject();
+      return res.status(200).json({ success: true, token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: user.userType, role: user.role || [] } });
+    }
+
+    if (user.userType === 'faculty') {
+      const Faculty = (await import('../models/Faculty.js')).default;
+      const faculty = await Faculty.findOne({ email: normalizedEmail }).select('_id');
+      if (!faculty) {
+        return res.status(409).json({ success: false, message: 'Faculty login exists without a matching faculty profile; contact an administrator' });
       }
     }
+
     return res.status(200).json({ success: true, token, user: { ...userWithoutPassword, authUserId: user._id.toString() } });
   } catch (_err) {
     return res.status(500).json({ success: false, message: 'Login failed' });
@@ -56,57 +66,163 @@ const loginUser = async (req, res, expectedUserType = null) => {
 };
 
 const registerBootstrapAdmin = async (req, res) => {
+  let session;
   try {
-    if (String(process.env.ADMIN_BOOTSTRAP_ENABLED || '').toLowerCase() !== 'true') return res.status(404).json({ success: false, message: 'Bootstrap disabled' });
+    if (String(process.env.ADMIN_BOOTSTRAP_ENABLED || '').toLowerCase() !== 'true') {
+      return res.status(404).json({ success: false, message: 'Bootstrap disabled' });
+    }
     const bootstrapKey = String(req.headers['x-bootstrap-key'] || '').trim();
     const expectedKey = String(process.env.ADMIN_BOOTSTRAP_KEY || '').trim();
-    if (!expectedKey || bootstrapKey !== expectedKey) return res.status(403).json({ success: false, message: 'Invalid bootstrap key' });
+    if (!expectedKey || bootstrapKey !== expectedKey) {
+      return res.status(403).json({ success: false, message: 'Invalid bootstrap key' });
+    }
 
     const { name, email, password } = req.body || {};
     const normalizedEmail = String(email || '').trim().toLowerCase();
     const normalizedName = String(name || '').trim();
     const normalizedPassword = String(password || '');
-    if (!normalizedName || !normalizedEmail || !normalizedPassword) return res.status(400).json({ success: false, message: 'name, email, and password are required' });
-    if (!isCollegeEmail(normalizedEmail)) return res.status(400).json({ success: false, message: 'Please use a valid college email address' });
-    if (!isStrongPassword(normalizedPassword)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
-
-    const maxAdmins = 2;
-    if (await User.countDocuments({ userType: 'admin' }) >= maxAdmins) return res.status(409).json({ success: false, message: `Admin limit reached (${maxAdmins})` });
-    if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    if (!normalizedName || !normalizedEmail || !normalizedPassword) {
+      return res.status(400).json({ success: false, message: 'name, email, and password are required' });
+    }
+    if (!isCollegeEmail(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: 'Please use a valid college email address' });
+    }
+    if (!isStrongPassword(normalizedPassword)) {
+      return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
+    }
+    if (await User.countDocuments({ userType: 'admin' }) >= 2) {
+      return res.status(409).json({ success: false, message: 'Admin limit reached (2)' });
+    }
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    }
 
     const hashedPassword = await bcrypt.hash(normalizedPassword, 12);
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: normalizedName, userType: 'admin', role: ['admin'] });
-    await Admin.create({ user: user._id, permissions: ['all'] });
-    await Profile.findOneAndUpdate({ user: user._id }, { $set: { userType: 'admin', displayName: normalizedName, email: normalizedEmail, department: 'Administration', designation: 'System Administrator', skills: [], tags: ['admin'], profileCompleteness: 100, verificationStatus: 'verified', isActive: true } }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    session = await User.startSession();
+    let user;
+    await session.withTransaction(async () => {
+      [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: normalizedName,
+        userType: 'admin',
+        role: ['admin'],
+      }], { session });
+      await Admin.create([{ user: user._id, permissions: ['all'] }], { session });
+      await Profile.findOneAndUpdate(
+        { user: user._id },
+        { $set: {
+          userType: 'admin',
+          displayName: normalizedName,
+          email: normalizedEmail,
+          department: 'Administration',
+          designation: 'System Administrator',
+          skills: [],
+          tags: ['admin'],
+          profileCompleteness: 100,
+          verificationStatus: 'verified',
+          isActive: true,
+        } },
+        { new: true, upsert: true, setDefaultsOnInsert: true, session }
+      );
+    });
 
     const token = signAccessToken(user);
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    const { password: _password, ...userWithoutPassword } = user.toObject();
     return res.status(201).json({ success: true, message: 'Admin account created', token, user: userWithoutPassword });
-  } catch (_err) {
-    return res.status(500).json({ success: false, message: 'Admin bootstrap failed' });
+  } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    }
+    const unsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(unsupported ? 503 : 500).json({
+      success: false,
+      message: unsupported
+        ? 'Atomic admin bootstrap requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Admin bootstrap failed; database transaction was aborted.',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 
 const registerStudent = async (req, res) => {
-  try {
-    const { name, roll, email, password, department } = req.body || {};
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    if (!name || !roll || !department || !isCollegeEmail(normalizedEmail)) return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
-    if (!isStrongPassword(password)) return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
+  const { name, roll, email, password, department } = req.body || {};
+  const normalizedName = String(name || '').trim();
+  const normalizedRoll = String(roll || '').trim();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const normalizedDepartment = String(department || '').trim();
 
-    const existingStudent = await Student.findOne({ $or: [{ roll }, { email: normalizedEmail }] });
-    if (existingStudent) return res.status(409).json({ success: false, message: existingStudent.roll === roll ? 'A student with this roll number already exists.' : 'A student with this email already exists.' });
-    if (await User.findOne({ email: normalizedEmail })) return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+  if (!normalizedName || !normalizedRoll || !normalizedDepartment || !isCollegeEmail(normalizedEmail)) {
+    return res.status(400).json({ success: false, message: 'Valid name, roll, department, and college email are required' });
+  }
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ success: false, message: 'Password must be 8-128 characters long' });
+  }
+
+  let session;
+  try {
+    const existingStudent = await Student.findOne({ $or: [{ roll: normalizedRoll }, { email: normalizedEmail }] });
+    if (existingStudent) {
+      return res.status(409).json({
+        success: false,
+        message: existingStudent.roll === normalizedRoll
+          ? 'A student with this roll number already exists.'
+          : 'A student with this email already exists.',
+      });
+    }
+    if (await User.findOne({ email: normalizedEmail })) {
+      return res.status(409).json({ success: false, message: 'A user with this email already exists.' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const student = await Student.create({ name: String(name).trim(), roll: String(roll).trim(), email: normalizedEmail, password: hashedPassword, department: String(department).trim() });
-    const user = await User.create({ email: normalizedEmail, password: hashedPassword, name: String(name).trim(), userType: 'student' });
-    await syncStudentProfile({ user, student });
-    const token = signAccessToken(user);
-    const { password: _, ...studentWithoutPassword } = student.toObject();
-    return res.status(201).json({ success: true, message: 'Student registered', token, user: { ...studentWithoutPassword, authUserId: user._id.toString(), userType: 'student' } });
-  } catch (_err) {
-    return res.status(400).json({ success: false, message: 'Registration failed' });
+    session = await Student.startSession();
+    let responseUser;
+    let responseStudent;
+    await session.withTransaction(async () => {
+      // All three records commit together or none of them do. MongoDB must run as
+      // a replica set or sharded cluster for multi-document transactions.
+      const [student] = await Student.create([{
+        name: normalizedName,
+        roll: normalizedRoll,
+        email: normalizedEmail,
+        password: hashedPassword,
+        department: normalizedDepartment,
+      }], { session });
+      const [user] = await User.create([{
+        email: normalizedEmail,
+        password: hashedPassword,
+        name: normalizedName,
+        userType: 'student',
+      }], { session });
+      await syncStudentProfile({ user, student, session });
+      responseUser = user;
+      responseStudent = student;
+    });
+
+    const token = signAccessToken(responseUser);
+    const { password: _password, ...studentWithoutPassword } = responseStudent.toObject();
+    return res.status(201).json({
+      success: true,
+      message: 'Student registered',
+      token,
+      user: { ...studentWithoutPassword, authUserId: responseUser._id.toString(), userType: 'student' },
+    });
+  } catch (err) {
+    if (err?.code === 11000) {
+      const duplicateField = Object.keys(err.keyPattern || err.keyValue || {})[0];
+      const fieldLabel = duplicateField === 'roll' ? 'roll number' : 'email';
+      return res.status(409).json({ success: false, message: `A student with this ${fieldLabel} already exists.` });
+    }
+    const transactionUnsupported = /transaction numbers are only allowed|replica set|mongos|does not support transactions/i.test(String(err?.message || ''));
+    return res.status(transactionUnsupported ? 503 : 500).json({
+      success: false,
+      message: transactionUnsupported
+        ? 'Atomic account creation requires MongoDB replica-set or sharded-cluster deployment. No account changes were committed.'
+        : 'Registration failed. The database transaction was aborted.',
+    });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 

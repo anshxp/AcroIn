@@ -33,9 +33,13 @@ router.post('/:opportunityId/mark', verifyToken, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Student profile not found' });
     }
 
-    const opportunity = await Opportunity.findById(req.params.opportunityId);
+    const opportunity = await Opportunity.findOne({
+      _id: req.params.opportunityId,
+      isActive: true,
+      status: 'APPROVED',
+    });
     if (!opportunity) {
-      return res.status(404).json({ success: false, message: 'Opportunity not found' });
+      return res.status(404).json({ success: false, message: 'Approved opportunity not found' });
     }
 
     // Check if student already interested

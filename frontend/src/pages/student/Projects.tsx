@@ -37,7 +37,7 @@ export const StudentProjects: React.FC = () => {
         const backendProjects = await projectAPI.getByStudent(studentIdentifier);
         const normalizedProjects = Array.isArray(backendProjects)
           ? backendProjects
-              .filter((project): project is Project => Boolean(project && typeof project === 'object'))
+              .filter((project) => Boolean(project && typeof project === 'object'))
               .map((project) => ({
                 ...project,
                 _id: String(project._id ?? ''),

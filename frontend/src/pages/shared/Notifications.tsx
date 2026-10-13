@@ -71,8 +71,20 @@ export const Notifications: React.FC = () => {
   };
 
   const markAllRead = async () => {
-    await Promise.all(notifications.filter((item) => !item.read).map((item) => notificationAPI.markAsRead(item._id)));
-    setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+    const unread = notifications.filter((item) => !item.read);
+    const results = await Promise.allSettled(
+      unread.map((item) => notificationAPI.markAsRead(item._id))
+    );
+    const successfullyUpdatedIds = new Set(
+      results.flatMap((result) => result.status === 'fulfilled' ? [result.value._id] : [])
+    );
+
+    // Reflect only server-confirmed updates; failed requests remain unread.
+    setNotifications((current) =>
+      current.map((item) =>
+        successfullyUpdatedIds.has(item._id) ? { ...item, read: true } : item
+      )
+    );
   };
 
   return (
