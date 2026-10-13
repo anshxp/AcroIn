@@ -524,7 +524,7 @@ export const PostCard: React.FC<PostCardProps> = ({
                   Apply Now <ExternalLink size={14} />
                 </a>
               )}
-              {opportunityId && (user?.userType === 'admin' || (user?.userType === 'faculty' && isAuthor)) && (
+              {opportunityId && (user?.userType === 'admin' || (user?.userType === 'faculty' && (isAuthor || (user.role?.includes('dept_admin') && user.department && post.author.department && user.department.trim().toLowerCase() === post.author.department.trim().toLowerCase())))) && (
                 <button
                   onClick={loadInterestedStudents}
                   className="opportunity-interest-list-btn"
