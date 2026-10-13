@@ -4,6 +4,7 @@ import Interest from '../models/Interest.js';
 import Opportunity from '../models/Opportunity.js';
 import Student from '../models/Student.js';
 import User from '../models/User.js';
+import Faculty from '../models/Faculty.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import { resolveStudentId } from '../utils/resolveStudentId.js';
 
@@ -114,10 +115,20 @@ router.get('/:opportunityId/interested', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Opportunity not found' });
     }
 
-    // If requester is faculty, ensure they created this opportunity
+    // Faculty owners and the department admin for the opportunity's department may view the list.
     if (req.user?.userType === 'faculty') {
-      if (!req.user?.id || opportunity.createdBy.toString() !== req.user.id) {
-        return res.status(403).json({ success: false, message: 'Only the faculty who posted this opportunity can view interested students' });
+      const isOwner = Boolean(req.user?.id && opportunity.createdBy.toString() === req.user.id);
+      if (!isOwner) {
+        const requester = await User.findById(req.user.id).select('email department');
+        const requesterFaculty = requester?.email ? await Faculty.findOne({ email: requester.email }).select('department role') : null;
+        const isDepartmentAdmin = Array.isArray(requesterFaculty?.role) && requesterFaculty.role.includes('dept_admin');
+        const creator = await User.findById(opportunity.createdBy).select('email department');
+        const creatorFaculty = creator?.email ? await Faculty.findOne({ email: creator.email }).select('department') : null;
+        const requesterDepartment = String(requesterFaculty?.department || requester?.department || '').trim().toLowerCase();
+        const creatorDepartment = String(creatorFaculty?.department || creator?.department || '').trim().toLowerCase();
+        if (!isDepartmentAdmin || !requesterDepartment || requesterDepartment !== creatorDepartment) {
+          return res.status(403).json({ success: false, message: 'Only the opportunity owner, its department admin, or the main admin can view interested students' });
+        }
       }
     }
 
