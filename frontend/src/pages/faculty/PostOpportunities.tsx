@@ -484,7 +484,7 @@ export const PostOpportunities: React.FC = () => {
                       </button>
                     </>
                   )}
-                  {(opportunity.status === 'APPROVED' || isOpportunityOwner(opportunity) || user?.userType === 'admin') && (
+                  {(isOpportunityOwner(opportunity) || user?.userType === 'admin') && (
                     <button
                       onClick={() => loadInterestedStudents(opportunity._id)}
                       className="btn-view-interest"
