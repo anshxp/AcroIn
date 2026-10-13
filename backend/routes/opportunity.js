@@ -107,10 +107,6 @@ router.post('/', verifyToken, isAdminOrFaculty, postUpload.array('files', 4), as
     const status = 'PENDING';
 
     const opportunity = new Opportunity({ title, type: type || 'internship', company, location, eventDate: eventDate ? new Date(eventDate) : null, deadline: deadline ? new Date(deadline) : null, description, requirements: normalizedRequirements, application_link, attachments: uploadedAttachments, createdBy: req.user?.id, createdByRole: req.user?.userType, status });
-    if (status === 'APPROVED' && facultyContext?.faculty?._id) {
-      opportunity.approvedBy = facultyContext.faculty._id;
-      opportunity.approvedAt = new Date();
-    }
     await opportunity.save();
 
     if (status === 'APPROVED') {
